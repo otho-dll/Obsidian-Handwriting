@@ -1,7 +1,7 @@
 {
   "id": "obsidian-handwritten-a4-notes",
   "name": "Handwritten Notes",
-  "version": "3.0.10",
+  "version": "3.10.0",
   "minAppVersion": "1.4.0",
   "description": "Create handwrited notes in Obsidian in a notebook styled format with unlimited pages. You can also export your notes to PDF as well as import your own PDF files to write on them.",
   "author": "Otho",
