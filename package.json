@@ -1,6 +1,6 @@
 {
   "name": "obsidian-handwriting",
-  "version": "3.11.0",
+  "version": "3.12.0",
   "scripts": {
     "dev": "esbuild main.ts --bundle --watch --format=cjs --external:obsidian --outfile=main.js",
     "build": "esbuild main.ts --bundle --minify --format=cjs --external:obsidian --outfile=main.js",
