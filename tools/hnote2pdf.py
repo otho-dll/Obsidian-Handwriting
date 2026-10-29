@@ -21,7 +21,7 @@ The .hnote file format (JSON) – in short (full description: src/format.ts, src
     "pages": [ {
         "strokes": [ { "points": [[x, y], [x, y, pressure 0-100], …], "color": "#000000", "width": 2,
                        "isHighlighter": false, "alpha": 0.5,                      # pen opacity
-                       "shape": "line"|"rect"|"ellipse", "dash": "dashed"|"dotted", "fill": true,
+                       "shape": "line"|"rect"|"ellipse", "dash": "dashed"|"dotted"|"dashdot", "fill": true,
                        "arrow": true, "rot": 0.3, "poly": true, "isEraser": true (old – skipped) } ],
         "images":  [ { "path": "@/attachments/abc.png" | "Folder/image.png", "data": "data:image/…",
                        "x": 0, "y": 0, "w": 100, "h": 80, "rot": 0 } ],
@@ -404,6 +404,9 @@ def dash_ops(stroke, w):
         return '0 J [%s %s] 0 d' % (fmt(w * 4 + 6), fmt(w * 2.5 + 5))
     if d == 'dotted':
         return '0 J [%s %s] 0 d' % (fmt(w * 1.2 + 0.8), fmt(w * 2 + 3))
+    if d == 'dashdot':
+        gap = fmt(w * 2 + 3.5)
+        return '0 J [%s %s %s %s] 0 d' % (fmt(w * 4 + 6), gap, fmt(w * 1.2 + 0.8), gap)
     return None
 
 

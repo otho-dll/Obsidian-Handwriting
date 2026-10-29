@@ -30,3 +30,9 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Local path to the vault plugin folder (used by scripts/deploy.mjs)
+.vault-plugin-dir
+
+# Private developer notes
+DEV-NOTES.md

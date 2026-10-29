@@ -119,7 +119,7 @@ export interface ToolMemory {
     shapeColor: string;
     customShape: string[];
     shapeType: 'line' | 'rect' | 'ellipse';
-    shapeDash: 'solid' | 'dashed' | 'dotted';
+    shapeDash: 'solid' | 'dashed' | 'dotted' | 'dashdot';
     shapeFill: boolean;
     shapeArrow: boolean;
 }

@@ -26,6 +26,7 @@ a calculator, version history and a PDF export – in notes that stay readable e
 - [Images, screenshots and PDFs](#images-screenshots-and-pdfs)
 - [Calculator and function plots](#calculator-and-function-plots)
 - [Export to PDF](#export-to-pdf)
+- [Printing](#printing)
 - [Version history](#version-history)
 - [Where your data lives](#where-your-data-lives)
 - [PDF without Obsidian – `hnote2pdf.py`](#pdf-without-obsidian--hnote2pdfpy)
@@ -55,7 +56,7 @@ a calculator, version history and a PDF export – in notes that stay readable e
 | **Pen** | Pressure-sensitive ink. Three thicknesses, a colour palette and opacity (100 / 75 / 50 / 25 %). Jitter from the pen is smoothed out, but sharp corners stay sharp. |
 | **Highlighter** | Transparent marker with flat ends – like a real highlighter. Overlapping strokes don't get darker. Highlight several lines in one zig-zag movement: the turns stay square. |
 | **Eraser** | Cuts strokes where you rub (it doesn't paint white). Its size on screen is the same at every zoom level; rub quickly and it grows up to 4×. The pen's eraser end and side button work too. |
-| **Shapes** | Line (optionally an arrow), rectangle, ellipse; solid, dashed or dotted; filled or outlined. Hold **Shift** for straight angles / squares / circles. |
+| **Shapes** | Line (optionally an arrow), rectangle, ellipse; solid, dashed, dotted or dash-dot; filled or outlined. Hold **Shift** for straight angles / squares / circles. |
 | **Lasso** | Select, move, scale, rotate, recolour, group and lock. Tap the lasso button again to switch between freehand lasso and rectangle selection. |
 
 The colour / thickness button opens the style panel. On narrow screens colours, thickness and opacity share one panel.
@@ -121,6 +122,13 @@ Give important pages a title: right-click a page → **Page title…**, or the c
 **⋯ → Export to PDF.** Choose where to save it each time, or set a default (next to the note, a vault folder, or – on
 desktop – a folder on your computer). Page sizes, patterns, images and PDF backgrounds are kept; page titles become
 bookmarks. Resolution: Settings → Files and export.
+
+## Printing
+
+**⋯ → Print…** (or the *Print current note* command, or a toolbar shortcut). On desktop the system print dialog opens
+with one sheet per page: A4 portrait or landscape as in the note, endless pages cut into A4 sheets. Pick the printer,
+page range and copies there. On phones and tablets plugins can't open a print dialog, so the note is exported to PDF
+and you print it from your PDF viewer (Share → Print).
 
 ## Version history
 
@@ -207,6 +215,7 @@ Settings → **OLED care** – each option on its own:
 | Create new handwritten note | |
 | Open calculator | |
 | Insert function plot into handwritten note | |
+| Export current note to PDF / Print current note | |
 | Show version history of the current note / Save a version of the current note now | |
 | Go to page… (search page titles) / Set title of the current page | |
 | Zoom to favourite zoom (repeat to cycle) / Save current zoom as favourite | |

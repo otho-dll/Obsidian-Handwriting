@@ -1,4 +1,4 @@
-import { ICON_CALC, ICON_FIT, ICON_IMAGE, ICON_PLOT, ICON_PAGES, ICON_PDF_IN, ICON_PDF_OUT, ICON_SNIP, ICON_HISTORY, ICON_CONTENTS } from './icons';
+import { ICON_CALC, ICON_FIT, ICON_IMAGE, ICON_PLOT, ICON_PAGES, ICON_PDF_IN, ICON_PDF_OUT, ICON_PRINT, ICON_SNIP, ICON_HISTORY, ICON_CONTENTS } from './icons';
 
 /** Actions that can be pinned as shortcuts on the toolbar (Settings → Toolbar shortcuts). */
 export const QUICK_ACTIONS: { id: string; label: string; icon: string }[] = [
@@ -12,6 +12,7 @@ export const QUICK_ACTIONS: { id: string; label: string; icon: string }[] = [
     { id: 'screenshot', label: 'Screenshot (Snipping Tool, Windows)', icon: ICON_SNIP },
     { id: 'importpdf', label: 'Import PDF', icon: ICON_PDF_IN },
     { id: 'exportpdf', label: 'Export to PDF', icon: ICON_PDF_OUT },
+    { id: 'print', label: 'Print', icon: ICON_PRINT },
     { id: 'history', label: 'Version history', icon: ICON_HISTORY },
 ];
 export const DEFAULT_QUICK_ACTIONS = ['calculator', 'zoom', 'contents'];

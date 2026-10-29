@@ -321,7 +321,6 @@ button.hw-swatch-add {
     background: var(--background-modifier-hover);
 }
 
-
 /* --- TOOLBAR: style button (colour + thickness) and panel --- */
 .hw-style-btn { gap: 4px; }
 .hw-style-btn .hw-style-dot {
@@ -410,7 +409,6 @@ button.hw-swatch-add {
     pointer-events: none;
 }
 
-
 /* --- MINIMAP: slim rail (expands into thumbnails on touch / hover) --- */
 .hw-mm-rail { transition: width 0.15s ease, opacity 0.2s ease; }
 .hw-mm-rail.hw-minimap-right { right: 3px; }
@@ -460,10 +458,8 @@ button.hw-swatch-add {
 .hw-minimap-badge-left { left: 24px; }
 .hw-minimap-badge.hw-mm-badge-on { opacity: 1; }
 
-
 /* --- Narrow screen: thickness and colours in a menu --- */
 .hw-compact .hw-style-inline { gap: 8px; }
-
 
 /* --- PAGE PATTERNS. Geometry and colours are computed by templateCssVars() (templates.ts) and set as the page's CSS variables:
    --hw-a-* = main pattern (::before), --hw-b-* = extras: accent lines, small squares (::after). --- */
@@ -491,117 +487,10 @@ button.hw-swatch-add {
 .hw-page-a4.hw-has-bg::before,
 .hw-page-a4.hw-has-bg::after { display: none !important; }
 
-/* --- PANEL: page pattern and colour --- */
-.hw-pagestyle { width: 292px; max-width: calc(100vw - 16px); gap: 10px; }
-.hw-ps-scope {
-    display: flex;
-    gap: 4px;
-    padding: 3px;
-    border-radius: 8px;
-    background: var(--background-secondary);
-}
-button.hw-ps-scope-btn {
-    flex: 1;
-    height: auto;
-    padding: 7px 8px;
-    border: none;
-    border-radius: 6px;
-    background: transparent;
-    box-shadow: none;
-    color: var(--text-muted);
-    cursor: pointer;
-}
-button.hw-ps-scope-btn.active {
-    background: var(--background-primary);
-    color: var(--text-normal);
-    font-weight: 600;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
-}
-.hw-ps-pager {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-}
-button.hw-ps-pager-btn {
-    width: 36px;
-    height: 32px;
-    padding: 0;
-    font-size: 18px;
-    line-height: 1;
-    cursor: pointer;
-}
-.hw-ps-pager-label { flex: 1; text-align: center; font-weight: 600; }
-.hw-ps-all-label { text-align: center; color: var(--text-muted); font-size: 12px; padding: 6px 0; }
-.hw-ps-tpls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-button.hw-ps-tpl {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    height: auto;
-    padding: 6px 4px;
-    border: 2px solid transparent;
-    border-radius: 8px;
-    background: transparent;
-    box-shadow: none;
-    color: var(--text-muted);
-    font-size: 12px;
-    cursor: pointer;
-}
-button.hw-ps-tpl:hover { background: var(--background-modifier-hover); }
-button.hw-ps-tpl.active {
-    border-color: var(--interactive-accent);
-    background: color-mix(in srgb, var(--interactive-accent) 18%, transparent);
-    color: var(--text-normal);
-    box-shadow: inset 0 0 0 1px var(--interactive-accent);
-}
-.hw-ps-papers { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-
-
-button.hw-ps-reset {
-    width: 100%;
-    cursor: pointer;
-    background: transparent;
-    box-shadow: none;
-    color: var(--text-muted);
-    font-size: 12px;
-}
-button.hw-ps-reset:hover { color: var(--text-normal); }
-
-
-/* --- Page choice: clear scope buttons and number field --- */
-.hw-ps-scope { gap: 8px !important; }
-button.hw-ps-scope-btn {
-    flex: 1;
-    padding: 10px 12px !important;
-    min-height: 40px;
-    font-weight: 600;
-    border: 2px solid var(--background-modifier-border) !important;
-    background: var(--background-secondary) !important;
-    color: var(--text-muted) !important;
-    border-radius: 10px !important;
-    box-shadow: none !important;
-}
-button.hw-ps-scope-btn.active {
-    border-color: var(--interactive-accent) !important;
-    background: var(--interactive-accent) !important;
-    color: var(--text-on-accent) !important;
-}
-.hw-ps-pager-label { display: flex; align-items: center; gap: 6px; justify-content: center; }
-input.hw-ps-pager-input {
-    width: 56px;
-    text-align: center;
-    padding: 4px 6px;
-    font-size: 15px;
-    font-weight: 600;
-}
-
 /* --- PDF export dialog --- */
 .hw-pdf-modal .hw-pdf-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
 .hw-pdf-modal .hw-pdf-row input { width: 100%; }
 .hw-pdf-modal .hw-pdf-buttons { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
-
 
 /* --- "Page continues" hints at the view edges --- */
 .hw-edge {
@@ -619,7 +508,6 @@ input.hw-ps-pager-input {
 .hw-edge-left { left: 0; background: linear-gradient(to right, rgba(0, 0, 0, 0.32), rgba(0, 0, 0, 0)); }
 .hw-edge-right { right: 0; background: linear-gradient(to left, rgba(0, 0, 0, 0.32), rgba(0, 0, 0, 0)); }
 
-
 /* Eraser circle (DOM element instead of a drawing on the canvas) */
 .hw-eraser-cursor {
     position: absolute;
@@ -634,7 +522,6 @@ input.hw-ps-pager-input {
     pointer-events: none;
     will-change: transform;
 }
-
 
 /* --- Image cropping --- */
 .hw-crop-overlay {
@@ -685,7 +572,6 @@ input.hw-ps-pager-input {
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
 }
 .hw-crop-title { font-weight: 600; margin-right: 4px; }
-
 
 /* --- Page reorder dialog --- */
 .hw-order-list { max-height: 55vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; }
@@ -866,20 +752,16 @@ input.hw-order-input { width: 56px; text-align: center; }
 .hw-order-add, .hw-order-del { display: inline-flex; align-items: center; justify-content: center; }
 .hw-order-add svg, .hw-order-del svg, .hw-order-btn-icon svg { width: 18px; height: 18px; }
 .hw-order-add { color: var(--interactive-accent); }
-.hw-order-style { max-height: 62vh; overflow-y: auto; }
-.hw-order-style .hw-menu { position: static; z-index: auto; display: flex; width: 100%; max-width: none; padding: 0; border: none; box-shadow: none; background: transparent; }
-.hw-order-style .hw-pagestyle { width: 100%; max-width: none; }
 
 /* --- "Pages" dialog: margins and layout --- */
 .hw-order-modal .hw-pdf-buttons { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin-top: 16px; padding-top: 4px; }
 .hw-order-list { margin-top: 4px; }
 .hw-order-add { gap: 4px; padding: 0 10px; white-space: nowrap; font-size: 0.85em; }
 .hw-order-add svg { width: 15px; height: 15px; }
-.hw-order-style.hw-pagestyle, .hw-order-style .hw-pagestyle { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: none; }
-.hw-order-style .hw-ps-tpls { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
 .hw-order-style { padding: 2px 2px 0; }
 .modal.mod-pages { width: min(760px, 96vw); max-width: 96vw; }
-.hw-order-style .hw-ps-papers { justify-content: center; gap: 12px; padding: 10px 8px; }
+
 .hw-order-style { padding: 4px 6px 0; }
 
 /* --- v3: read-only --- */
@@ -988,15 +870,6 @@ button.hw-contents-item.active { background: color-mix(in srgb, var(--interactiv
 }
 
 /* --- v3.10: page formats --- */
-.hw-ps-formats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-button.hw-ps-format {
-    display: flex; flex-direction: column; align-items: center; gap: 4px; height: auto;
-    padding: 6px 4px; border: 2px solid transparent; border-radius: 8px; background: transparent; box-shadow: none;
-    font-size: 0.8em; color: var(--text-muted);
-}
-button.hw-ps-format:hover { background: var(--background-modifier-hover); }
-button.hw-ps-format.active { border-color: var(--interactive-accent); background: color-mix(in srgb, var(--interactive-accent) 18%, transparent); color: var(--text-normal); }
-.hw-ps-format small { font-size: 0.85em; opacity: 0.75; }
 
 /* --- v3.13: OLED care --- */
 /* 1. Dark paper: JS computes the background (darkPaperColor), the filter inverts ink and PDF pages (the same as for the background). */
@@ -1072,18 +945,115 @@ button.hw-history-rowdel svg { width: 14px; height: 14px; }
 button.hw-history-rowdel.is-armed, button.hw-history-delete.is-armed, button.hw-history-delall.is-armed { background: var(--background-modifier-error, #dc2626); color: #fff; opacity: 1; }
 @media (hover: none) { button.hw-history-rowdel { opacity: 0.7; } }
 
-/* --- v3.17: "Page style" dialog – only the pattern list scrolls (with a visible scrollbar), the rest stays in place --- */
-.modal.mod-pages { height: auto; max-height: 92vh; }
-.modal.mod-pages .modal-content { overflow-y: auto; }
-.hw-order-style { max-height: none; overflow: visible; }
-.hw-order-style .hw-ps-tpls {
-    max-height: min(32vh, 300px);
-    overflow-y: auto;
-    padding: 2px 6px 2px 2px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--background-modifier-border-hover, #666) transparent;
-    border-radius: 8px;
+/* --- Pages dialog: one scroll at most (the dialog itself), never nested scroll areas --- */
+.modal.mod-pages { height: auto; max-height: 92vh; display: flex; flex-direction: column; }
+.modal.mod-pages .modal-content { overflow-y: auto; min-height: 0; flex: 1 1 auto; }
+
+/* --- v3.20: removing custom colours --- */
+button.hw-swatch.custom { position: relative; }
+.hw-swatch-x {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    line-height: 1;
+    color: var(--text-on-accent, #fff);
+    background: var(--text-muted);
+    box-shadow: 0 0 0 1.5px var(--background-primary);
+    cursor: pointer;
 }
-.hw-order-style .hw-ps-tpls::-webkit-scrollbar { width: 8px; display: block; }
-.hw-order-style .hw-ps-tpls::-webkit-scrollbar-thumb { background: var(--background-modifier-border-hover, #666); border-radius: 4px; }
-.hw-order-style .hw-ps-tpls::-webkit-scrollbar-track { background: transparent; }
+.hw-swatch-x:hover { background: var(--text-error, #e5484d); }
+@media (hover: hover) {
+    button.hw-swatch.custom:hover .hw-swatch-x { display: flex; }
+}
+.hw-zoom-panel .hw-zoom-add.hw-hidden { display: none; }
+
+/* --- v3.21: "Page style" tab rebuilt – preview + compact rows, adapts to the dialog width --- */
+.hw-order-style { max-height: none; overflow: visible; padding: 2px 0 0; }
+.hw-ps2-host { container-type: inline-size; }
+.hw-ps2 { display: flex; flex-direction: column; gap: 16px; }
+.hw-ps2 .hw-hidden { display: none !important; }
+
+.hw-ps2-side { display: flex; gap: 14px; align-items: center; }
+.hw-ps2-preview {
+    flex: 0 0 auto; width: 84px; aspect-ratio: 300 / 424;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 8px; background: var(--background-secondary); padding: 6px; box-sizing: content-box;
+}
+.hw-ps2-preview canvas { width: 100%; height: 100%; filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.25)); }
+.hw-ps2-target { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+
+/* segmented buttons (scope and page size) */
+.hw-ps2-seg { display: flex; padding: 3px; gap: 3px; border-radius: 10px; background: var(--background-modifier-form-field, var(--background-secondary)); border: 1px solid var(--background-modifier-border); }
+.hw-ps2-seg > button {
+    flex: 1 1 0; min-width: 0; height: auto; min-height: 34px; padding: 6px 8px; margin: 0;
+    border: none; border-radius: 7px; box-shadow: none; background: transparent;
+    color: var(--text-muted); font-size: 0.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer;
+}
+.hw-ps2-seg > button:hover:not(:disabled) { background: var(--background-modifier-hover); color: var(--text-normal); }
+.hw-ps2-seg > button.active { background: var(--interactive-accent); color: var(--text-on-accent); }
+.hw-ps2-seg > button:disabled { opacity: 0.45; cursor: default; }
+.hw-ps2-formats > button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; }
+.hw-ps2-formats > button svg { width: 30px; height: 32px; flex: 0 0 auto; }
+.hw-ps2-formats > button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+
+.hw-ps2-pager { display: flex; align-items: center; gap: 6px; }
+button.hw-ps2-pager-btn { flex: 0 0 auto; width: 34px; height: 34px; padding: 0; font-size: 20px; line-height: 1; }
+.hw-ps2-pager-label { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; white-space: nowrap; }
+input.hw-ps2-pager-input { width: 52px; height: 30px; text-align: center; padding: 0 4px; -moz-appearance: textfield; }
+input.hw-ps2-pager-input::-webkit-inner-spin-button, input.hw-ps2-pager-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.hw-ps2-note { color: var(--text-muted); font-size: 0.82em; line-height: 1.35; }
+button.hw-ps2-reset { align-self: flex-start; height: auto; padding: 2px 0; background: none; box-shadow: none; border: none; color: var(--text-accent); font-size: 0.85em; text-decoration: underline; cursor: pointer; }
+
+.hw-ps2-opts { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.hw-ps2-section { display: flex; flex-direction: column; gap: 6px; }
+.hw-ps2-label { font-size: 0.75em; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+
+.hw-ps2-tpls { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; }
+button.hw-ps2-tpl {
+    display: flex; flex-direction: column; align-items: center; gap: 3px; height: auto; min-width: 0;
+    padding: 6px 2px 5px; margin: 0; border-radius: 8px; box-shadow: none;
+    border: 1px solid var(--background-modifier-border); background: var(--background-primary);
+    color: var(--text-muted); font-size: 0.78em; cursor: pointer;
+}
+button.hw-ps2-tpl svg { width: 30px; height: 39px; flex: 0 0 auto; }
+button.hw-ps2-tpl span { max-width: 100%; line-height: 1.15; text-align: center; white-space: normal; overflow-wrap: anywhere; }
+button.hw-ps2-tpl:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+button.hw-ps2-tpl.active { border-color: var(--interactive-accent); box-shadow: inset 0 0 0 1px var(--interactive-accent); color: var(--text-normal); background: color-mix(in srgb, var(--interactive-accent) 12%, var(--background-primary)); }
+
+.hw-ps2-papers { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 2px 2px 4px; }
+.hw-ps2-papers button.hw-swatch { width: 28px; height: 28px; min-width: 28px; min-height: 28px; }
+.hw-ps2-papers button.hw-swatch-add { width: 28px; height: 28px; min-width: 28px; min-height: 28px; }
+
+/* wide dialog: preview and scope on the left, options on the right */
+@container (min-width: 600px) {
+    .hw-ps2 { flex-direction: row; align-items: flex-start; gap: 22px; }
+    .hw-ps2-side { flex: 0 0 200px; flex-direction: column; align-items: stretch; position: sticky; top: 0; }
+    .hw-ps2-preview { width: clamp(70px, 24vh, 150px); align-self: center; }
+    .hw-ps2-opts { flex: 1; }
+    .hw-ps2-formats > button { flex-direction: row; justify-content: center; gap: 8px; }
+    .hw-ps2-formats > button svg { width: 26px; height: 28px; }
+}
+/* very narrow (phone): smaller preview, tighter pattern tiles */
+@container (max-width: 360px) {
+    .hw-ps2-preview { width: 64px; }
+    .hw-ps2-tpls { grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); }
+}
+
+/* --- v3.23: hidden frame used for printing --- */
+iframe.hw-print-frame { position: fixed; right: 0; bottom: 0; width: 0; height: 0; border: 0; visibility: hidden; }
+
+/* --- 3.12.0: no horizontal scrolling in the Pages dialog; buttons don't grow on hover --- */
+.modal.mod-pages .modal-content { overflow-x: hidden; }
+.hw-order-tabs button { flex: 1 1 0; min-width: 0; }
+.hw-ps2, .hw-ps2 * { box-sizing: border-box; }
+.hw-ps2-preview { box-sizing: content-box; }
+.hw-ps2 button, .hw-order-tabs button { transform: none !important; }
+.hw-ps2-papers button.hw-swatch:hover { box-shadow: inset 0 0 0 1px rgba(128,128,128,0.45), 0 0 0 2px var(--background-primary), 0 0 0 4px var(--background-modifier-border-hover, #888); }
+.hw-ps2-papers button.hw-swatch.active:hover { box-shadow: inset 0 0 0 1px rgba(128,128,128,0.45), 0 0 0 2px var(--background-primary), 0 0 0 4px var(--interactive-accent); }

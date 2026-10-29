@@ -22,6 +22,7 @@ import { pageToolsMixin, PageToolsMethods } from './src/view/pageTools';
 import { minimapMixin, MinimapMethods } from './src/view/minimap';
 import { toolbarMixin, ToolbarMethods } from './src/view/toolbar';
 import { pdfIOMixin, PdfIOMethods } from './src/view/pdfIO';
+import { printMixin, PrintMethods } from './src/view/print';
 import { strokeDrawMixin, StrokeDrawMethods } from './src/view/strokeDraw';
 import { calcPanelMixin, CalcPanelMethods } from './src/view/calcPanel';
 import { clipboardMixin, ClipboardMethods } from './src/view/clipboard';
@@ -81,6 +82,26 @@ export default class HandwritingPlugin extends Plugin {
                 const v = this.app.workspace.getActiveViewOfType(HandwritingView);
                 if (!v) return false;
                 if (!checking) v.insertPlot();
+                return true;
+            },
+        });
+        this.addCommand({
+            id: 'export-pdf',
+            name: 'Export current note to PDF',
+            checkCallback: (checking: boolean) => {
+                const v = this.app.workspace.getActiveViewOfType(HandwritingView);
+                if (!v) return false;
+                if (!checking) void v.exportToPDF();
+                return true;
+            },
+        });
+        this.addCommand({
+            id: 'print-note',
+            name: 'Print current note',
+            checkCallback: (checking: boolean) => {
+                const v = this.app.workspace.getActiveViewOfType(HandwritingView);
+                if (!v) return false;
+                if (!checking) void v.printNote();
                 return true;
             },
         });
@@ -284,7 +305,7 @@ export default class HandwritingPlugin extends Plugin {
         if (isHexColor(m.shapeColor)) mem.shapeColor = m.shapeColor.toLowerCase();
         mem.customShape = cl(m.customShape);
         if (['line', 'rect', 'ellipse'].includes(m.shapeType)) mem.shapeType = m.shapeType;
-        if (['solid', 'dashed', 'dotted'].includes(m.shapeDash)) mem.shapeDash = m.shapeDash;
+        if (['solid', 'dashed', 'dotted', 'dashdot'].includes(m.shapeDash)) mem.shapeDash = m.shapeDash;
         mem.shapeFill = m.shapeFill === true;
         mem.shapeArrow = m.shapeArrow === true;
         this.settings.memory = mem;
@@ -395,7 +416,7 @@ export class HandwritingView extends TextFileView {
     currentTool: 'pen' | 'highlighter' | 'eraser' | 'lasso' | 'shape' = 'pen';
 
     shapeType: 'line' | 'rect' | 'ellipse' = 'rect';
-    shapeDash: 'solid' | 'dashed' | 'dotted' = 'solid';
+    shapeDash: 'solid' | 'dashed' | 'dotted' | 'dashdot' = 'solid';
     shapeFill = false;
     shapeArrow = false;
 
@@ -535,6 +556,8 @@ export class HandwritingView extends TextFileView {
     zoomBtnRaf = 0;
     zoomPanel: HTMLElement | null = null;
     zoomPanelCleanup: (() => void) | null = null;
+    /** Removes the hidden print frame of the last print job. */
+    printCleanup: (() => void) | null = null;
     /** Dragging the selection: image of the selected strokes and its transform since the drag started. */
     dragSprite: { canvas: HTMLCanvasElement; x: number; y: number; w: number; h: number } | null = null;
     dragXform: DOMMatrix | null = null;
@@ -1024,5 +1047,5 @@ export class HandwritingView extends TextFileView {
 
 }
 
-export interface HandwritingView extends HistoryMethods, GeometryMethods, ImagesMethods, CanvasWindowMethods, ImageInsertMethods, PageToolsMethods, MinimapMethods, ToolbarMethods, PdfIOMethods, StrokeDrawMethods, CalcPanelMethods, ClipboardMethods, MenusMethods, SelectionEditMethods, VersionsMethods, PositionMethods, AssetsMethods, SelectionMethods, ContextMenuMethods, NavigationMethods, InputMethods, PageSizeMethods, ContentsMethods, OledCareMethods, ZoomPanelMethods, TouchMethods {}
-Object.assign(HandwritingView.prototype, historyMixin, geometryMixin, imagesMixin, canvasWindowMixin, imageInsertMixin, pageToolsMixin, minimapMixin, toolbarMixin, pdfIOMixin, strokeDrawMixin, calcPanelMixin, clipboardMixin, menusMixin, selectionEditMixin, versionsMixin, positionMixin, assetsMixin, selectionMixin, contextMenuMixin, navigationMixin, inputMixin, pageSizeMixin, contentsMixin, oledCareMixin, zoomPanelMixin, touchMixin);
+export interface HandwritingView extends HistoryMethods, GeometryMethods, ImagesMethods, CanvasWindowMethods, ImageInsertMethods, PageToolsMethods, MinimapMethods, ToolbarMethods, PdfIOMethods, StrokeDrawMethods, CalcPanelMethods, ClipboardMethods, MenusMethods, SelectionEditMethods, VersionsMethods, PositionMethods, AssetsMethods, SelectionMethods, ContextMenuMethods, NavigationMethods, InputMethods, PageSizeMethods, ContentsMethods, OledCareMethods, ZoomPanelMethods, TouchMethods, PrintMethods {}
+Object.assign(HandwritingView.prototype, historyMixin, geometryMixin, imagesMixin, canvasWindowMixin, imageInsertMixin, pageToolsMixin, minimapMixin, toolbarMixin, pdfIOMixin, strokeDrawMixin, calcPanelMixin, clipboardMixin, menusMixin, selectionEditMixin, versionsMixin, positionMixin, assetsMixin, selectionMixin, contextMenuMixin, navigationMixin, inputMixin, pageSizeMixin, contentsMixin, oledCareMixin, zoomPanelMixin, touchMixin, printMixin);

@@ -2,6 +2,15 @@ import { defineMixin } from './mixin';
 import { Point, Stroke } from '../types';
 import type { PathCacheEntry } from '../../main';
 
+/** Dash pattern for a line style (in page units, scaled with the line width); [] = solid. Same values in tools/hnote2pdf.py. */
+export function dashPattern(dash: string | undefined, w: number): number[] {
+    const long = w * 4 + 6, dot = w * 1.2 + 0.8;
+    if (dash === 'dashed') return [long, w * 2.5 + 5];
+    if (dash === 'dotted') return [dot, w * 2 + 3];
+    if (dash === 'dashdot') { const gap = w * 2 + 3.5; return [long, gap, dot, gap]; }
+    return [];
+}
+
 /**
  * Whether the stroke turns sharply at point i (turn > ~110°). There the stroke must pass exactly through
  * the point – the usual smoothing (curves through segment midpoints) cuts corners and shortens reversals.
@@ -96,16 +105,9 @@ export const strokeDrawMixin = defineMixin({
 
         // Dashed and dotted lines have flat ends and explicit dash lengths –
         // with the thinnest line, round dots of ~0 length were not drawn at all.
-        if (stroke.dash === 'dashed') {
-            ctx.lineCap = 'butt';
-            ctx.setLineDash([w * 4 + 6, w * 2.5 + 5]);
-        } else if (stroke.dash === 'dotted') {
-            ctx.lineCap = 'butt';
-            ctx.setLineDash([w * 1.2 + 0.8, w * 2 + 3]);
-        } else {
-            ctx.lineCap = 'round';
-            ctx.setLineDash([]);
-        }
+        const pattern = dashPattern(stroke.dash, w);
+        ctx.lineCap = pattern.length ? 'butt' : 'round';
+        ctx.setLineDash(pattern);
 
         const rotated = !!stroke.rot && stroke.shape !== 'line';
         const cx = (p0.x + p1.x) / 2, cy = (p0.y + p1.y) / 2;
@@ -378,13 +380,8 @@ export const strokeDrawMixin = defineMixin({
         ctx.lineJoin = polyline ? 'miter' : 'round';
         ctx.miterLimit = stroke.isHighlighter ? 2.2 : 4;
         ctx.setLineDash([]);
-        if (stroke.dash === 'dashed') {
-            ctx.lineCap = 'butt';
-            ctx.setLineDash([stroke.width * 4 + 6, stroke.width * 2.5 + 5]);
-        } else if (stroke.dash === 'dotted') {
-            ctx.lineCap = 'butt';
-            ctx.setLineDash([stroke.width * 1.2 + 0.8, stroke.width * 2 + 3]);
-        }
+        const pattern = dashPattern(stroke.dash, stroke.width);
+        if (pattern.length) { ctx.lineCap = 'butt'; ctx.setLineDash(pattern); }
 
         // A single tap draws a dot (a square for the highlighter).
         if (stroke.points.length === 1) {

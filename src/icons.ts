@@ -21,11 +21,13 @@ export const ICON_FILL = `<rect x="4" y="5" width="16" height="14" rx="1" fill="
 export const ICON_ARROW = `<path d="M5 19 19 5"></path><path d="M10 5h9v9"></path>`;
 export const ICON_DASH_SOLID = `<path d="M3 12h18"></path>`;
 export const ICON_DASH_DASHED = `<path d="M3 12h4"></path><path d="M10 12h4"></path><path d="M17 12h4"></path>`;
+export const ICON_DASH_DASHDOT = `<path d="M2 12h7"></path><path d="M12.5 12h.01"></path><path d="M16 12h6"></path>`;
 export const ICON_DASH_DOTTED = `<path d="M4 12h.01"></path><path d="M9 12h.01"></path><path d="M14 12h.01"></path><path d="M19 12h.01"></path>`;
 export const ICON_CALC = `<rect x="4" y="2" width="16" height="20" rx="2"></rect><path d="M8 6h8"></path><path d="M8 11h.01"></path><path d="M12 11h.01"></path><path d="M16 11h.01"></path><path d="M8 15h.01"></path><path d="M12 15h.01"></path><path d="M16 15h.01"></path><path d="M8 19h.01"></path><path d="M12 19h.01"></path><path d="M16 19h.01"></path>`;
 export const ICON_PLOT = `<path d="M3 3v18h18"></path><path d="M7 15c2-8 4-8 6-3s4 3 5-5"></path>`;
 export const ICON_PAGES = `<rect x="7" y="3" width="13" height="16" rx="2"></rect><path d="M4 7v12a2 2 0 0 0 2 2h10"></path>`;
 export const ICON_PDF_IN = `<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path><path d="M12 11v6"></path><path d="m9.5 14.5 2.5 2.5 2.5-2.5"></path>`;
+export const ICON_PRINT = `<path d="M6 9V3h12v6"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><path d="M6 14h12v7H6z"></path>`;
 export const ICON_PDF_OUT = `<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path><path d="M12 17v-6"></path><path d="m9.5 13.5 2.5-2.5 2.5 2.5"></path>`;
 export const ICON_HISTORY = '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>';
 export const ICON_CONTENTS = '<path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/>';

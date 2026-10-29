@@ -165,6 +165,7 @@ export const inputMixin = defineMixin({
         };
 
         topCanvas.addEventListener('pointerdown', (e) => {
+            this.posLog('pointerdown', e.pointerType, 'button', e.button, 'tool', this.currentTool, 'page', pageIndex, 'active', this.pageViews[pageIndex]?.active);
             if (e.pointerType !== 'pen' && e.pointerType !== 'mouse') return;
             if (e.pointerType === 'mouse' && e.button !== 0) return;   // the right button opens the menu, it doesn't draw
             const view = this.pageViews[pageIndex];
@@ -493,6 +494,7 @@ export const inputMixin = defineMixin({
             if (!isDrawing || !currentStroke) return;
             isDrawing = false;
 
+            if (currentStroke.shape) this.posLog('shape end', e.type, 'points', currentStroke.points.length);
             // A shape without dragging (just a tap) is skipped.
             if (currentStroke.shape && currentStroke.points.length < 2) {
                 topCtx.clearRect(0, 0, this.pageW(pageIndex), this.pageH(pageIndex));

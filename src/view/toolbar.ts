@@ -1,6 +1,6 @@
 import { defineMixin } from './mixin';
 import { Menu, setIcon } from 'obsidian';
-import { ICON_PEN, ICON_ERASER, ICON_HIGHLIGHTER, ICON_LASSO, ICON_UNDO, ICON_REDO, ICON_TRASH, ICON_SELECT_RECT, ICON_MORE, ICON_SHAPE_LINE, ICON_SHAPE_RECT, ICON_SHAPE_ELLIPSE, ICON_FILL, ICON_ARROW, ICON_DASH_SOLID, ICON_DASH_DASHED, ICON_DASH_DOTTED } from '../icons';
+import { ICON_PEN, ICON_ERASER, ICON_HIGHLIGHTER, ICON_LASSO, ICON_UNDO, ICON_REDO, ICON_TRASH, ICON_SELECT_RECT, ICON_MORE, ICON_SHAPE_LINE, ICON_SHAPE_RECT, ICON_SHAPE_ELLIPSE, ICON_FILL, ICON_ARROW, ICON_DASH_SOLID, ICON_DASH_DASHED, ICON_DASH_DOTTED, ICON_DASH_DASHDOT } from '../icons';
 import { Stroke } from '../types';
 import { setSvg } from '../svg';
 
@@ -40,7 +40,44 @@ export const toolbarMixin = defineMixin({
         };
         presets.forEach(c => addSwatch(c, ''));
         const customs = () => kind === 'pen' ? this.customPen : kind === 'shape' ? this.customShape : this.customHigh;
-        customs().forEach(c => { if (!presets.includes(c)) addSwatch(c, 'custom'); });
+        const setCustoms = (next: string[]) => {
+            if (kind === 'pen') this.customPen = next; else if (kind === 'shape') this.customShape = next; else this.customHigh = next;
+            this.persistMemory();
+        };
+        // Custom colours can be removed: the small × (mouse hover), right click or a long press (touch / pen).
+        const removeCustom = (c: string) => {
+            setCustoms(customs().filter(x => x !== c));
+            this.renderPalette(container, presets, current, kind, onChange);
+        };
+        customs().forEach(c => {
+            if (presets.includes(c)) return;
+            addSwatch(c, 'custom');
+            const b = swatches[swatches.length - 1];
+            b.setAttribute('title', `${c} – right click or long press to remove`);
+            const x = b.createSpan({ cls: 'hw-swatch-x', text: '×' });
+            x.setAttribute('aria-label', `Remove ${c}`);
+            x.onclick = (e) => { e.stopPropagation(); removeCustom(c); };
+            const menu = (e: MouseEvent | PointerEvent) => {
+                const m = new Menu();
+                m.addItem(i => i.setTitle('Remove color').setIcon('trash-2').onClick(() => removeCustom(c)));
+                m.showAtMouseEvent(e as MouseEvent);
+            };
+            b.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); menu(e); });
+            let timer = 0, longPressed = false;
+            b.addEventListener('pointerdown', (e) => {
+                if (e.pointerType === 'mouse') return;
+                longPressed = false;
+                const sx = e.clientX, sy = e.clientY;
+                const cancel = () => { window.clearTimeout(timer); b.removeEventListener('pointermove', move); };
+                const move = (ev: PointerEvent) => { if (Math.hypot(ev.clientX - sx, ev.clientY - sy) > 10) cancel(); };
+                b.addEventListener('pointermove', move);
+                b.addEventListener('pointerup', cancel, { once: true });
+                b.addEventListener('pointercancel', cancel, { once: true });
+                timer = window.setTimeout(() => { longPressed = true; cancel(); menu(e); }, 550);
+            });
+            // A long press must not also pick the colour when the finger is lifted.
+            b.addEventListener('click', (e) => { if (longPressed) { longPressed = false; e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+        });
 
         const addBtn = wrapper.createEl("button", { cls: "hw-swatch-add" });
         addBtn.setAttribute('aria-label', 'Custom color');
@@ -50,11 +87,7 @@ export const toolbarMixin = defineMixin({
         picker.oninput = () => { current = picker.value.toLowerCase(); refresh(); onChange(picker.value); };
         picker.onchange = () => {
             const c = picker.value.toLowerCase();
-            if (!presets.includes(c) && !customs().includes(c)) {
-                const next = [c, ...customs()].slice(0, 3);
-                if (kind === 'pen') this.customPen = next; else if (kind === 'shape') this.customShape = next; else this.customHigh = next;
-                this.persistMemory();
-            }
+            if (!presets.includes(c) && !customs().includes(c)) setCustoms([c, ...customs()].slice(0, 3));
             this.renderPalette(container, presets, c, kind, onChange);
         };
 
@@ -217,6 +250,7 @@ export const toolbarMixin = defineMixin({
             ['solid', addOpt(dashRow, ICON_DASH_SOLID, 'Solid', () => { this.shapeDash = 'solid'; refreshShapeMenu(); })],
             ['dashed', addOpt(dashRow, ICON_DASH_DASHED, 'Dashed', () => { this.shapeDash = 'dashed'; refreshShapeMenu(); })],
             ['dotted', addOpt(dashRow, ICON_DASH_DOTTED, 'Dotted', () => { this.shapeDash = 'dotted'; refreshShapeMenu(); })],
+            ['dashdot', addOpt(dashRow, ICON_DASH_DASHDOT, 'Dash-dot', () => { this.shapeDash = 'dashdot'; refreshShapeMenu(); })],
         ];
 
         const extraRow = addGroup("Options");

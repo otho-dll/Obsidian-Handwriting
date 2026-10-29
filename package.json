@@ -1,9 +1,12 @@
 {
   "name": "obsidian-handwriting",
-  "version": "3.10.0",
+  "version": "3.11.0",
   "scripts": {
     "dev": "esbuild main.ts --bundle --watch --format=cjs --external:obsidian --outfile=main.js",
-    "build": "esbuild main.ts --bundle --minify --format=cjs --external:obsidian --outfile=main.js"
+    "build": "esbuild main.ts --bundle --minify --format=cjs --external:obsidian --outfile=main.js",
+    "deploy": "node scripts/deploy.mjs",
+    "deploy:watch": "node scripts/deploy.mjs --watch",
+    "release:local": "npm run build && npm run deploy"
   },
   "dependencies": {
     "obsidian": "latest"

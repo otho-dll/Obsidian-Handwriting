@@ -11,7 +11,7 @@ export interface Stroke {
     isEraser?: boolean;   // old notes only – converted to cut strokes on load
     // Shapes: points = [start, end]
     shape?: 'line' | 'rect' | 'ellipse';
-    dash?: 'solid' | 'dashed' | 'dotted';
+    dash?: 'solid' | 'dashed' | 'dotted' | 'dashdot';
     fill?: boolean;
     arrow?: boolean;
     poly?: boolean;       // freehand stroke drawn as a polyline (pieces of cut shapes)

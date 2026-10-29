@@ -59,6 +59,7 @@ export const menusMixin = defineMixin({
             [
                 { id: 'importpdf', title: 'Import PDF…', icon: 'file-input', run: () => this.importPDF() },
                 { id: 'exportpdf', title: 'Export to PDF', icon: 'file-output', run: () => { void this.exportToPDF(); } },
+                { id: 'print', title: 'Print…', icon: 'printer', run: () => { void this.printNote(); } },
                 { id: 'history', title: 'Version history…', icon: 'history', run: () => this.openVersionHistory() },
             ],
         ];
@@ -132,6 +133,7 @@ export const menusMixin = defineMixin({
                 break;
             case 'importpdf': this.importPDF(); break;
             case 'exportpdf': void this.exportToPDF(); break;
+            case 'print': void this.printNote(); break;
             case 'history': this.openVersionHistory(); break;
         }
     },

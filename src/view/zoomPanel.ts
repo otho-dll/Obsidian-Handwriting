@@ -8,6 +8,8 @@ import { Notice } from 'obsidian';
  */
 export const MAX_ZOOM_PRESETS = 4;
 const pct = (z: number) => `${Math.round(z * 100)}%`;
+/** Same zoom as shown on the button (both rounded to whole percent). */
+const sameZoom = (a: number, b: number) => Math.round(a * 100) === Math.round(b * 100);
 
 export const zoomPanelMixin = defineMixin({
     /** Favourite zoom levels (sorted ascending). */
@@ -16,7 +18,7 @@ export const zoomPanelMixin = defineMixin({
     saveZoomPreset() {
         const st = this.plugin.settings;
         const z = Math.round(this.currentZoom * 100) / 100;
-        if (st.zoomPresets.some(p => Math.abs(p - z) < 0.005)) { new Notice(`${pct(z)} is already a favourite.`); return; }
+        if (st.zoomPresets.some(p => sameZoom(p, z))) { new Notice(`${pct(z)} is already a favourite.`); return; }
         if (st.zoomPresets.length >= MAX_ZOOM_PRESETS) st.zoomPresets.shift();
         st.zoomPresets = [...st.zoomPresets, z].sort((a, b) => a - b);
         void this.plugin.saveSettings();
@@ -77,6 +79,13 @@ export const zoomPanelMixin = defineMixin({
         this.zoomPanel = null;
     },
 
+    /** "+ Save x%" button: shows the current zoom and is hidden when that zoom is already a favourite. */
+    updateZoomAddButton(add: HTMLElement) {
+        const t = `+ Save ${pct(this.currentZoom)}`;
+        if (add.textContent !== t) add.textContent = t;
+        add.toggleClass('hw-hidden', this.plugin.settings.zoomPresets.some(p => sameZoom(p, this.currentZoom)));
+    },
+
     /** Builds the panel content (onlyValue = only the current value, without rebuilding the buttons). */
     refreshZoomPanel(onlyValue = false) {
         const panel = this.zoomPanel;
@@ -84,7 +93,9 @@ export const zoomPanelMixin = defineMixin({
         const cur = panel.querySelector('.hw-zoom-value');
         if (onlyValue && cur) {
             cur.textContent = pct(this.currentZoom);
-            panel.querySelectorAll<HTMLElement>('.hw-zoom-chip').forEach(c => c.toggleClass('active', Math.abs(Number(c.dataset.z) - this.currentZoom) < 0.005));
+            panel.querySelectorAll<HTMLElement>('.hw-zoom-chip').forEach(c => c.toggleClass('active', sameZoom(Number(c.dataset.z), this.currentZoom)));
+            const addBtn = panel.querySelector<HTMLElement>('.hw-zoom-add');
+            if (addBtn) this.updateZoomAddButton(addBtn);
             return;
         }
         panel.empty();
@@ -110,16 +121,17 @@ export const zoomPanelMixin = defineMixin({
         for (const z of st.zoomPresets) {
             const chip = favs.createDiv({ cls: 'hw-zoom-chip' });
             chip.dataset.z = String(z);
-            chip.toggleClass('active', Math.abs(z - this.currentZoom) < 0.005);
+            chip.toggleClass('active', sameZoom(z, this.currentZoom));
             const go = chip.createEl('button', { cls: 'hw-zoom-chip-go', text: pct(z) });
             go.onclick = () => this.zoomKeepingCenter(z);
             const rm = chip.createEl('button', { cls: 'hw-zoom-chip-x', text: '×' });
             rm.setAttribute('aria-label', `Remove ${pct(z)}`);
             rm.onclick = () => this.removeZoomPreset(z);
         }
-        const add = favs.createEl('button', { cls: 'hw-zoom-add', text: `+ Save ${pct(this.currentZoom)}` });
+        const add = favs.createEl('button', { cls: 'hw-zoom-add' });
         add.setAttribute('aria-label', 'Save the current zoom as a favourite');
         add.onclick = () => this.saveZoomPreset();
+        this.updateZoomAddButton(add);
         if (st.zoomPresets.length === 0) panel.createDiv({ cls: 'hw-zoom-hint', text: 'Save the zoom you like to write at – one tap brings it back.' });
 
         // Opening notes at the chosen zoom

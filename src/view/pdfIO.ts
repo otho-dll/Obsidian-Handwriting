@@ -37,6 +37,78 @@ export const pdfIOMixin = defineMixin({
         });
     },
 
+    /**
+     * Draws page i at high resolution from the vector data (not from the screen canvases):
+     * paper, pattern or PDF background, images, highlighter under the pen. Used by PDF export and printing.
+     */
+    async renderPageForExport(i: number, scale: number): Promise<HTMLCanvasElement> {
+        const page = this.noteData.pages[i];
+        const canvas = document.createElement('canvas');
+        const PW = this.pageW(i), PH = this.pageH(i);
+        // Long ("endless") page: lower resolution so the canvas fits the browser limits.
+        const S = Math.min(scale, 30000 / PH, Math.sqrt(160e6 / (PW * PH)));
+        canvas.width = Math.round(PW * S);
+        canvas.height = Math.round(PH * S);
+        const ctx = canvas.getContext('2d')!;
+        const eff = this.effectiveStyle(i);
+        ctx.fillStyle = eff.paper;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const hasBg = !!(page.bgPath || page.bgImage);
+        if (!hasBg) {
+            // Page pattern (dots, lines, grid...) – same as on screen
+            drawPageTemplate(ctx, S, eff.tpl, inkForPaper(eff.paper), PW, PH);
+        } else {
+            // Background (imported PDF) – fitted as on screen (contain)
+            const bgUrl = await this.getPageBgUrl(page);
+            const bg = bgUrl ? await loadImageEl(bgUrl) : null;
+            if (bg) {
+                const k = Math.min(canvas.width / bg.naturalWidth, canvas.height / bg.naturalHeight);
+                const dw = bg.naturalWidth * k, dh = bg.naturalHeight * k;
+                ctx.drawImage(bg, (canvas.width - dw) / 2, (canvas.height - dh) / 2, dw, dh);
+            }
+        }
+
+        // Inserted images (with rotation)
+        for (const img of page.images ?? []) {
+            const url = await this.getImageUrl(img);
+            const el = url ? await loadImageEl(url) : null;
+            if (!el) continue;
+            ctx.save();
+            ctx.translate((img.x + img.w / 2) * S, (img.y + img.h / 2) * S);
+            if (img.rot) ctx.rotate(img.rot);
+            ctx.drawImage(el, (-img.w / 2) * S, (-img.h / 2) * S, img.w * S, img.h * S);
+            ctx.restore();
+        }
+
+        // Strokes: highlighter (semi-transparent) under the pen
+        const hasHigh = page.strokes.some(s => s.isHighlighter);
+        const bottom = document.createElement('canvas');
+        bottom.width = canvas.width;
+        bottom.height = canvas.height;
+        const bCtx = bottom.getContext('2d')!;
+        bCtx.scale(S, S);
+        let hCtx: CanvasRenderingContext2D | null = null;
+        let high: HTMLCanvasElement | null = null;
+        if (hasHigh) {
+            high = document.createElement('canvas');
+            high.width = canvas.width;
+            high.height = canvas.height;
+            hCtx = high.getContext('2d')!;
+            hCtx.scale(S, S);
+        }
+        this.drawPageStrokes(hCtx, bCtx, page.strokes);
+        if (high) {
+            ctx.globalAlpha = 0.4;
+            ctx.drawImage(high, 0, 0);
+            ctx.globalAlpha = 1;
+            high.width = 0;
+        }
+        ctx.drawImage(bottom, 0, 0);
+        bottom.width = 0;
+        return canvas;
+    },
+
     async exportToPDF() {
         const target = await this.pickPdfTarget();
         if (!target) return;
@@ -46,71 +118,8 @@ export const pdfIOMixin = defineMixin({
         try {
             for (let i = 0; i < this.noteData.pages.length; i++) {
                 notice.setMessage(`Preparing PDF… page ${i + 1}/${this.noteData.pages.length}`);
-                const page = this.noteData.pages[i];
-                const canvas = document.createElement('canvas');
+                const canvas = await this.renderPageForExport(i, SCALE);
                 const PW = this.pageW(i), PH = this.pageH(i);
-                // Long ("endless") page: lower resolution so the canvas fits the browser limits.
-                const S = Math.min(SCALE, 30000 / PH, Math.sqrt(160e6 / (PW * PH)));
-                canvas.width = Math.round(PW * S);
-                canvas.height = Math.round(PH * S);
-                const ctx = canvas.getContext('2d')!;
-                const eff = this.effectiveStyle(i);
-                ctx.fillStyle = eff.paper;
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                const hasBg = !!(page.bgPath || page.bgImage);
-                if (!hasBg) {
-                    // Page pattern (dots, lines, grid...) – same as on screen
-                    drawPageTemplate(ctx, S, eff.tpl, inkForPaper(eff.paper), PW, PH);
-                } else {
-                    // Background (imported PDF) – fitted as on screen (contain)
-                    const bgUrl = await this.getPageBgUrl(page);
-                    const bg = bgUrl ? await loadImageEl(bgUrl) : null;
-                    if (bg) {
-                        const k = Math.min(canvas.width / bg.naturalWidth, canvas.height / bg.naturalHeight);
-                        const dw = bg.naturalWidth * k, dh = bg.naturalHeight * k;
-                        ctx.drawImage(bg, (canvas.width - dw) / 2, (canvas.height - dh) / 2, dw, dh);
-                    }
-                }
-
-                // Inserted images (with rotation)
-                for (const img of page.images ?? []) {
-                    const url = await this.getImageUrl(img);
-                    const el = url ? await loadImageEl(url) : null;
-                    if (!el) continue;
-                    ctx.save();
-                    ctx.translate((img.x + img.w / 2) * S, (img.y + img.h / 2) * S);
-                    if (img.rot) ctx.rotate(img.rot);
-                    ctx.drawImage(el, (-img.w / 2) * S, (-img.h / 2) * S, img.w * S, img.h * S);
-                    ctx.restore();
-                }
-
-                // Strokes: highlighter (semi-transparent) under the pen
-                const hasHigh = page.strokes.some(s => s.isHighlighter);
-                const bottom = document.createElement('canvas');
-                bottom.width = canvas.width;
-                bottom.height = canvas.height;
-                const bCtx = bottom.getContext('2d')!;
-                bCtx.scale(S, S);
-                let hCtx: CanvasRenderingContext2D | null = null;
-                let high: HTMLCanvasElement | null = null;
-                if (hasHigh) {
-                    high = document.createElement('canvas');
-                    high.width = canvas.width;
-                    high.height = canvas.height;
-                    hCtx = high.getContext('2d')!;
-                    hCtx.scale(S, S);
-                }
-                this.drawPageStrokes(hCtx, bCtx, page.strokes);
-                if (high) {
-                    ctx.globalAlpha = 0.4;
-                    ctx.drawImage(high, 0, 0);
-                    ctx.globalAlpha = 1;
-                    high.width = 0;
-                }
-                ctx.drawImage(bottom, 0, 0);
-                bottom.width = 0;
-
                 const encoded = await encodeCanvasForPdf(canvas);
                 canvas.width = 0;
                 // Page size in points: A4 (800 units) = 595.28 pt wide.
