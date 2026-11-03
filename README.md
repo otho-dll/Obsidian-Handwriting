@@ -298,7 +298,3 @@ tools/hnote2pdf.py      standalone converter; tools/embed_script.py copies it in
 
 Build with the usual Obsidian sample-plugin setup (`npm install`, `npm run dev` / `npm run build`).
 After changing `tools/hnote2pdf.py`, run `python3 tools/embed_script.py`.
-
-## License
-
-<!-- e.g. MIT – add a LICENSE file -->
