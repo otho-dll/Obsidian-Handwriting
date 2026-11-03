@@ -290,6 +290,13 @@ Settings → **OLED care** – each option on its own:
 - **Desktop-only extras** (Electron / Node APIs, used only on desktop and turned off on mobile): saving PDFs to a folder
   outside the vault, the Windows Snipping Tool integration, and reading images from the system clipboard when the
   browser clipboard is not available. Everything else works on desktop, tablets and phones.
+- **Vault file list:** the plugin lists the files in your vault only to find other `.hnote` notes (so a renamed note
+  doesn't take over another note's hidden folder, and an image moved into a note's folder isn't deleted while another
+  note still uses it) and to offer vault folders as a PDF export location. It reads only `.hnote` files, never your
+  Markdown notes.
+- **Clipboard:** used only when you ask for it – copying / pasting strokes and images, pasting a screenshot, copying a
+  calculator result or the `hnote2pdf.py` command. Nothing is read from the clipboard in the background, except while
+  waiting for a Snipping Tool screenshot you started.
 - Inside your vault the plugin writes only the `.hnote` files, their hidden `.<name>.hnote-data` folders and – when you
   ask for it – `hnote2pdf.py` in the vault root.
 
@@ -315,7 +322,6 @@ npm run deploy       # copy main.js, manifest.json and styles.css into the vault
 ```
 
 After changing `tools/hnote2pdf.py`, run `python3 tools/embed_script.py`.
-<<<<<<< HEAD
 To release: set the same version in `manifest.json` and `package.json`, commit, then push a tag with exactly that
 version (e.g. `git tag 3.15.2 && git push origin 3.15.2`).
 

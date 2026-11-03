@@ -8,7 +8,9 @@ on:
       - "*"
 
 permissions:
-  contents: write
+  contents: write      # create the release
+  id-token: write      # sign the build attestation
+  attestations: write  # store the build attestation
 
 jobs:
   release:
@@ -25,6 +27,16 @@ jobs:
         run: |
           npm ci
           npm run build
+
+      # Lets anyone verify that the release files were built from this repository:
+      #   gh attestation verify main.js --repo <github-user>/<repository>
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: |
+            main.js
+            manifest.json
+            styles.css
 
       - name: Create release
         env:

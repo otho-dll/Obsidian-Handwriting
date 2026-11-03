@@ -474,7 +474,6 @@ export const pagesPanelMixin = defineMixin({
             if (src) {
                 const g = ghost.createEl('canvas');
                 g.width = src.width; g.height = src.height;
-                g.style.height = src.style.height;
                 g.getContext('2d')?.drawImage(src, 0, 0);
             }
             if (moving > 1) ghost.createSpan({ cls: 'hw-pp-ghost-count', text: String(moving) });
