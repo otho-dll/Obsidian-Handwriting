@@ -315,6 +315,7 @@ npm run deploy       # copy main.js, manifest.json and styles.css into the vault
 ```
 
 After changing `tools/hnote2pdf.py`, run `python3 tools/embed_script.py`.
+<<<<<<< HEAD
 To release: set the same version in `manifest.json` and `package.json`, commit, then push a tag with exactly that
 version (e.g. `git tag 3.15.2 && git push origin 3.15.2`).
 
@@ -322,3 +323,5 @@ version (e.g. `git tag 3.15.2 && git push origin 3.15.2`).
 
 [MIT License](LICENSE) – free to use, change and share, also commercially, as long as the copyright notice
 (with the link to this repository) and the license text are kept in all copies.
+=======
+>>>>>>> 6ddd1353ee29a322439428ee3998a34ce99b9b43
