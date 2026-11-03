@@ -12,6 +12,8 @@ export interface Stroke {
     // Shapes: points = [start, end]
     shape?: 'line' | 'rect' | 'ellipse';
     dash?: 'solid' | 'dashed' | 'dotted' | 'dashdot';
+    fillAlpha?: number;   // fill opacity 0–1 of a filled shape (missing = 1, solid)
+    noLine?: boolean;     // filled shape drawn without its outline
     fill?: boolean;
     arrow?: boolean;
     poly?: boolean;       // freehand stroke drawn as a polyline (pieces of cut shapes)

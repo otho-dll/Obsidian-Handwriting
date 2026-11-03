@@ -1,13 +1,12 @@
 import { defineMixin } from './mixin';
 import { Menu } from 'obsidian';
-import { PageTemplate, PAGE_TEMPLATES, PAPER_COLORS, inkForPaper, templateCssVars, TEMPLATE_CSS_VARS } from '../templates';
-import { newPage, PAGE_FORMATS, PageFormat, formatOf } from '../pageFormat';
-import { PageOrderModal } from '../pageOrderModal';
-import { appendSvg } from '../svg';
+import { PageTemplate, PAGE_TEMPLATES, inkForPaper, templateCssVars, TEMPLATE_CSS_VARS } from '../templates';
+import { newPage, PageFormat } from '../pageFormat';
 
 export const pageToolsMixin = defineMixin({
     // --- PAGE OPERATIONS (button at the bottom of the note + "More" menu and right-click menu) ---
     addPageAt(position: number) {
+        if (this.endlessBlocksPages()) return;
         const pos = Math.max(0, Math.min(position, this.noteData.pages.length));
         this.noteData.pages.splice(pos, 0, newPage(this.noteData));
         this.activePageIndex = pos;
@@ -33,6 +32,7 @@ export const pageToolsMixin = defineMixin({
     addPageQuickItems(menu: Menu) {
         const n = this.noteData.pages.length;
         const i0 = this.activePageIndex;
+        menu.addItem(it => it.setTitle('Pages panel').setIcon('hw-pages').onClick(() => { this.openPagesPanel(); this.ppReveal(i0, true); }));
         menu.addItem(it => it.setTitle('Add page before').setIcon('arrow-up-from-line').onClick(() => this.addPageAt(this.activePageIndex)));
         menu.addItem(it => it.setTitle('Add page after').setIcon('arrow-down-from-line').onClick(() => this.addPageAt(this.activePageIndex + 1)));
         menu.addItem(it => it.setTitle('Move page up').setIcon('arrow-up').setDisabled(i0 === 0).onClick(() => this.movePage(-1)));
@@ -42,6 +42,8 @@ export const pageToolsMixin = defineMixin({
 
     /** "Add new page" button at the bottom of the last page. */
     createAddPageButton() {
+        // An endless page grows by itself – no more pages in such a note.
+        if (this.noteData.pages.some(p => p.endless)) return;
         const row = this.pagesWrapper.createEl('div', { cls: 'hw-add-page-row' });
         const btn = row.createEl('button', { cls: 'hw-add-page-btn', text: '+ Add new page' });
         row.addEventListener('pointerdown', (e) => e.stopPropagation());
@@ -63,29 +65,8 @@ export const pageToolsMixin = defineMixin({
     // New page layout: number = former page index, null = new blank page. Omitted pages are deleted.
     applyPageLayout(layout: (number | null)[], focus: number) {
         const pages = this.noteData.pages;
-        // When a page disappears, first keep the current state in the version history.
-        const kept = new Set(layout.filter((i): i is number => i !== null));
-        if (pages.some((_, i) => !kept.has(i))) void this.snapshotNow('delete');
         const next = layout.map(i => (i === null ? newPage(this.noteData) : pages[i])).filter(Boolean);
-        if (next.length === 0) next.push(newPage(this.noteData));
-        this.noteData.pages = next;
-        this.activePageIndex = Math.max(0, Math.min(focus, next.length - 1));
-        this.requestSave();
-        this.buildPageElements();
-        this.scrollToPage(this.activePageIndex);
-    },
-
-    /** One dialog: order / adding / deleting pages, plus pattern and background colour. */
-    openPagesDialog(tab: 'pages' | 'style' = 'pages') {
-        new PageOrderModal(
-            this.app,
-            this.noteData.pages.length,
-            this.activePageIndex,
-            (i, canvas) => this.renderThumbInner(i, canvas),
-            (layout, focus) => this.applyPageLayout(layout, focus),
-            (container) => this.buildPageStyleContent(container),
-            tab,
-        ).open();
+        this.applyPagesArray(next, focus, null);
     },
 
     // --- PAGE PATTERN AND COLOUR ---
@@ -105,7 +86,6 @@ export const pageToolsMixin = defineMixin({
         const ink = inkForPaper(paper);
         const el = view.container;
         el.toggleClass('hw-oled-inv', paper !== real);
-        this.minimapCells[i]?.toggleClass('hw-oled-inv', paper !== real);
         PAGE_TEMPLATES.forEach(t => el.removeClass(`hw-tpl-${t.id}`));
         el.addClass(`hw-tpl-${tpl}`);
         // Page pattern as CSS variables (geometry depends on the page size – see templates.ts).
@@ -120,7 +100,7 @@ export const pageToolsMixin = defineMixin({
 
     applyAllPageStyles() {
         this.pageViews.forEach((_, i) => this.applyPageStyle(i));
-        this.minimapCanvases.forEach((c, i) => { if (c) this.markThumbDirty(i); });
+        this.noteData.pages.forEach((_, i) => this.markThumbDirty(i));
     },
 
     // scope 'all' changes the whole note's setting (and clears per-page settings), 'page' only one page.
@@ -205,159 +185,9 @@ export const pageToolsMixin = defineMixin({
         this.scheduleRedrawAfterZoom();
     },
 
-    // Pattern and background colour panel. Two buttons choose the scope: the selected page or all;
-    // for the "page" scope you can pick which page (arrows, scrolling the view to it).
+    /** Page style of one page: the pages panel opens with the style popover. */
     openPageStylePanel(_anchor?: { left: number; top: number; bottom: number }) {
-        this.openPagesDialog('style');
-    },
-
-    /**
-     * "Page style" tab, rebuilt in v3.21: no inner scroll areas. A live preview of the page sits next to the
-     * scope choice (this page / all pages); size, pattern and paper are compact rows that wrap to the width.
-     * On wide dialogs the preview and scope form a left column, the options a right column (container query).
-     */
-    buildPageStyleContent(panel: HTMLElement) {
-        const total = this.pageViews.length;
-        let idx = Math.max(0, Math.min(this.activePageIndex, total - 1));
-        // The host measures the width (container query); the layout itself lives in the inner element.
-        panel.addClass('hw-ps2-host');
-        const root = panel.createDiv({ cls: 'hw-ps2' });
-        const section = (parent: HTMLElement, title: string) => {
-            const sec = parent.createDiv({ cls: 'hw-ps2-section' });
-            sec.createDiv({ cls: 'hw-ps2-label', text: title });
-            return sec;
-        };
-
-        // --- Left: preview + which pages ---
-        const side = root.createDiv({ cls: 'hw-ps2-side' });
-        const previewBox = side.createDiv({ cls: 'hw-ps2-preview' });
-        const preview = previewBox.createEl('canvas');
-        preview.width = 300; preview.height = 424;
-
-        const target = side.createDiv({ cls: 'hw-ps2-target' });
-        const seg = target.createDiv({ cls: 'hw-ps2-seg' });
-        const bPage = seg.createEl('button', { text: 'This page' });
-        const bAll = seg.createEl('button', { text: 'All pages' });
-
-        const pager = target.createDiv({ cls: 'hw-ps2-pager' });
-        const prev = pager.createEl('button', { cls: 'hw-ps2-pager-btn', text: '‹' });
-        const pageLabel = pager.createDiv({ cls: 'hw-ps2-pager-label' });
-        pageLabel.createSpan({ text: 'Page' });
-        const pageInput = pageLabel.createEl('input', { cls: 'hw-ps2-pager-input', type: 'number' });
-        pageInput.min = '1';
-        pageInput.max = String(total);
-        pageInput.setAttribute('aria-label', 'Page number');
-        pageLabel.createSpan({ text: `/ ${total}` });
-        const next = pager.createEl('button', { cls: 'hw-ps2-pager-btn', text: '›' });
-        prev.setAttribute('aria-label', 'Previous page');
-        next.setAttribute('aria-label', 'Next page');
-        const allLabel = target.createDiv({ cls: 'hw-ps2-note', text: 'Every page of this note and new pages.' });
-        const resetBtn = target.createEl('button', { cls: 'hw-ps2-reset', text: 'Use note default' });
-
-        // --- Right: options ---
-        const opts = root.createDiv({ cls: 'hw-ps2-opts' });
-
-        const fmtSec = section(opts, 'Size');
-        const fmtRow = fmtSec.createDiv({ cls: 'hw-ps2-seg hw-ps2-formats' });
-        const fmtShort: Record<PageFormat, string> = { a4: 'Portrait', a4l: 'Landscape', endless: 'Endless' };
-        const fmtBtns: [PageFormat, HTMLButtonElement][] = PAGE_FORMATS.map(f => {
-            const b = fmtRow.createEl('button');
-            appendSvg(b, this.formatPreviewSvg(f.id));
-            b.createSpan({ text: fmtShort[f.id] ?? f.label });
-            b.setAttribute('title', `${f.label} – ${f.hint}`);
-            b.onclick = () => {
-                const keep = this.pageStyleScope === 'page' ? idx : -1;
-                this.setPageFormat(this.pageStyleScope, idx, f.id);
-                if (keep >= 0) this.activePageIndex = keep;
-                refresh();
-            };
-            return [f.id, b];
-        });
-        const fmtNote = fmtSec.createDiv({ cls: 'hw-ps2-note', text: 'Pages with an imported PDF keep their size.' });
-
-        const tplSec = section(opts, 'Pattern');
-        const tplGrid = tplSec.createDiv({ cls: 'hw-ps2-tpls' });
-        const tplBtns: [PageTemplate, HTMLElement][] = PAGE_TEMPLATES.map(t => {
-            const b = tplGrid.createEl('button', { cls: 'hw-ps2-tpl' });
-            appendSvg(b, this.templatePreviewSvg(t.id));
-            b.createSpan({ text: t.label });
-            b.setAttribute('title', t.label);
-            b.onclick = () => { this.setPageStyle(this.pageStyleScope, idx, { tpl: t.id }); refresh(); };
-            return [t.id, b];
-        });
-
-        const paperSec = section(opts, 'Paper');
-        const paperRow = paperSec.createDiv({ cls: 'hw-ps2-papers' });
-        const paperBtns: [string, HTMLElement][] = PAPER_COLORS.map(c => {
-            const b = paperRow.createEl('button', { cls: 'hw-swatch' });
-            b.style.setProperty('--sw', c);
-            b.setAttribute('aria-label', c);
-            b.setAttribute('title', c);
-            b.onclick = () => { this.setPageStyle(this.pageStyleScope, idx, { paper: c }); refresh(); };
-            return [c, b];
-        });
-        const addBtn = paperRow.createEl('button', { cls: 'hw-swatch-add' });
-        addBtn.setAttribute('aria-label', 'Custom color');
-        addBtn.setAttribute('title', 'Custom color');
-        const picker = paperRow.createEl('input', { type: 'color', cls: 'hw-color-input' });
-        addBtn.onclick = () => { picker.value = currentStyle().paper; picker.click(); };
-        picker.oninput = () => { this.setPageStyle(this.pageStyleScope, idx, { paper: picker.value.toLowerCase() }); refresh(); };
-
-        resetBtn.onclick = () => {
-            const p = this.noteData.pages[idx];
-            if (p) { delete p.tpl; delete p.paper; }
-            this.requestSave();
-            this.applyAllPageStyles();
-            refresh();
-        };
-
-        const currentStyle = () => this.pageStyleScope === 'all'
-            ? { tpl: this.noteData.defaults?.tpl ?? this.plugin.settings.defaultTemplate, paper: this.noteData.defaults?.paper ?? this.plugin.settings.defaultPaper }
-            : this.effectiveStyle(idx);
-
-        // The preview is redrawn at most once per frame (the colour picker reports many changes).
-        let previewRaf = 0;
-        const drawPreview = () => {
-            if (previewRaf) return;
-            previewRaf = window.requestAnimationFrame(() => { previewRaf = 0; void this.renderThumbInner(idx, preview); });
-        };
-
-        const refresh = () => {
-            const single = this.pageStyleScope === 'page';
-            bPage.toggleClass('active', single);
-            bAll.toggleClass('active', !single);
-            pager.toggleClass('hw-hidden', !single);
-            allLabel.toggleClass('hw-hidden', single);
-            if (pageInput.value !== String(idx + 1)) pageInput.value = String(idx + 1);
-            prev.disabled = idx <= 0;
-            next.disabled = idx >= total - 1;
-            const cur = currentStyle();
-            tplBtns.forEach(([id, b]) => b.toggleClass('active', cur.tpl === id));
-            const pg = this.noteData.pages[idx];
-            const locked = single && !!pg && !!(pg.bgPath || pg.bgImage);
-            const curFmt: PageFormat = single ? (pg ? formatOf(pg) : 'a4') : (this.noteData.defaults?.format ?? 'a4');
-            fmtBtns.forEach(([id, b]) => { b.toggleClass('active', curFmt === id); b.disabled = locked; });
-            fmtNote.toggleClass('hw-hidden', !locked);
-            paperBtns.forEach(([c, b]) => b.toggleClass('active', cur.paper === c));
-            resetBtn.toggleClass('hw-hidden', !(single && pg && (pg.tpl || pg.paper)));
-            drawPreview();
-        };
-        const goTo = (i: number) => { idx = Math.max(0, Math.min(total - 1, i)); this.scrollToPage(idx); refresh(); };
-        prev.onclick = () => goTo(idx - 1);
-        next.onclick = () => goTo(idx + 1);
-        // The page number can also be typed (Enter or leaving the field confirms).
-        const commitInput = () => {
-            const n = parseInt(pageInput.value, 10);
-            if (Number.isFinite(n)) goTo(n - 1); else refresh();
-        };
-        pageInput.onchange = commitInput;
-        pageInput.addEventListener('keydown', (e: KeyboardEvent) => {
-            e.stopPropagation();
-            if (e.key === 'Enter') { e.preventDefault(); commitInput(); pageInput.blur(); }
-        });
-        bPage.onclick = () => { this.pageStyleScope = 'page'; refresh(); };
-        bAll.onclick = () => { this.pageStyleScope = 'all'; refresh(); };
-        refresh();
+        this.openPageStylePop([Math.max(0, Math.min(this.activePageIndex, this.noteData.pages.length - 1))]);
     },
 });
 export type PageToolsMethods = typeof pageToolsMixin;

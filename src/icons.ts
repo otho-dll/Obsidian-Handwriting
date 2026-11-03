@@ -17,6 +17,10 @@ export const ICON_IMAGE = `<rect x="3" y="3" width="18" height="18" rx="2"></rec
 export const ICON_SHAPE_LINE = `<path d="M5 19 19 5"></path>`;
 export const ICON_SHAPE_RECT = `<rect x="4" y="5" width="16" height="14" rx="1"></rect>`;
 export const ICON_SHAPE_ELLIPSE = `<circle cx="12" cy="12" r="8"></circle>`;
+export const ICON_FILL_NONE = `<rect x="4" y="5" width="16" height="14" rx="1"></rect>`;
+export const ICON_FILL_LIGHT = `<rect x="4" y="5" width="16" height="14" rx="1" fill="currentColor" fill-opacity="0.3"></rect>`;
+export const ICON_NO_OUTLINE = `<rect x="4" y="5" width="16" height="14" rx="1" fill="currentColor" fill-opacity="0.35" stroke="none"></rect>`;
+export const ICON_LASSO_LOOP = `<path d="M7 22a5 5 0 0 1-2-4"></path><path d="M7 16.9c1 .4 2 .7 3 .9"></path><path d="M3.3 14A6.8 6.8 0 0 1 2 10c0-4.4 4.5-8 10-8s10 3.6 10 8c0 .7-.1 1.3-.3 2"></path><circle cx="5" cy="16" r="2"></circle><path d="M14.3 22h-.1a.4.4 0 0 1-.2-.3v-10c0-.2.1-.3.3-.3h.2l7.3 6a.3.3 0 0 1-.2.6h-4.5l-2.6 3.9a.4.4 0 0 1-.3.1z"></path>`;
 export const ICON_FILL = `<rect x="4" y="5" width="16" height="14" rx="1" fill="currentColor"></rect>`;
 export const ICON_ARROW = `<path d="M5 19 19 5"></path><path d="M10 5h9v9"></path>`;
 export const ICON_DASH_SOLID = `<path d="M3 12h18"></path>`;
@@ -25,7 +29,8 @@ export const ICON_DASH_DASHDOT = `<path d="M2 12h7"></path><path d="M12.5 12h.01
 export const ICON_DASH_DOTTED = `<path d="M4 12h.01"></path><path d="M9 12h.01"></path><path d="M14 12h.01"></path><path d="M19 12h.01"></path>`;
 export const ICON_CALC = `<rect x="4" y="2" width="16" height="20" rx="2"></rect><path d="M8 6h8"></path><path d="M8 11h.01"></path><path d="M12 11h.01"></path><path d="M16 11h.01"></path><path d="M8 15h.01"></path><path d="M12 15h.01"></path><path d="M16 15h.01"></path><path d="M8 19h.01"></path><path d="M12 19h.01"></path><path d="M16 19h.01"></path>`;
 export const ICON_PLOT = `<path d="M3 3v18h18"></path><path d="M7 15c2-8 4-8 6-3s4 3 5-5"></path>`;
-export const ICON_PAGES = `<rect x="7" y="3" width="13" height="16" rx="2"></rect><path d="M4 7v12a2 2 0 0 0 2 2h10"></path>`;
+export const ICON_PAGE_STYLE = `<rect x="5" y="3" width="14" height="18" rx="2"></rect><path d="M8.5 8h7M8.5 12h7M8.5 16h4"></path>`;
+export const ICON_PAGES = `<path d="M6.5 3h6.5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H8.5L4.5 17V5a2 2 0 0 1 2-2z"></path><path d="M4.5 17h4v4"></path><path d="M17.5 4.5a1.5 1.5 0 0 1 1.5 1.5v12a1.5 1.5 0 0 1-1.5 1.5"></path><path d="M20.5 4.5a1.5 1.5 0 0 1 1.5 1.5v12a1.5 1.5 0 0 1-1.5 1.5"></path>`;
 export const ICON_PDF_IN = `<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path><path d="M12 11v6"></path><path d="m9.5 14.5 2.5 2.5 2.5-2.5"></path>`;
 export const ICON_PRINT = `<path d="M6 9V3h12v6"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><path d="M6 14h12v7H6z"></path>`;
 export const ICON_PDF_OUT = `<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path><path d="M12 17v-6"></path><path d="m9.5 13.5 2.5-2.5 2.5 2.5"></path>`;

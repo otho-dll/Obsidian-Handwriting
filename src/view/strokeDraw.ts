@@ -131,8 +131,15 @@ export const strokeDrawMixin = defineMixin({
             const ry = Math.abs(by - ay) / 2;
             ctx.ellipse((ax + bx) / 2, (ay + by) / 2, rx, ry, 0, 0, Math.PI * 2);
         }
-        if (stroke.fill && stroke.shape !== 'line') ctx.fill();
-        ctx.stroke();
+        const filled = !!stroke.fill && stroke.shape !== 'line';
+        if (filled) {
+            // Light fill: the colour with reduced opacity; the outline stays fully opaque.
+            const a = ctx.globalAlpha;
+            ctx.globalAlpha = a * Math.max(0, Math.min(1, stroke.fillAlpha ?? 1));
+            ctx.fill();
+            ctx.globalAlpha = a;
+        }
+        if (!(filled && stroke.noLine)) ctx.stroke();
         if (rotated) ctx.restore();
 
         if (stroke.shape === 'line' && stroke.arrow) {

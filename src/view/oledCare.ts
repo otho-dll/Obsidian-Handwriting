@@ -4,7 +4,7 @@ import { defineMixin } from './mixin';
  * OLED screen protection (Settings → OLED care). Four independent options:
  * 1. Dark paper – pages shown in a dark version (dark background, light ink). Screen only:
  *    the file, thumbnails in dialogs and PDF export are unchanged.
- * 2. Dimming the toolbar and minimap while writing – they come back when the cursor / pen gets close.
+ * 2. Dimming the toolbar and page rail while writing – they come back when the cursor / pen gets close.
  * 3. Pixel shift – every few minutes the whole view moves by 1–2 px (edges don't stay in one place).
  * 4. Dim when idle – after the chosen time without activity the view fades almost to black.
  */
@@ -29,7 +29,7 @@ export function isLightPaper(hex: string): boolean {
 const SHIFT_STEPS: [number, number][] = [[0, 0], [1, 0], [2, 1], [1, 2], [0, 2], [-1, 1], [-2, 0], [-1, -1], [0, -2], [1, -1]];
 const SHIFT_EVERY_MS = 3 * 60e3;
 const DIM_UI_AFTER_MS = 1500;      // the toolbar fades after 1.5 s of writing
-const UI_WAKE_DISTANCE = 70;       // px from the toolbar / minimap at which they come back
+const UI_WAKE_DISTANCE = 70;       // px from the toolbar / page rail at which they come back
 
 export const oledCareMixin = defineMixin({
     /** Paper colour to display (dark when dark paper is on). */
@@ -58,10 +58,10 @@ export const oledCareMixin = defineMixin({
             this.registerDomEvent(window, ev, activity, { capture: true, passive: true } as AddEventListenerOptions);
         }
 
-        // Dimming the toolbar and minimap while writing.
+        // Dimming the toolbar and page rail while writing.
         this.registerDomEvent(this.scrollArea, 'pointerdown', (e: PointerEvent) => {
             if (!this.plugin.settings.oledDimToolbar) return;
-            if (this.minimapEl && this.minimapEl.contains(e.target as Node)) return;
+            if (((this.railEl && this.railEl.contains(e.target as Node)) || (this.pagesPanelEl && this.pagesPanelEl.contains(e.target as Node)))) return;
             if (this.oledDimTimer !== null) window.clearTimeout(this.oledDimTimer);
             this.oledDimTimer = window.setTimeout(() => { this.oledDimTimer = null; this.setUiDimmed(true); }, DIM_UI_AFTER_MS);
         }, { capture: true });
@@ -71,9 +71,9 @@ export const oledCareMixin = defineMixin({
             if (this.nearUi(e.clientX, e.clientY)) this.setUiDimmed(false);
         });
         this.registerDomEvent(root, 'pointerdown', (e: PointerEvent) => {
-            // touching the toolbar / minimap brightens them immediately (and works normally)
+            // touching the toolbar / page rail brightens them immediately (and works normally)
             if (this.oledUiDimmed && !this.scrollArea.contains(e.target as Node)) this.setUiDimmed(false);
-            if (this.oledUiDimmed && this.minimapEl?.contains(e.target as Node)) this.setUiDimmed(false);
+            if (this.oledUiDimmed && this.railEl?.contains(e.target as Node)) this.setUiDimmed(false);
         }, { capture: true });
 
         this.oledLastInput = Date.now();
@@ -90,7 +90,7 @@ export const oledCareMixin = defineMixin({
             const r = el.getBoundingClientRect();
             return x > r.left - UI_WAKE_DISTANCE && x < r.right + UI_WAKE_DISTANCE && y > r.top - UI_WAKE_DISTANCE && y < r.bottom + UI_WAKE_DISTANCE;
         };
-        return near(tb) || near(this.minimapEl);
+        return near(tb) || near(this.railEl);
     },
 
     setUiDimmed(on: boolean) {

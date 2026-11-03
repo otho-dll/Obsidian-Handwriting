@@ -1,7 +1,8 @@
 import { defineMixin } from './mixin';
 import { Menu, setIcon } from 'obsidian';
-import { ICON_PEN, ICON_ERASER, ICON_HIGHLIGHTER, ICON_LASSO, ICON_UNDO, ICON_REDO, ICON_TRASH, ICON_SELECT_RECT, ICON_MORE, ICON_SHAPE_LINE, ICON_SHAPE_RECT, ICON_SHAPE_ELLIPSE, ICON_FILL, ICON_ARROW, ICON_DASH_SOLID, ICON_DASH_DASHED, ICON_DASH_DOTTED, ICON_DASH_DASHDOT } from '../icons';
+import { ICON_PEN, ICON_ERASER, ICON_HIGHLIGHTER, ICON_LASSO, ICON_UNDO, ICON_REDO, ICON_TRASH, ICON_SELECT_RECT, ICON_MORE, ICON_SHAPE_LINE, ICON_SHAPE_RECT, ICON_SHAPE_ELLIPSE, ICON_FILL, ICON_FILL_NONE, ICON_FILL_LIGHT, ICON_NO_OUTLINE, ICON_LASSO_LOOP, ICON_ARROW, ICON_DASH_SOLID, ICON_DASH_DASHED, ICON_DASH_DOTTED, ICON_DASH_DASHDOT } from '../icons';
 import { Stroke } from '../types';
+import type { HandwritingSettings } from '../settings';
 import { setSvg } from '../svg';
 
 export const toolbarMixin = defineMixin({
@@ -107,7 +108,7 @@ export const toolbarMixin = defineMixin({
         label(eraserBtn, 'Eraser');
         const highBtn = this.createToolBtn(secTools, ICON_HIGHLIGHTER);
         label(highBtn, 'Highlighter');
-        const selIcon = () => this.plugin.settings.selectMode === 'rect' ? ICON_SELECT_RECT : ICON_LASSO;
+        const selIcon = () => this.plugin.settings.selectMode === 'rect' ? ICON_SELECT_RECT : ICON_LASSO_LOOP;
         const selLabel = () => this.plugin.settings.selectMode === 'rect' ? 'Rectangle selection (click again to change mode)' : 'Lasso selection (click again to change mode)';
         const lassoBtn = this.createToolBtn(secTools, selIcon());
         label(lassoBtn, selLabel());
@@ -146,10 +147,7 @@ export const toolbarMixin = defineMixin({
         const styleInline = toolbar.createEl("div", { cls: "hw-tool-section hw-style-inline" });
         // Thickness and opacity: one button (a dot in the current thickness, colour and opacity),
         // with the choice in a small menu – the toolbar stays readable.
-        const secThickness = styleInline.createEl("div", { cls: "hw-tool-section" });
-        const sizeBtn = secThickness.createEl("button", { cls: "hw-tool-btn hw-size-btn" });
-        const sizeDot = sizeBtn.createSpan({ cls: "hw-size-dot" });
-        label(sizeBtn, 'Thickness and opacity');
+        // Thickness and opacity are not on the toolbar: tapping the active tool again opens them (sizePop).
         const sizePop = document.body.createEl("div", { cls: "hw-menu hw-size-pop" });
         sizePop.style.display = 'none';
         this.register(() => sizePop.remove());
@@ -191,9 +189,43 @@ export const toolbarMixin = defineMixin({
         };
         const closeSizePop = () => { sizePop.style.display = 'none'; };
 
+        // What the eraser erases (only shown for the eraser): shapes on/off, highlighter off / whole / partial.
+        const eraseGroup = sizePop.createDiv({ cls: "hw-menu-group hw-erase-opts" });
+        eraseGroup.createDiv({ cls: "hw-menu-title", text: "Eraser erases" });
+        const shapeRowEl = eraseGroup.createDiv({ cls: 'hw-erase-row' });
+        shapeRowEl.createSpan({ cls: 'hw-erase-name', text: 'Shapes' });
+        // A button styled as a switch (Obsidian themes draw checkboxes with a tick, which looked broken here).
+        const shapeSwitch = shapeRowEl.createEl('button', { cls: 'hw-switch' });
+        shapeSwitch.createSpan({ cls: 'hw-switch-knob' });
+        shapeSwitch.setAttribute('role', 'switch');
+        shapeSwitch.setAttribute('aria-label', 'Eraser erases shapes');
+        shapeSwitch.onclick = () => { this.plugin.settings.shapeEraseOn = !this.plugin.settings.shapeEraseOn; void this.plugin.saveSettings(); refreshEraseGroup(); };
+        const hlRowEl = eraseGroup.createDiv({ cls: 'hw-erase-row' });
+        hlRowEl.createSpan({ cls: 'hw-erase-name', text: 'Highlighter' });
+        const hlSeg = hlRowEl.createDiv({ cls: 'hw-erase-seg' });
+        const hlOpts: [HandwritingSettings['highlighterErase'], string, string][] = [
+            ['off', 'Off', 'The eraser leaves the highlighter alone'],
+            ['whole', 'Whole', 'Touching a highlighter stroke removes all of it'],
+            ['partial', 'Part', 'The eraser cuts out only the part it passes over'],
+        ];
+        const hlBtns = hlOpts.map(([v, text, tip]) => {
+            const b = hlSeg.createEl('button', { text });
+            b.setAttribute('title', tip);
+            b.setAttribute('aria-label', `Highlighter: ${tip}`);
+            b.onclick = () => { this.plugin.settings.highlighterErase = v; void this.plugin.saveSettings(); refreshEraseGroup(); };
+            return [v, b] as const;
+        });
+        const refreshEraseGroup = () => {
+            const st = this.plugin.settings;
+            eraseGroup.style.display = this.currentTool === 'eraser' ? '' : 'none';
+            shapeSwitch.toggleClass('is-on', st.shapeEraseOn);
+            shapeSwitch.setAttribute('aria-checked', String(st.shapeEraseOn));
+            hlBtns.forEach(([v, b]) => b.toggleClass('active', st.highlighterErase === v));
+        };
+
         const styleBtn = toolbar.createEl("button", { cls: "hw-tool-btn hw-style-btn" });
         styleBtn.createEl("span", { cls: "hw-style-dot" });
-        label(styleBtn, 'Color and thickness');
+        label(styleBtn, 'Color');
         styleBtn.style.display = 'none';
 
         toolbar.createEl("div", { cls: "hw-toolbar-spacer" });
@@ -238,6 +270,15 @@ export const toolbarMixin = defineMixin({
             return b;
         };
 
+        const shapeThRow = addGroup("Thickness");
+        shapeThRow.addClass('hw-thickness-presets');
+        const shapeThBtns = ['sm', 'md', 'lg'].map((sz, i) => {
+            const b = shapeThRow.createEl('button', { cls: 'hw-thickness-btn' });
+            b.createEl('div', { cls: `hw-dot hw-dot-${sz}` });
+            b.setAttribute('aria-label', ['Thin', 'Medium', 'Thick'][i]);
+            b.onclick = () => pickSize(i);
+            return b;
+        });
         const shapeRow = addGroup("Shape");
         const shapeOpts: [NonNullable<Stroke['shape']>, HTMLElement][] = [
             ['line', addOpt(shapeRow, ICON_SHAPE_LINE, 'Line', () => { this.shapeType = 'line'; refreshShapeMenu(); })],
@@ -253,17 +294,30 @@ export const toolbarMixin = defineMixin({
             ['dashdot', addOpt(dashRow, ICON_DASH_DASHDOT, 'Dash-dot', () => { this.shapeDash = 'dashdot'; refreshShapeMenu(); })],
         ];
 
+        // Fill (rectangle / ellipse): outline only, solid, light fill with outline, light fill only.
+        // (A solid fill without outline looks the same as with it, so that option doesn't exist.)
+        const fillRow = addGroup("Fill");
+        const fillGroup = fillRow.parentElement!;
+        const setFill = (f: 'none' | 'solid' | 'light', line: boolean) => { this.shapeFill = f; this.shapeLineOn = line; refreshShapeMenu(); };
+        const fillOpts: ['none' | 'solid' | 'light', boolean, HTMLElement][] = [
+            ['none', true, addOpt(fillRow, ICON_FILL_NONE, 'Outline only', () => setFill('none', true))],
+            ['solid', true, addOpt(fillRow, ICON_FILL, 'Solid fill', () => setFill('solid', true))],
+            ['light', true, addOpt(fillRow, ICON_FILL_LIGHT, 'Light fill with outline', () => setFill('light', true))],
+            ['light', false, addOpt(fillRow, ICON_NO_OUTLINE, 'Light fill only (no outline)', () => setFill('light', false))],
+        ];
         const extraRow = addGroup("Options");
-        const fillBtn = addOpt(extraRow, ICON_FILL, 'Fill with color', () => { this.shapeFill = !this.shapeFill; refreshShapeMenu(); });
+        const arrowGroup = extraRow.parentElement!;
         const arrowBtn = addOpt(extraRow, ICON_ARROW, 'Arrow at the end', () => { this.shapeArrow = !this.shapeArrow; refreshShapeMenu(); });
 
         const refreshShapeMenu = () => {
             shapeOpts.forEach(([t, b]) => b.toggleClass('active', this.shapeType === t));
             dashOpts.forEach(([d, b]) => b.toggleClass('active', this.shapeDash === d));
-            fillBtn.toggleClass('active', this.shapeFill);
+            // solid + "no outline" from older settings counts as solid
+            const line = this.shapeFill === 'light' ? this.shapeLineOn : true;
+            fillOpts.forEach(([f, l, b]) => b.toggleClass('active', this.shapeFill === f && l === line));
             arrowBtn.toggleClass('active', this.shapeArrow);
-            fillBtn.style.display = this.shapeType === 'line' ? 'none' : '';
-            arrowBtn.style.display = this.shapeType === 'line' ? '' : 'none';
+            fillGroup.style.display = this.shapeType === 'line' ? 'none' : '';
+            arrowGroup.style.display = this.shapeType === 'line' ? '' : 'none';
             setSvg(shapeBtn, this.iconSvg(this.shapeIcon()));
             this.persistMemory();
             if (this.refreshToolbarUI) this.refreshToolbarUI();
@@ -279,8 +333,9 @@ export const toolbarMixin = defineMixin({
             const t = e.target as Node;
             if (!secShapes.contains(t) && !shapeMenu.contains(t)) closeShapeMenu();
             const inSize = sizePop.contains(t);
-            if (!styleBtn.contains(t) && !stylePop.contains(t) && !inSize) closeStylePop();
-            if (!inSize && !sizeBtn.contains(t)) closeSizePop();
+            const onTool = toolBtnOf(this.currentTool)?.contains(t) ?? false;   // the active tool's button toggles its own options
+            if (!styleBtn.contains(t) && !stylePop.contains(t)) closeStylePop();
+            if (!inSize && !onTool) closeSizePop();
         }, { capture: true });
 
         refreshShapeMenu();
@@ -298,20 +353,13 @@ export const toolbarMixin = defineMixin({
             toolbar.toggleClass('hw-compact', c);
             closeSizePop();
             if (c) {
-                // Narrow screen: colours, thickness and opacity together in one panel (no menu in a menu).
+                // Narrow screen: the colours go into a panel under one button.
                 stylePop.appendChild(styleInline);
-                stylePop.appendChild(thGroup);
-                stylePop.appendChild(alphaGroup);
-                sizeBtn.style.display = 'none';
-                styleBtn.style.display = '';
             } else {
                 toolbar.insertBefore(styleInline, styleBtn);
-                sizePop.appendChild(thGroup);
-                sizePop.appendChild(alphaGroup);
-                sizeBtn.style.display = '';
-                styleBtn.style.display = 'none';
                 closeStylePop();
             }
+            updateStyleBtn();
         };
 
         // --- "More" menu ---
@@ -333,8 +381,8 @@ export const toolbarMixin = defineMixin({
             const t = this.currentTool;
             const color = t === 'pen' ? this.penColor : t === 'shape' ? this.shapeColor : t === 'highlighter' ? this.highlighterColor : t === 'lasso' ? (this.selectionColor() ?? '') : '';
             dot.style.setProperty('--sw', color || 'var(--text-faint)');
-            styleBtn.disabled = t === 'lasso' && !this.selectionStyleKind();
-            updateSizeBtn();
+            // narrow screen only, and only for tools with colours
+            styleBtn.style.display = compact && !styleInline.hasClass('hw-no-colors') ? '' : 'none';
         };
 
         const currentColor = () => {
@@ -342,19 +390,15 @@ export const toolbarMixin = defineMixin({
             return t === 'pen' ? this.penColor : t === 'shape' ? this.shapeColor : t === 'highlighter' ? this.highlighterColor : t === 'lasso' ? (this.selectionColor() ?? '') : '';
         };
         const updateSizeBtn = () => {
-            const idx = this.currentTool === 'lasso' ? this.selectionSizeIndex() : this.activeSizeIndex;
-            const px = [5, 9, 14][idx < 0 ? 1 : idx];
-            sizeDot.style.width = sizeDot.style.height = `${px}px`;
-            sizeDot.style.setProperty('--sw', currentColor() || 'var(--text-normal)');
-            sizeDot.style.opacity = String(alphaNow ?? 1);
-            sizeBtn.disabled = btnSm.disabled;
+            // the thickness dots show the current colour
+            const col = currentColor() || 'var(--text-normal)';
+            for (const b of [btnSm, btnMd, btnLg, ...shapeThBtns]) b.style.setProperty('--dot', col);
+            void alphaNow;
         };
         const updateThicknessUI = () => {
-            [btnSm, btnMd, btnLg].forEach(b => b.removeClass("active"));
             const idx = this.currentTool === 'lasso' ? this.selectionSizeIndex() : this.activeSizeIndex;
-            if (idx === 0) btnSm.addClass("active");
-            if (idx === 1) btnMd.addClass("active");
-            if (idx === 2) btnLg.addClass("active");
+            [btnSm, btnMd, btnLg].forEach((b, i) => b.toggleClass("active", i === idx));
+            shapeThBtns.forEach((b, i) => b.toggleClass("active", i === idx));
             updateSizeBtn();
         };
 
@@ -390,6 +434,9 @@ export const toolbarMixin = defineMixin({
                 }
             }
             updateThicknessUI();
+            refreshEraseGroup();
+            // No colours (eraser, lasso without strokes): no colour row and, on a narrow screen, no colour button.
+            styleInline.toggleClass('hw-no-colors', secColor.childElementCount === 0);
             updateStyleBtn();
         };
         this.refreshToolbarUI = () => {
@@ -403,33 +450,82 @@ export const toolbarMixin = defineMixin({
             closeShapeMenu();
             closeSizePop();
             closeStylePop();
+            closeSelModePop();
             [penBtn, eraserBtn, highBtn, lassoBtn, shapeBtn].forEach(b => b.removeClass("active"));
             btn.addClass("active");
             if (this.currentTool !== 'lasso') this.clearSelection();
             updateSharedUI();
         };
 
-        penBtn.onclick = () => { this.currentTool = 'pen'; updateActiveTool(penBtn); };
-        eraserBtn.onclick = () => { this.currentTool = 'eraser'; updateActiveTool(eraserBtn); };
-        highBtn.onclick = () => { this.currentTool = 'highlighter'; updateActiveTool(highBtn); };
+        // Tapping the active tool again opens its options: thickness (+ opacity for the pen, + what the eraser erases).
+        const toolTap = (tool: 'pen' | 'eraser' | 'highlighter', btn: HTMLElement) => {
+            if (this.currentTool === tool) { openToolOptions(btn); return; }
+            this.currentTool = tool;
+            updateActiveTool(btn);
+        };
+        penBtn.onclick = () => toolTap('pen', penBtn);
+        eraserBtn.onclick = () => toolTap('eraser', eraserBtn);
+        highBtn.onclick = () => toolTap('highlighter', highBtn);
+        label(penBtn, 'Pen (tap again: thickness and opacity)');
+        label(eraserBtn, 'Eraser (tap again: size and what it erases)');
+        label(highBtn, 'Highlighter (tap again: thickness)');
+        const toolBtnOf = (t: string): HTMLElement | null => ({ pen: penBtn, eraser: eraserBtn, highlighter: highBtn, lasso: lassoBtn, shape: shapeBtn } as Record<string, HTMLElement>)[t] ?? null;
+        const openToolOptions = (anchor: HTMLElement) => {
+            if (sizePop.style.display !== 'none') { closeSizePop(); return; }
+            closeShapeMenu();
+            closeStylePop();
+            sizePop.appendChild(thGroup);
+            sizePop.appendChild(alphaGroup);
+            sizePop.appendChild(eraseGroup);
+            updateSharedUI();
+            placeBelow(sizePop, anchor);
+        };
         lassoBtn.onclick = (ev: MouseEvent) => {
             if (this.currentTool !== 'lasso') {
                 this.currentTool = 'lasso';
                 updateActiveTool(lassoBtn);
                 return;
             }
-            // Clicking the active tool again: choose the selection mode.
-            const menu = new Menu();
-            const setMode = (mode: 'lasso' | 'rect') => {
+            // Clicking the active tool again: choose the selection mode (and the thickness of selected strokes).
+            void ev;
+            if (selModePop.style.display !== 'none') { closeSelModePop(); return; }
+            closeSizePop();
+            refreshSelModePop();
+            if (this.selectionStyleKind()) { selModePop.appendChild(thGroup); selModePop.appendChild(alphaGroup); updateSharedUI(); }
+            else { sizePop.appendChild(thGroup); sizePop.appendChild(alphaGroup); }
+            placeBelow(selModePop, lassoBtn);
+        };
+        // Selection mode: just two icons (lasso / rectangle).
+        const selModePop = document.body.createEl('div', { cls: 'hw-menu hw-selmode-pop' });
+        selModePop.style.display = 'none';
+        this.register(() => selModePop.remove());
+        const selGroup = selModePop.createDiv({ cls: 'hw-menu-group' });
+        selGroup.createDiv({ cls: 'hw-menu-title', text: 'Selection' });
+        const selRow = selGroup.createDiv({ cls: 'hw-menu-row' });
+        const selModes: ['lasso' | 'rect', string, string][] = [
+            ['lasso', ICON_LASSO_LOOP, 'Lasso (freehand)'],
+            ['rect', ICON_SELECT_RECT, 'Rectangle'],
+        ];
+        const selModeBtns = selModes.map(([mode, icon, name]) => {
+            const b = this.createToolBtn(selRow, icon);
+            b.addClass('hw-menu-btn');
+            label(b, name);
+            b.onclick = () => {
                 this.plugin.settings.selectMode = mode;
                 void this.plugin.saveSettings();
                 setSvg(lassoBtn, this.iconSvg(selIcon()));
                 label(lassoBtn, selLabel());
+                refreshSelModePop();
+                if (!this.selectionStyleKind()) window.setTimeout(closeSelModePop, 120);
             };
-            menu.addItem(i => i.setTitle('Lasso (freehand)').setIcon('lasso').setChecked(this.plugin.settings.selectMode === 'lasso').onClick(() => setMode('lasso')));
-            menu.addItem(i => i.setTitle('Rectangle').setIcon('square-dashed').setChecked(this.plugin.settings.selectMode === 'rect').onClick(() => setMode('rect')));
-            menu.showAtMouseEvent(ev);
-        };
+            return [mode, b] as const;
+        });
+        const refreshSelModePop = () => selModeBtns.forEach(([m, b]) => b.toggleClass('active', this.plugin.settings.selectMode === m));
+        const closeSelModePop = () => { selModePop.style.display = 'none'; };
+        this.registerDomEvent(document, 'pointerdown', (e: PointerEvent) => {
+            const t = e.target as Node;
+            if (!selModePop.contains(t) && !lassoBtn.contains(t)) { closeSelModePop(); }
+        }, { capture: true });
         this.activateLasso = () => { this.currentTool = 'lasso'; updateActiveTool(lassoBtn); };
         this.setTool = (t) => {
             const btn = { pen: penBtn, eraser: eraserBtn, highlighter: highBtn, lasso: lassoBtn, shape: shapeBtn }[t];
@@ -441,22 +537,19 @@ export const toolbarMixin = defineMixin({
             if (this.currentTool === 'lasso') this.setSelectionSize(i);
             else this.activeSizeIndex = i;
             updateThicknessUI();
-            closeSizePop();
-        };
-        sizeBtn.onclick = () => {
-            if (sizePop.style.display !== 'none') { closeSizePop(); return; }
-            closeShapeMenu();
-            placeBelow(sizePop, sizeBtn);
+            // the eraser and the pen keep the panel open (more options there); otherwise it closes
+            if (this.currentTool === 'highlighter') closeSizePop();
         };
         btnSm.onclick = () => pickSize(0);
         btnMd.onclick = () => pickSize(1);
         btnLg.onclick = () => pickSize(2);
 
+        // Like the other tools: the first tap picks the shape tool, tapping it again opens its options.
+        label(shapeBtn, 'Shapes (tap again: shape, thickness, line style, fill)');
         shapeBtn.onclick = () => {
             if (this.currentTool !== 'shape') {
                 this.currentTool = 'shape';
                 updateActiveTool(shapeBtn);
-                openShapeMenu();
             } else if (shapeMenu.style.display === 'none') {
                 openShapeMenu();
             } else {
@@ -466,6 +559,7 @@ export const toolbarMixin = defineMixin({
 
         // --- Custom toolbar layout: buttons turned off in the settings are in the "More" menu ---
         this.openShapeOptions = (anchor: HTMLElement) => { closeStylePop(); closeSizePop(); placeBelow(shapeMenu, anchor); };
+        this.openEraserOptions = (anchor: HTMLElement) => openToolOptions(anchor);
         const itemEls: Record<string, HTMLElement[]> = {
             eraser: [eraserBtn], highlighter: [highBtn], lasso: [lassoBtn], shapes: [secShapes],
             undo: [this.undoBtn, this.redoBtn].filter((b): b is HTMLButtonElement => !!b),

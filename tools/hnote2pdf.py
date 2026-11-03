@@ -21,7 +21,7 @@ The .hnote file format (JSON) – in short (full description: src/format.ts, src
     "pages": [ {
         "strokes": [ { "points": [[x, y], [x, y, pressure 0-100], …], "color": "#000000", "width": 2,
                        "isHighlighter": false, "alpha": 0.5,                      # pen opacity
-                       "shape": "line"|"rect"|"ellipse", "dash": "dashed"|"dotted"|"dashdot", "fill": true,
+                       "shape": "line"|"rect"|"ellipse", "dash": "dashed"|"dotted"|"dashdot", "fill": true, "fillAlpha": 0.25, "noLine": true,
                        "arrow": true, "rot": 0.3, "poly": true, "isEraser": true (old – skipped) } ],
         "images":  [ { "path": "@/attachments/abc.png" | "Folder/image.png", "data": "data:image/…",
                        "x": 0, "y": 0, "w": 100, "h": 80, "rot": 0 } ],
@@ -429,13 +429,28 @@ def draw_shape(c, s, pts):
         c.add('%s %s %s %s %s %s cm' % (fmt(co), fmt(si), fmt(-si), fmt(co), fmt(cx), fmt(cy)))
         ox, oy = cx, cy
     ax, ay, bx, by = p0[0] - ox, p0[1] - oy, p1[0] - ox, p1[1] - oy
-    if shape == 'line':
-        c.add('%s %s m %s %s l' % (fmt(p0[0]), fmt(p0[1]), fmt(p1[0]), fmt(p1[1])))
-    elif shape == 'rect':
-        c.add('%s %s %s %s re' % (fmt(min(ax, bx)), fmt(min(ay, by)), fmt(abs(bx - ax)), fmt(abs(by - ay))))
-    else:
-        c.ops.extend(ellipse_ops((ax + bx) / 2, (ay + by) / 2, abs(bx - ax) / 2, abs(by - ay) / 2))
-    c.add('B' if (s.get('fill') and shape != 'line') else 'S')
+
+    def path():
+        if shape == 'line':
+            c.add('%s %s m %s %s l' % (fmt(p0[0]), fmt(p0[1]), fmt(p1[0]), fmt(p1[1])))
+        elif shape == 'rect':
+            c.add('%s %s %s %s re' % (fmt(min(ax, bx)), fmt(min(ay, by)), fmt(abs(bx - ax)), fmt(abs(by - ay))))
+        else:
+            c.ops.extend(ellipse_ops((ax + bx) / 2, (ay + by) / 2, abs(bx - ax) / 2, abs(by - ay) / 2))
+
+    filled = bool(s.get('fill')) and shape != 'line'
+    if filled:
+        # fillAlpha: light (semi-transparent) fill; the outline stays opaque
+        fa = float(s.get('fillAlpha', 1) or 1)
+        c.add('q')
+        if fa < 1:
+            c.alpha(fa)
+        path()
+        c.add('f')
+        c.add('Q')
+    if not (filled and s.get('noLine')):
+        path()
+        c.add('S')
     c.add('Q')
     if shape == 'line' and s.get('arrow'):
         ang = math.atan2(p1[1] - p0[1], p1[0] - p0[0])

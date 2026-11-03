@@ -189,6 +189,10 @@ export const pdfIOMixin = defineMixin({
 
     // --- PDF IMPORT ---
     importPDF() {
+        // A note with an endless page can't get more pages (unless that page is still empty – it is replaced).
+        const only = this.noteData.pages.length === 1 ? this.noteData.pages[0] : null;
+        const blankEndless = !!only && only.endless && only.strokes.length === 0 && !(only.images?.length) && !only.bgPath && !only.bgImage;
+        if (!blankEndless && this.endlessBlocksPages()) return;
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = 'application/pdf';

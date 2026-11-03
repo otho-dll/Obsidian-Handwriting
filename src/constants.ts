@@ -14,3 +14,5 @@ export const INERTIA_TAU_MS = 325;         // time constant of scroll inertia de
 export const ROTATE_STEP = Math.PI / 12;   // rotation step with Shift (15°)
 /** File name of the plugin logo. Put it in the plugin folder (next to manifest.json); change this name if the file is named differently. */
 export const LOGO_FILE = 'logo.png';
+/** Opacity of the "light" shape fill. */
+export const LIGHT_FILL_ALPHA = 0.25;

@@ -2,7 +2,7 @@ import { App, Notice, Platform, PluginSettingTab, Setting } from 'obsidian';
 import { canUseDisk, pickDiskFolder } from './disk';
 import { PageTemplate, PAGE_TEMPLATES } from './templates';
 import { QUICK_ACTIONS, TOOLBAR_ITEMS } from './quickActions';
-import { setSvg } from './svg';
+import { setSvg, appendSvg } from './svg';
 import { CONVERTER_FILE, saveConverterScript, copyConverterCommand } from './converter';
 import { LOGO_FILE } from './constants';
 import { HandwritingSettings, DEFAULT_PEN_PALETTE, DEFAULT_HIGHLIGHTER_PALETTE } from './settings';
@@ -118,13 +118,18 @@ export class HandwritingSettingTab extends PluginSettingTab {
                     .onChange(async (v) => { st.penButtonAction = v as HandwritingSettings['penButtonAction']; await this.plugin.saveSettings(); }));
             new Setting(c)
                 .setName('Eraser on highlighter')
-                .setDesc('Whole stroke: touching a highlighter stroke removes all of it at once. Partial: the eraser cuts out only the part it passes over (like with the pen).')
+                .setDesc('Off: the eraser leaves the highlighter alone. Whole stroke: touching a highlighter stroke removes all of it at once. Partial: the eraser cuts out only the part it passes over (like with the pen). Also in the eraser menu on the toolbar.')
                 .addDropdown(d => d
+                    .addOption('off', 'Off (not erased)')
                     .addOption('whole', 'Whole stroke')
                     .addOption('partial', 'Partial')
                     .setValue(st.highlighterErase)
                     .onChange(async (v) => { st.highlighterErase = v as HandwritingSettings['highlighterErase']; await this.plugin.saveSettings(); }));
 
+            new Setting(c)
+                .setName('Eraser erases shapes')
+                .setDesc('Off: lines, rectangles and ellipses are never erased – handy for diagrams. Also in the eraser menu on the toolbar.')
+                .addToggle(t => t.setValue(st.shapeEraseOn).onChange(async (v) => { st.shapeEraseOn = v; await this.plugin.saveSettings(); }));
             new Setting(c)
                 .setName('Eraser on shapes')
                 .setDesc('Partial: the eraser cuts out only the part it passes over (a filled shape or an arrow is still removed whole). Whole shape: touching a shape removes all of it.')
@@ -198,10 +203,10 @@ export class HandwritingSettingTab extends PluginSettingTab {
                     d.setValue(String(st.openZoom)).onChange(async (v) => { st.openZoom = Number(v); await this.plugin.saveSettings(); });
                 });
 
-            c.createEl('h4', { text: 'Page minimap', cls: 'hw-set-sub' });
+            c.createEl('h4', { text: 'Page navigation', cls: 'hw-set-sub' });
             new Setting(c)
-                .setName('Minimap')
-                .setDesc('A strip of page thumbnails with a frame showing the visible area. Tap or drag it to jump around the note.')
+                .setName('Page rail')
+                .setDesc('A thin strip along the edge of the note: top = first page, bottom = last page, ticks = pages with a title. Drag along it to see a preview of the page, let go to jump there; a tap jumps at once.')
                 .addDropdown(d => d
                     .addOption('always', 'Always visible')
                     .addOption('auto', 'Show while scrolling')
@@ -209,60 +214,108 @@ export class HandwritingSettingTab extends PluginSettingTab {
                     .setValue(st.minimap)
                     .onChange(async (v) => { st.minimap = v as HandwritingSettings['minimap']; await this.plugin.saveSettings(); this.plugin.refreshViews(); }));
             new Setting(c)
-                .setName('Style')
-                .setDesc('Slim rail: a thin strip at the edge that expands into thumbnails when you touch or hover it (stays out of the writing area). Panel: thumbnails always visible.')
-                .addDropdown(d => d
-                    .addOption('rail', 'Slim rail (expands on touch)')
-                    .addOption('panel', 'Thumbnail panel')
-                    .setValue(st.minimapStyle)
-                    .onChange(async (v) => { st.minimapStyle = v as HandwritingSettings['minimapStyle']; await this.plugin.saveSettings(); this.plugin.refreshViews(); }));
-            new Setting(c)
-                .setName('Side')
+                .setName('Page rail side')
                 .addDropdown(d => d
                     .addOption('right', 'Right')
                     .addOption('left', 'Left')
                     .setValue(st.minimapSide)
                     .onChange(async (v) => { st.minimapSide = v as HandwritingSettings['minimapSide']; await this.plugin.saveSettings(); this.plugin.refreshViews(); }));
             new Setting(c)
-                .setName('Thumbnail size')
+                .setName('Page rail precision')
+                .setDesc('Fine: move your finger away from the edge while dragging and the rail slows down 4× (for an exact page); the preview also snaps to section starts. Simple: the rail always follows your finger 1:1.')
                 .addDropdown(d => d
-                    .addOption('small', 'Small')
-                    .addOption('medium', 'Medium')
-                    .addOption('large', 'Large')
-                    .setValue(st.minimapSize)
-                    .onChange(async (v) => { st.minimapSize = v as HandwritingSettings['minimapSize']; await this.plugin.saveSettings(); this.plugin.refreshViews(); }));
+                    .addOption('fine', 'Fine (slow down away from the edge)')
+                    .addOption('simple', 'Simple')
+                    .setValue(st.railPrecision)
+                    .onChange(async (v) => { st.railPrecision = v as HandwritingSettings['railPrecision']; await this.plugin.saveSettings(); }));
             new Setting(c)
-                .setName('Show drawing in thumbnails')
-                .setDesc('Off = plain page blocks with numbers (lighter on very long notes).')
-                .addToggle(t => t.setValue(st.minimapThumbs).onChange(async (v) => { st.minimapThumbs = v; await this.plugin.saveSettings(); this.plugin.refreshViews(); }));
+                .setName('Pages panel side')
+                .setDesc('Where the pages panel (thumbnails, adding / moving / deleting pages, page style) opens. On a phone it slides up from the bottom.')
+                .addDropdown(d => d
+                    .addOption('right', 'Right')
+                    .addOption('left', 'Left')
+                    .setValue(st.pagesPanelSide)
+                    .onChange(async (v) => { st.pagesPanelSide = v as HandwritingSettings['pagesPanelSide']; await this.plugin.saveSettings(); this.plugin.refreshViews(); }));
+            new Setting(c)
+                .setName('Pages panel columns')
+                .setDesc('How many thumbnails sit side by side in the pages panel (the panel gets wider with more columns). On a phone it always shows three.')
+                .addDropdown(d => d
+                    .addOption('1', 'One (large thumbnails)')
+                    .addOption('2', 'Two')
+                    .addOption('3', 'Three (small thumbnails)')
+                    .setValue(String(st.pagesPanelColumns))
+                    .onChange(async (v) => { st.pagesPanelColumns = Number(v) as HandwritingSettings['pagesPanelColumns']; await this.plugin.saveSettings(); this.plugin.refreshViews(); }));
 
         }
         {
             const c = section('Toolbar', false);
-            c.createEl('p', { cls: 'setting-item-description', text: 'Decide what sits on the toolbar. Anything you turn off here moves into the "More" (⋯) menu, so it is still one tap away. The pen and the color / thickness button always stay on the toolbar.' });
+            c.createEl('p', { cls: 'setting-item-description', text: 'Decide what sits on the toolbar. Anything you turn off here moves into the "More" (⋯) menu, so it is still one tap away. The pen and the colours always stay on the toolbar; tap a tool again for its thickness and options.' });
             const save = async () => { await this.plugin.saveSettings(); this.plugin.refreshViews(); };
+            // Tools: chips that are on (on the toolbar) or off (in the ⋯ menu).
             c.createEl('h4', { text: 'Tools', cls: 'hw-set-sub' });
-            for (const it of TOOLBAR_ITEMS) {
-                new Setting(c)
-                    .setName(it.label)
-                    .addToggle(t => t.setValue(!st.toolbarHidden.includes(it.id)).onChange(async (v) => {
-                        st.toolbarHidden = v ? st.toolbarHidden.filter(x => x !== it.id) : [...st.toolbarHidden, it.id];
+            c.createEl('p', { cls: 'setting-item-description', text: 'Tap a tool to show or hide it on the toolbar.' });
+            const toolChips = c.createDiv({ cls: 'hw-chips' });
+            const renderTools = () => {
+                toolChips.empty();
+                for (const it of TOOLBAR_ITEMS) {
+                    const on = !st.toolbarHidden.includes(it.id);
+                    const chip = toolChips.createEl('button', { cls: `hw-chip${on ? ' is-on' : ''}` });
+                    chip.createSpan({ cls: 'hw-chip-mark', text: on ? '✓' : '+' });
+                    chip.createSpan({ text: it.label });
+                    chip.setAttribute('aria-pressed', String(on));
+                    chip.onclick = async () => {
+                        st.toolbarHidden = on ? [...st.toolbarHidden, it.id] : st.toolbarHidden.filter(x => x !== it.id);
+                        renderTools();
                         await save();
-                    }));
-            }
+                    };
+                }
+            };
+            renderTools();
+
+            // Shortcut buttons: the ones on the toolbar in their order (‹ › moves, × removes), the rest below to add.
             c.createEl('h4', { text: 'Shortcut buttons', cls: 'hw-set-sub' });
-            for (const a of QUICK_ACTIONS) {
-                if (a.id === 'screenshot' && !Platform.isWin) continue;
-                new Setting(c)
-                    .setName(a.label)
-                    .addToggle(t => t.setValue(st.quickActions.includes(a.id)).onChange(async (v) => {
-                        // Button order = order in this list.
-                        const on = new Set(st.quickActions);
-                        if (v) on.add(a.id); else on.delete(a.id);
-                        st.quickActions = QUICK_ACTIONS.map(q => q.id).filter(id => on.has(id));
-                        await save();
-                    }));
-            }
+            c.createEl('p', { cls: 'setting-item-description', text: 'On the toolbar (in this order) – use ‹ › to move a button, × to remove it. Below: buttons you can add.' });
+            const onBox = c.createDiv({ cls: 'hw-chips hw-chips-on' });
+            c.createDiv({ cls: 'hw-chips-label', text: 'Available' });
+            const offBox = c.createDiv({ cls: 'hw-chips' });
+            const avail = QUICK_ACTIONS.filter(a => !(a.id === 'screenshot' && !Platform.isWin));
+            const short = (l: string) => l.replace(/\s*\(.*\)\s*$/, '');
+            const icon = (el: HTMLElement, svg: string) => { if (svg) { const s = el.createSpan({ cls: 'hw-chip-icon' }); appendSvg(s, `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${svg}</svg>`); } };
+            const renderQuick = () => {
+                onBox.empty(); offBox.empty();
+                const ids = st.quickActions.filter(id => avail.some(a => a.id === id));
+                if (ids.length === 0) onBox.createDiv({ cls: 'hw-chips-empty', text: 'No shortcut buttons on the toolbar.' });
+                ids.forEach((id, k) => {
+                    const a = avail.find(q => q.id === id)!;
+                    const chip = onBox.createDiv({ cls: 'hw-chip is-on' });
+                    chip.setAttribute('title', a.label);
+                    const left = chip.createEl('button', { cls: 'hw-chip-btn', text: '‹' });
+                    left.setAttribute('aria-label', `Move ${short(a.label)} left`);
+                    left.disabled = k === 0;
+                    icon(chip, a.icon);
+                    chip.createSpan({ text: short(a.label) });
+                    const right = chip.createEl('button', { cls: 'hw-chip-btn', text: '›' });
+                    right.setAttribute('aria-label', `Move ${short(a.label)} right`);
+                    right.disabled = k === ids.length - 1;
+                    const rm = chip.createEl('button', { cls: 'hw-chip-btn hw-chip-x', text: '×' });
+                    rm.setAttribute('aria-label', `Remove ${short(a.label)}`);
+                    const move = async (d: number) => { const arr = [...ids]; [arr[k], arr[k + d]] = [arr[k + d], arr[k]]; st.quickActions = arr; renderQuick(); await save(); };
+                    left.onclick = () => move(-1);
+                    right.onclick = () => move(1);
+                    rm.onclick = async () => { st.quickActions = ids.filter(x => x !== id); renderQuick(); await save(); };
+                });
+                for (const a of avail) {
+                    if (ids.includes(a.id)) continue;
+                    const chip = offBox.createEl('button', { cls: 'hw-chip' });
+                    chip.setAttribute('title', a.label);
+                    chip.createSpan({ cls: 'hw-chip-mark', text: '+' });
+                    icon(chip, a.icon);
+                    chip.createSpan({ text: short(a.label) });
+                    chip.onclick = async () => { st.quickActions = [...ids, a.id]; renderQuick(); await save(); };
+                }
+                if (offBox.childElementCount === 0) offBox.createDiv({ cls: 'hw-chips-empty', text: 'All shortcut buttons are on the toolbar.' });
+            };
+            renderQuick();
         }
         {
             const c = section('Files and export', false);
@@ -469,7 +522,7 @@ export class HandwritingSettingTab extends PluginSettingTab {
                 .addToggle(t => t.setValue(st.oledDarkPaper).onChange(async (v) => { st.oledDarkPaper = v; await save(); }));
             new Setting(c)
                 .setName('Fade the toolbar while writing')
-                .setDesc('A moment after you start writing, the toolbar and the minimap fade. They come back when the cursor or pen gets close to them, or when you tap them.')
+                .setDesc('A moment after you start writing, the toolbar and the page rail fade. They come back when the cursor or pen gets close to them, or when you tap them.')
                 .addToggle(t => t.setValue(st.oledDimToolbar).onChange(async (v) => { st.oledDimToolbar = v; await save(); }));
             new Setting(c)
                 .setName('Pixel shift')
@@ -493,7 +546,7 @@ export class HandwritingSettingTab extends PluginSettingTab {
             const c = section('Advanced', false);
             new Setting(c)
                 .setName('Debug logging')
-                .setDesc('Writes diagnostic messages (position memory, minimap thumbnails) to the developer console (Ctrl+Shift+I). Only needed when reporting a problem.')
+                .setDesc('Writes diagnostic messages (position memory, page thumbnails) to the developer console (Ctrl+Shift+I). Only needed when reporting a problem.')
                 .addToggle(t => t.setValue(st.debugLog).onChange(async (v) => { st.debugLog = v; await this.plugin.saveSettings(); }));
         }
     }

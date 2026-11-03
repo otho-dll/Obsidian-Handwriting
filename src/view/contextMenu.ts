@@ -95,7 +95,7 @@ export const contextMenuMixin = defineMixin({
                 const has = !!this.noteData.pages[idx]?.title;
                 menu.addItem(i => i.setTitle(has ? 'Rename page title…' : 'Page title…').setIcon('heading').onClick(() => this.editPageTitle(idx)));
             }
-            menu.addItem(i => i.setTitle('Page style…').setIcon('layout-grid').onClick(() => this.openPageStylePanel({ left: clientX, top: clientY, bottom: clientY })));
+            menu.addItem(i => i.setTitle('Page style…').setIcon('paintbrush').onClick(() => this.openPageStylePanel({ left: clientX, top: clientY, bottom: clientY })));
             menu.addSeparator();
             this.addPageQuickItems(menu);
         }

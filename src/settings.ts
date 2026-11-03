@@ -35,12 +35,18 @@ export interface HandwritingSettings {
     penPalette: string[];
     highlighterPalette: string[];
 
-    /** Page minimap. */
+    /** Page rail (thin strip along the edge for jumping through the note): always, while scrolling, off. Key kept from the old minimap. */
     minimap: 'off' | 'always' | 'auto';
-    minimapStyle: 'rail' | 'panel';
+    /** Side of the page rail. */
     minimapSide: 'right' | 'left';
-    minimapSize: 'small' | 'medium' | 'large';
-    minimapThumbs: boolean;
+    /** Page rail: 'fine' = moving away from the edge slows it down and snaps to sections, 'simple' = direct. */
+    railPrecision: 'fine' | 'simple';
+    /** Side of the pages panel. */
+    pagesPanelSide: 'right' | 'left';
+    /** Thumbnail columns in the pages panel. */
+    pagesPanelColumns: 1 | 2 | 3;
+    /** The pages panel button was added to the toolbar (one-time, 3.15). */
+    pagesPanelIntro?: boolean;
 
     /** Default page pattern and paper colour (for notes without their own settings). */
     defaultTemplate: PageTemplate;
@@ -60,8 +66,8 @@ export interface HandwritingSettings {
 
     /** Pen side button. */
     penButtonAction: 'none' | 'snip' | 'menu' | 'undo' | 'redo';
-    /** Eraser vs highlighter: 'whole' = removes the whole highlighter stroke at a touch, 'partial' = cuts pieces out. */
-    highlighterErase: 'whole' | 'partial';
+    /** Eraser vs highlighter: 'off' = never erased, 'whole' = removes the whole stroke at a touch, 'partial' = cuts pieces out. */
+    highlighterErase: 'off' | 'whole' | 'partial';
     /** Menu on a long finger press on the page. */
     longPressMenu: boolean;
     /** Finger hold time (ms) needed to open the menu. */
@@ -80,12 +86,14 @@ export interface HandwritingSettings {
     oledIdleDim: boolean;
     /** After how many minutes without input the note view dims. */
     oledIdleMinutes: number;
-    /** Diagnostic log in the developer console (position memory, minimap). */
+    /** Diagnostic log in the developer console (position memory, page rail). */
     debugLog: boolean;
     /** Canvas resolution: fewer pixels = smoother writing at high zoom, but less sharp strokes. */
     canvasQuality: 'high' | 'balanced' | 'fast';
     /** Eraser vs shapes: 'partial' = cuts a piece out, 'whole' = removes the whole shape. */
     shapeErase: 'whole' | 'partial';
+    /** Whether the eraser erases shapes (lines, rectangles, ellipses) at all. */
+    shapeEraseOn: boolean;
 
     /** Where pasted images and PDF pages are stored: the plugin's hidden folder or Obsidian's attachment folder. */
     attachmentLocation: 'hidden' | 'vault';
@@ -120,12 +128,15 @@ export interface ToolMemory {
     customShape: string[];
     shapeType: 'line' | 'rect' | 'ellipse';
     shapeDash: 'solid' | 'dashed' | 'dotted' | 'dashdot';
-    shapeFill: boolean;
+    /** Shape fill: none, solid colour or a light (semi-transparent) fill. */
+    shapeFill: 'none' | 'solid' | 'light';
+    /** Outline of rectangles / ellipses (off = only the fill is drawn). */
+    shapeOutline: boolean;
     shapeArrow: boolean;
 }
 
 export function defaultMemory(): ToolMemory {
-    return { sizes: { pen: 1, highlighter: 1, eraser: 1, shape: 1 }, penColor: '', penAlpha: 1, highlighterColor: '', customPen: [], customHigh: [], shapeColor: '', customShape: [], shapeType: 'rect', shapeDash: 'solid', shapeFill: false, shapeArrow: false };
+    return { sizes: { pen: 1, highlighter: 1, eraser: 1, shape: 1 }, penColor: '', penAlpha: 1, highlighterColor: '', customPen: [], customHigh: [], shapeColor: '', customShape: [], shapeType: 'rect', shapeDash: 'solid', shapeFill: 'none', shapeOutline: true, shapeArrow: false };
 }
 
 export const DEFAULT_PEN_PALETTE = ['#000000', '#dc2626', '#2563eb', '#16a34a', '#737373'];
@@ -148,10 +159,10 @@ export const DEFAULT_SETTINGS: HandwritingSettings = {
     penPalette: [...DEFAULT_PEN_PALETTE],
     highlighterPalette: [...DEFAULT_HIGHLIGHTER_PALETTE],
     minimap: 'always',
-    minimapStyle: 'rail',
     minimapSide: 'right',
-    minimapSize: 'small',
-    minimapThumbs: true,
+    railPrecision: 'fine',
+    pagesPanelSide: 'right',
+    pagesPanelColumns: 2,
     defaultTemplate: 'dots',
     defaultPaper: '#ffffff',
     pdfScale: 3,
@@ -177,6 +188,7 @@ export const DEFAULT_SETTINGS: HandwritingSettings = {
     oledIdleMinutes: 3,
     canvasQuality: 'balanced',
     shapeErase: 'partial',
+    shapeEraseOn: true,
     attachmentLocation: 'hidden',
     historyEnabled: true,
     historyInterval: 10,

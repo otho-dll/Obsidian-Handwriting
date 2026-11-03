@@ -20,8 +20,8 @@ a calculator, version history and a PDF export – in notes that stay readable e
 - [Getting started](#getting-started)
 - [Writing tools](#writing-tools)
 - [Selection (lasso)](#selection-lasso)
-- [Moving around: scroll, zoom, minimap](#moving-around-scroll-zoom-minimap)
-- [Pages: add, reorder, size, pattern, paper](#pages)
+- [Moving around: scroll, zoom, page rail](#moving-around-scroll-zoom-page-rail)
+- [Pages panel: add, move, delete, size, pattern, paper](#pages-panel)
 - [Contents – page titles](#contents--page-titles)
 - [Images, screenshots and PDFs](#images-screenshots-and-pdfs)
 - [Calculator and function plots](#calculator-and-function-plots)
@@ -55,11 +55,11 @@ a calculator, version history and a PDF export – in notes that stay readable e
 |---|---|
 | **Pen** | Pressure-sensitive ink. Three thicknesses, a colour palette and opacity (100 / 75 / 50 / 25 %). Jitter from the pen is smoothed out, but sharp corners stay sharp. |
 | **Highlighter** | Transparent marker with flat ends – like a real highlighter. Overlapping strokes don't get darker. Highlight several lines in one zig-zag movement: the turns stay square. |
-| **Eraser** | Cuts strokes where you rub (it doesn't paint white). Its size on screen is the same at every zoom level; rub quickly and it grows up to 4×. The pen's eraser end and side button work too. |
-| **Shapes** | Line (optionally an arrow), rectangle, ellipse; solid, dashed, dotted or dash-dot; filled or outlined. Hold **Shift** for straight angles / squares / circles. |
-| **Lasso** | Select, move, scale, rotate, recolour, group and lock. Tap the lasso button again to switch between freehand lasso and rectangle selection. |
+| **Eraser** | Cuts strokes where you rub (it doesn't paint white). Its size on screen is the same at every zoom level; rub quickly and it grows up to 4×. The pen's eraser end and side button work too. Tap the active eraser (or its size button) to choose what it erases: shapes on/off, highlighter off / whole stroke / part. |
+| **Shapes** | Line (optionally an arrow), rectangle, ellipse; solid, dashed, dotted or dash-dot; outline only, solid fill, light (semi-transparent) fill with outline, or light fill only. Hold **Shift** for straight angles / squares / circles. |
+| **Lasso** | Select, move, scale, rotate, recolour, group and lock. Tap the selection button again to choose the mode: freehand lasso or rectangle. |
 
-The colour / thickness button opens the style panel. On narrow screens colours, thickness and opacity share one panel.
+**Tap the active tool again** for its options: thickness (pen, highlighter, eraser, shapes), opacity (pen), what the eraser erases, the shape options, or the selection mode (lasso / rectangle – plus the thickness of selected strokes). The colours sit on the toolbar; on narrow screens they share one panel under the colour button.
 
 ## Selection (lasso)
 
@@ -70,34 +70,51 @@ The colour / thickness button opens the style panel. On narrow screens colours, 
   send to back, align, rotate 90°, duplicate, copy, cut, delete.
 - Locked items can't be selected, moved or erased – right-click the page → *Unlock*.
 
-## Moving around: scroll, zoom, minimap
+## Moving around: scroll, zoom, page rail
 
 - **Fingers / trackpad:** one finger scrolls (with inertia), two fingers pinch-zoom. **Mouse:** wheel scrolls, Ctrl + wheel zooms.
 - **Zoom button** (shows the current zoom, e.g. *135%*): − / + in 10 % steps, *Fit width*, *100%*,
   and up to four **favourite zoom levels** – save the zoom you like to write at with *+ Save*, one tap brings it back.
   *Open notes at …* makes every note open at that zoom (otherwise each note keeps the zoom you last used in it).
 - Notes remember **where you stopped** and open at that place.
-- **Minimap** – page thumbnails at the edge. *Slim rail* expands when touched or hovered; *Panel* is always visible.
-  Tap or drag it to jump. Pages with a title are marked with a corner flag.
+- **Page rail** – a thin strip along the whole edge of the note, like a scrollbar: top = first page, bottom = last page,
+  small ticks = pages with a title. **Drag along it** and a preview of the page under your finger appears
+  (*74 / 120* and the section title); let go to jump there. A tap jumps at once.
+  With *Fine* precision (default) moving your finger away from the edge slows the rail down 4× – handy in notes with
+  hundreds of pages – and the preview snaps to section starts. *Simple* follows your finger 1:1.
+  Settings → Pages and view → Page navigation: always visible / while scrolling / off, side, precision.
 - On a very narrow window the toolbar scrolls sideways (finger, mouse wheel or the ‹ › arrows).
 
-## Pages
+## Pages panel
 
-Open **⋯ → Pages and style…** (or right-click a page).
+The **Pages** button on the toolbar (also ⋯ → *Pages panel*, or right-click / long-press a page) opens a panel with
+thumbnails of all pages. It lies over the note on the right (or left – Settings → Pages and view); on a phone it
+slides up from the bottom.
 
-- **Pages tab:** add, delete and reorder pages (drag the handle or type a position).
-- **Page style tab** – for one page or for all pages (and new pages) of the note:
-  - **Page size:** *A4 portrait*, *A4 landscape*, or *Endless* – a page that grows downwards as you write
-    (half a page at a time, up to 16 A4 pages).
+- **Sections:** pages are grouped by page titles (tap a section header to fold it). The search field jumps to a page
+  number or filters sections by title.
+- **Tap** a thumbnail to go to the page. **Drag** it (mouse) or **long-press and drag** it (finger / pen) to move it.
+- **Long-press / right-click** a thumbnail: add page before / after, duplicate, set title, page style, move to…, delete.
+- **Select** – pick several pages, then *Style*, *Duplicate*, *Move to…* or *Delete*.
+- **+ Add page** adds a page at the end (*Add page before / after* are in the page menu).
+- **Contents** tab: the titled pages as a list.
+- Number of thumbnail columns (1 / 2 / 3): the columns button at the top of the panel, or Settings → Pages and view.
+- The current page has a thin accent frame (the same at every zoom level).
+- Changes apply at once. Every add / move / delete can be undone from the **Undo** message in the panel, and deleting
+  pages first saves a version to the version history.
+- **Page style** (⋯ menu, right-click / long-press a page, the page menu in the panel or *Select → Style*) opens at the side. At the top choose which pages it changes: this page, all pages, or another page:
+  - **Size:** *Portrait*, *Landscape*, or *Endless* – a page that grows downwards as you write
+    (half a page at a time, up to 16 A4 pages). Endless is for one-page notes only: such a note can't get more pages.
   - **Pattern:** dots, lines, grid (5 mm), blank, Cornell, isometric, lines + margin, checklist, millimetre paper, music staff.
   - **Paper colour:** presets or any colour.
-- Right-click (or long-press) a page for quick actions: add page before / after, move, delete, paste, page style, page title.
+  - *Use note default* removes the pages' own style; *All pages* changes the note default (also for new pages).
+- Right-click (or long-press) a page in the note itself for quick actions: pages panel, add page before / after, move, delete, paste, page style, page title.
 
 ## Contents – page titles
 
-Give important pages a title: right-click a page → **Page title…**, or the command *Set title of the current page*.
+Give important pages a title: right-click a page → **Page title…**, the pages panel, or the command *Set title of the current page*. Titled pages start sections in the pages panel and are ticks on the page rail.
 
-- The **Contents** button on the toolbar lists titled pages; tap one to jump there.
+- **Contents** (a view in the pages panel, also the Contents button) lists titled pages; tap one to jump there.
 - **Go to page…** (command or the Contents panel) searches titles and page numbers.
 - Titles become **bookmarks** in exported PDFs.
 
@@ -180,12 +197,12 @@ The file format is documented at the top of the script.
 
 Settings → **Toolbar** decides what sits on the toolbar:
 
-- **Tools** – eraser, highlighter, lasso, shapes, undo/redo. The pen and the colour / thickness button always stay.
-- **Shortcut buttons** – calculator, zoom, contents, function plot, insert image, pages and style, screenshot,
+- **Tools** – eraser, highlighter, lasso, shapes, undo/redo. The pen and the colours always stay.
+- **Shortcut buttons** – calculator, zoom, contents, function plot, insert image, pages panel, screenshot,
   import / export PDF, version history, fit to width.
 
 Anything not on the toolbar is in the **⋯ menu** – nothing appears twice. The ⋯ menu also has quick switches
-(minimap, pen pressure, palm rejection) and *Settings*.
+(page rail, pen pressure, palm rejection) and *Settings*.
 
 ## Pen, touch and palm rejection
 
@@ -204,7 +221,7 @@ Settings → **OLED care** – each option on its own:
 
 - **Dark paper on screen** – light pages are shown dark with light ink (colours keep their hue). Display only: files and
   exports are unchanged.
-- **Fade the toolbar while writing** – toolbar and minimap fade and come back when the pen or cursor gets close.
+- **Fade the toolbar while writing** – toolbar and page rail fade and come back when the pen or cursor gets close.
 - **Pixel shift** – the view moves by 1–2 px every few minutes.
 - **Dim when idle** – after 1–30 minutes without input the note dims almost to black; the first tap only wakes it.
 
@@ -240,7 +257,7 @@ Settings → **OLED care** – each option on its own:
 |---|---|
 | Pen and touch | pressure, palm rejection, pinch to zoom, long-press menu, pen side button, eraser behaviour on highlighter and shapes, default selection mode |
 | Colors | five quick colours for the pen and for the highlighter |
-| Pages and view | default page pattern and paper colour, favourite zoom levels, zoom when opening a note, minimap |
+| Pages and view | default page pattern and paper colour, favourite zoom levels, zoom when opening a note, page rail (visibility, side, precision), pages panel side |
 | Toolbar | tools and shortcut buttons on the toolbar (the rest goes to ⋯) |
 | Files and export | where images are stored, the Python converter, new-note naming, PDF export location and resolution |
 | Version history | on/off, interval, how long to keep versions, space limit per note |
@@ -271,7 +288,7 @@ Settings → **OLED care** – each option on its own:
 
 ```
 main.ts                 plugin + the view (lifecycle, loading / saving notes)
-src/view/*.ts           view features as mixins (input, navigation, selection, minimap, toolbar, versions, …)
+src/view/*.ts           view features as mixins (input, navigation, selection, pageRail, pagesPanel, toolbar, versions, …)
 src/format.ts           file format versions and migrations (v1 → v4)
 src/pageFormat.ts       page sizes (A4, landscape, endless)
 src/templates.ts        page patterns (shared geometry for screen, thumbnails, PDF)

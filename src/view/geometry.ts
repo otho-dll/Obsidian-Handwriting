@@ -123,7 +123,8 @@ export const geometryMixin = defineMixin({
         return false;
     },
 
-    eraseFromList(strokes: Stroke[], a: Point, b: Point, r: number, wholeHighlighterArg?: boolean, dirty?: BBox): { list: Stroke[]; changed: boolean } {
+    /** `skip` (only for the eraser tool): shapes / highlighter strokes the eraser must leave alone (toolbar switches). */
+    eraseFromList(strokes: Stroke[], a: Point, b: Point, r: number, wholeHighlighterArg?: boolean, dirty?: BBox, skip?: { shapes?: boolean; highlighter?: boolean }): { list: Stroke[]; changed: boolean } {
         const wholeHighlighter = wholeHighlighterArg ?? (this.plugin.settings.highlighterErase === 'whole');
         let changed = false;
         const out: Stroke[] = [];
@@ -139,6 +140,7 @@ export const geometryMixin = defineMixin({
         for (const s0 of strokes) {
             let s = s0;
             if (s.isEraser || s.lock) { out.push(s); continue; }   // the eraser doesn't touch locked items
+            if (skip && ((skip.shapes && s.shape) || (skip.highlighter && s.isHighlighter))) { out.push(s); continue; }
 
             // Quick rejection by bounding box (from the cache).
             const bb = this.getStrokeBBox(s);
@@ -214,7 +216,8 @@ export const geometryMixin = defineMixin({
     eraseAt(pageIndex: number, a: Point, b: Point, r: number, dirty?: BBox): boolean {
         const page = this.noteData.pages[pageIndex];
         if (!page) return false;
-        const res = this.eraseFromList(page.strokes, a, b, r, this.plugin.settings.highlighterErase === 'whole', dirty);
+        const st = this.plugin.settings;
+        const res = this.eraseFromList(page.strokes, a, b, r, st.highlighterErase === 'whole', dirty, { shapes: !st.shapeEraseOn, highlighter: st.highlighterErase === 'off' });
         if (res.changed) page.strokes = res.list;
         return res.changed;
     },

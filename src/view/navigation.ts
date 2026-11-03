@@ -164,9 +164,27 @@ export const navigationMixin = defineMixin({
             bottom: this.pagePositionY + scaledHeight > viewportHeight + eps,
         };
         for (const k of ['top', 'right', 'bottom', 'left'] as const) this.edgeEls[k]?.toggleClass('hw-edge-on', more[k]);
+        // The hints cover only the page (not the app background next to it).
+        const z = this.currentZoom;
+        const fit = (el: HTMLElement | undefined, i: number) => {
+            if (!el || !this.pageViews[i]) return;
+            const x0 = Math.max(0, this.pagePositionX + this.pageOffsetX(i) * z);
+            const x1 = Math.min(viewportWidth, this.pagePositionX + (this.pageOffsetX(i) + this.pageW(i)) * z);
+            el.style.left = `${x0}px`;
+            el.style.width = `${Math.max(0, x1 - x0)}px`;
+            el.style.right = 'auto';
+        };
+        if (more.top) fit(this.edgeEls.top, this.pageAtWrapperY(-this.pagePositionY / z).i);
+        if (more.bottom) fit(this.edgeEls.bottom, this.pageAtWrapperY((viewportHeight - this.pagePositionY) / z).i);
+        for (const k of ['left', 'right'] as const) {
+            const el = this.edgeEls[k];
+            if (!el || !more[k]) continue;
+            el.style.top = `${Math.max(0, this.pagePositionY)}px`;
+            el.style.bottom = `${Math.max(0, viewportHeight - (this.pagePositionY + scaledHeight))}px`;
+        }
         this.layoutVersion++;
         this.refreshZoomButton();
-        this.updateMinimap();
+        this.updatePageRail();
         this.scheduleVirtualization();
         this.posTrack();
     },

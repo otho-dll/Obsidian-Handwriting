@@ -1,5 +1,5 @@
 import { defineMixin } from './mixin';
-import { SIMPLIFY_EPSILON, ROTATE_STEP } from '../constants';
+import { SIMPLIFY_EPSILON, ROTATE_STEP, LIGHT_FILL_ALPHA } from '../constants';
 import { Point, Stroke, Bounds, BBox } from '../types';
 
 /** Writing with the pen / mouse: pen, highlighter, eraser, shapes and lasso on the page canvas. */
@@ -237,7 +237,10 @@ export const inputMixin = defineMixin({
             if (effectiveTool === 'shape') {
                 currentStroke.shape = this.shapeType;
                 currentStroke.dash = this.shapeDash;
-                currentStroke.fill = this.shapeFill && this.shapeType !== 'line';
+                const closed = this.shapeType !== 'line';
+                currentStroke.fill = this.shapeFill !== 'none' && closed;
+                if (currentStroke.fill && this.shapeFill === 'light') currentStroke.fillAlpha = LIGHT_FILL_ALPHA;
+                if (currentStroke.fill && this.shapeFill === 'light' && !this.shapeLineOn) currentStroke.noLine = true;
                 currentStroke.arrow = this.shapeArrow && this.shapeType === 'line';
             }
 

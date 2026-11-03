@@ -54,7 +54,8 @@ export const menusMixin = defineMixin({
             [
                 { id: 'zoom', title: `Zoom (${Math.round(this.currentZoom * 100)}%)…`, icon: 'zoom-in', run: () => window.setTimeout(() => this.toggleZoomPanel(anchorEl), 30) },
                 { id: 'contents', title: 'Contents…', icon: 'list', run: () => window.setTimeout(() => this.toggleContentsPanel(anchorEl), 30) },
-                { id: 'pages', title: 'Pages and style…', icon: 'files', run: () => { this.activePageIndex = this.pageIndexAtViewCenter(); this.openPagesDialog('pages'); } },
+                { id: 'pages', title: 'Pages panel', icon: 'hw-pages', run: () => this.togglePagesPanel(), checked: !!this.pagesPanelEl },
+                { id: 'pagestyle', title: 'Page style…', icon: 'paintbrush', run: () => this.openPageStylePop([this.pageIndexAtViewCenter()]) },
             ],
             [
                 { id: 'importpdf', title: 'Import PDF…', icon: 'file-input', run: () => this.importPDF() },
@@ -71,7 +72,7 @@ export const menusMixin = defineMixin({
             for (const it of items) menu.addItem(i => { i.setTitle(it.title).setIcon(it.icon).onClick(it.run); if (it.checked) i.setChecked(true); });
         }
         if (any) menu.addSeparator();
-        menu.addItem(i => i.setTitle('Minimap').setIcon('map').setChecked(st.minimap !== 'off').onClick(() => change(() => { st.minimap = st.minimap === 'off' ? 'always' : 'off'; })));
+        menu.addItem(i => i.setTitle('Page rail').setIcon('map').setChecked(st.minimap !== 'off').onClick(() => change(() => { st.minimap = st.minimap === 'off' ? 'always' : 'off'; })));
         menu.addItem(i => i.setTitle('Pen pressure').setIcon('pen-tool').setChecked(st.pressureEnabled).onClick(() => change(() => { st.pressureEnabled = !st.pressureEnabled; })));
         menu.addItem(i => i.setTitle('Palm rejection').setIcon('hand').setChecked(st.palmRejection !== 'off').onClick(() => change(() => { st.palmRejection = st.palmRejection === 'off' ? 'auto' : 'off'; })));
         menu.addItem(i => i.setTitle('Settings').setIcon('settings').onClick(() => this.openPluginSettings()));
@@ -126,7 +127,8 @@ export const menusMixin = defineMixin({
             case 'fit': this.fitToWidth(); break;
             case 'plot': this.insertPlot(); break;
             case 'image': this.importImages(); break;
-            case 'pages': this.activePageIndex = this.pageIndexAtViewCenter(); this.openPagesDialog('pages'); break;
+            case 'pages': this.togglePagesPanel(); break;
+            case 'pagestyle': this.openPageStylePop([this.pageIndexAtViewCenter()]); break;
             case 'screenshot':
                 if (Platform.isWin) void this.startSnip();
                 else new Notice('Snipping Tool is available on Windows only.');

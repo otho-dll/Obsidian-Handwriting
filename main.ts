@@ -1,3 +1,4 @@
+import { ICON_PAGES } from './src/icons';
 import { Menu, Notice, Plugin, TAbstractFile, TFile, TFolder, TextFileView, WorkspaceLeaf, addIcon } from 'obsidian';
 
 const ICON_NEW_NOTE = 'hw-handwritten-note';
@@ -19,7 +20,9 @@ import { imagesMixin, ImagesMethods } from './src/view/images';
 import { canvasWindowMixin, CanvasWindowMethods } from './src/view/canvasWindow';
 import { imageInsertMixin, ImageInsertMethods } from './src/view/imageInsert';
 import { pageToolsMixin, PageToolsMethods } from './src/view/pageTools';
-import { minimapMixin, MinimapMethods } from './src/view/minimap';
+import { thumbsMixin, ThumbsMethods } from './src/view/thumbs';
+import { pageRailMixin, PageRailMethods } from './src/view/pageRail';
+import { pagesPanelMixin, PagesPanelMethods } from './src/view/pagesPanel';
 import { toolbarMixin, ToolbarMethods } from './src/view/toolbar';
 import { pdfIOMixin, PdfIOMethods } from './src/view/pdfIO';
 import { printMixin, PrintMethods } from './src/view/print';
@@ -61,6 +64,8 @@ export default class HandwritingPlugin extends Plugin {
 
     async onload() {
         // Custom "handwritten note" icon (sheet with a pen) – used in the file menu and commands.
+        // The pages panel icon for Obsidian menus (24-unit paths scaled to Obsidian's 100-unit icon box).
+        addIcon('hw-pages', `<g transform="scale(4.1667)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON_PAGES}</g>`);
         addIcon(ICON_NEW_NOTE, '<g fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"><path d="M58 10H24a8 8 0 0 0-8 8v64a8 8 0 0 0 8 8h22"/><path d="M58 10l22 22v10"/><path d="M58 10v22h22"/><path d="M80 52l10 10-28 28H52V80z"/><path d="M28 64c6-8 10-8 13 0s7 8 11 0"/></g>');
         await this.loadSettings();
         this.addSettingTab(new HandwritingSettingTab(this.app, this));
@@ -244,10 +249,20 @@ export default class HandwritingPlugin extends Plugin {
         this.settings.highlighterPalette = fix(this.settings.highlighterPalette, DEFAULT_HIGHLIGHTER_PALETTE);
         const st = this.settings as any;
         if (!['ask', 'folder', 'note'].includes(st.pdfExportMode)) st.pdfExportMode = 'ask';
+        if (!['fine', 'simple'].includes(st.railPrecision)) st.railPrecision = 'fine';
+        if (!['right', 'left'].includes(st.pagesPanelSide)) st.pagesPanelSide = 'right';
+        if (![1, 2, 3].includes(st.pagesPanelColumns)) st.pagesPanelColumns = 2;
+        // 3.15: the pages panel replaces the old Pages dialog – put its button on the toolbar once.
+        if (!st.pagesPanelIntro) {
+            st.pagesPanelIntro = true;
+            if (Array.isArray(st.quickActions) && !st.quickActions.includes('pages')) st.quickActions = [...st.quickActions, 'pages'];
+        }
+        for (const k of ['minimapStyle', 'minimapSize', 'minimapThumbs', 'minimapLength']) delete st[k];
         if (typeof st.pdfExportFolder !== 'string') st.pdfExportFolder = '';
         if (typeof st.pdfLastFolder !== 'string') st.pdfLastFolder = '';
         if (!['none', 'snip', 'menu', 'undo', 'redo'].includes(st.penButtonAction)) st.penButtonAction = DEFAULT_SETTINGS.penButtonAction;
-        if (!['whole', 'partial'].includes(st.highlighterErase)) st.highlighterErase = 'whole';
+        if (!['off', 'whole', 'partial'].includes(st.highlighterErase)) st.highlighterErase = 'whole';
+        if (typeof st.shapeEraseOn !== 'boolean') st.shapeEraseOn = true;
         if (typeof st.longPressMenu !== 'boolean') st.longPressMenu = true;
         if (!['folderDate', 'folder', 'date'].includes(st.nameMode)) st.nameMode = st.dateFormat === 'none' ? 'folder' : 'folderDate';
         if (!['-', '.', '_', ' '].includes(st.dateSeparator)) st.dateSeparator = '-';
@@ -306,7 +321,9 @@ export default class HandwritingPlugin extends Plugin {
         mem.customShape = cl(m.customShape);
         if (['line', 'rect', 'ellipse'].includes(m.shapeType)) mem.shapeType = m.shapeType;
         if (['solid', 'dashed', 'dotted', 'dashdot'].includes(m.shapeDash)) mem.shapeDash = m.shapeDash;
-        mem.shapeFill = m.shapeFill === true;
+        // Older versions stored the fill as true / false.
+        mem.shapeFill = m.shapeFill === true ? 'solid' : (['none', 'solid', 'light'].includes(m.shapeFill) ? m.shapeFill : 'none');
+        mem.shapeOutline = m.shapeOutline !== false;
         mem.shapeArrow = m.shapeArrow === true;
         this.settings.memory = mem;
         const lp: Record<string, LastPosition> = {};
@@ -346,7 +363,7 @@ export default class HandwritingPlugin extends Plugin {
         if (all[oldPath]) { all[newPath] = all[oldPath]; delete all[oldPath]; void this.saveSettings(); }
     }
 
-    /** Refreshes open views after a settings change (palette, minimap...). */
+    /** Refreshes open views after a settings change (palette, page rail...). */
     refreshViews() {
         this.app.workspace.getLeavesOfType(VIEW_TYPE_HANDWRITING).forEach(leaf => {
             const v = leaf.view as any;
@@ -417,7 +434,9 @@ export class HandwritingView extends TextFileView {
 
     shapeType: 'line' | 'rect' | 'ellipse' = 'rect';
     shapeDash: 'solid' | 'dashed' | 'dotted' | 'dashdot' = 'solid';
-    shapeFill = false;
+    shapeFill: 'none' | 'solid' | 'light' = 'none';
+    /** Outline of filled shapes (false = fill only). */
+    shapeLineOn = true;
     shapeArrow = false;
 
     penColor = '#000000';
@@ -456,6 +475,7 @@ export class HandwritingView extends TextFileView {
         m.shapeType = this.shapeType;
         m.shapeDash = this.shapeDash;
         m.shapeFill = this.shapeFill;
+        m.shapeOutline = this.shapeLineOn;
         m.shapeArrow = this.shapeArrow;
         const snap = JSON.stringify(m);
         if (snap === this.memSnap) return;   // unchanged – nothing to save
@@ -538,14 +558,48 @@ export class HandwritingView extends TextFileView {
     /** Ready stroke paths (Path2D) – redrawing while scrolling and zooming does not rebuild them. */
     pathCache: WeakMap<Stroke, PathCacheEntry> = new WeakMap();
 
-    // Minimap
-    minimapEl: HTMLElement | null = null;
-    minimapInner: HTMLElement | null = null;
-    minimapVp: HTMLElement | null = null;
-    minimapCells: HTMLElement[] = [];
-    minimapCanvases: (HTMLCanvasElement | null)[] = [];
-    /** Minimap: thumbnail width, height of each thumbnail, their positions and total height. */
-    minimapW = 56;
+    // Page rail (src/view/pageRail.ts)
+    railEl: HTMLElement | null = null;
+    railVp: HTMLElement | null = null;
+    railBadge: HTMLElement | null = null;
+    railPreview: HTMLElement | null = null;
+    railTicks: number[] = [];
+    /** Accent frame around the current page (screen pixels, see placeCurrentFrame). */
+    curFrame: HTMLElement | null = null;
+    railDragging = false;
+    railCurrent = -1;
+    railPreviewPage = -1;
+    railPreviewRaf = 0;
+    railHideTimer: number | null = null;
+    railBadgeTimer: number | null = null;
+    /** Rendered scrub previews (page index -> canvas), most recently used last. */
+    previewCache: Map<number, HTMLCanvasElement> = new Map();
+    // Pages panel (src/view/pagesPanel.ts)
+    pagesPanelEl: HTMLElement | null = null;
+    ppHead: HTMLElement | null = null;
+    ppFoot: HTMLElement | null = null;
+    ppList: HTMLElement | null = null;
+    ppToast: HTMLElement | null = null;
+    ppToastTimer: number | null = null;
+    ppCells: HTMLElement[] = [];
+    ppCanvases: HTMLCanvasElement[] = [];
+    ppSelected: Set<number> = new Set();
+    ppSelecting = false;
+    ppCollapsed: Set<number> = new Set();
+    ppFilter = '';
+    ppObserver: IntersectionObserver | null = null;
+    ppVisible: Set<number> = new Set();
+    ppPainted: Set<number> = new Set();
+    ppDirty: Set<number> = new Set();
+    ppTimer: number | null = null;
+    ppDrag: { from: number; lifted: boolean; started: boolean; x: number; y: number; id: number; ghost: HTMLElement | null; target: number } | null = null;
+    ppIndicator: HTMLElement | null = null;
+    ppAutoScroll = 0;
+    ppScrollRaf = 0;
+    ppStylePop: HTMLElement | null = null;
+    ppStyleRefresh: (() => void) | null = null;
+    ppStyleCleanup: (() => void) | null = null;
+    ppCleanup: (() => void) | null = null;
     roomTimer: number | null = null;
     /** Version history: state after loading (in the form written by the plugin) and hash of the last known content. */
     baseCanonical = '';
@@ -569,28 +623,13 @@ export class HandwritingView extends TextFileView {
     oledShiftAt = 0;
     oledShiftStep = 0;
     /** Contents panel (when open) and its cleanup. */
-    contentsPanel: HTMLElement | null = null;
-    contentsAnchor: HTMLElement | null = null;
-    contentsCleanup: (() => void) | null = null;
-    minimapHs: number[] = [];
-    minimapTops: number[] = [];
-    minimapTotal = 0;
-    minimapOffset = 0;
-    minimapDragging = false;
-    minimapCurrent = -1;
-    minimapHideTimer: number | null = null;
-    minimapOpen = true;
-    minimapCloseTimer: number | null = null;
-    minimapBadge: HTMLElement | null = null;
-    minimapBadgeTimer: number | null = null;
-    thumbStale = false;
-    pageStyleScope: 'page' | 'all' = 'all';
+    /** Pages panel view: thumbnails or contents (titled pages). */
+    ppTab: 'pages' | 'contents' = 'pages';
+    ppTabBtns: HTMLElement[] = [];
+    ppCols = 2;
     thumbSprites: Map<string, HTMLCanvasElement> = new Map();
     thumbFailAt: Map<string, number> = new Map();
-    thumbRenderId: Map<number, number> = new Map();
     thumbBitmaps: Map<string, ImageBitmap | null> = new Map();
-    thumbDirty: Set<number> = new Set();
-    thumbTimer: number | null = null;
 
     // Toolbar callbacks
     refreshToolbarUI: (() => void) | null = null;
@@ -599,6 +638,8 @@ export class HandwritingView extends TextFileView {
     applyToolbarItems: (() => void) | null = null;
     /** Opens the shapes menu under the given element (when the shapes button is moved to the "More" menu). */
     openShapeOptions: ((anchor: HTMLElement) => void) | null = null;
+    /** Opens the eraser options (size, what it erases) under the given element. */
+    openEraserOptions: ((anchor: HTMLElement) => void) | null = null;
 
     // Cache: does the stroke have varying pressure
     pressureCache: WeakMap<Stroke, boolean> = new WeakMap();
@@ -618,6 +659,7 @@ export class HandwritingView extends TextFileView {
         this.shapeType = mem.shapeType;
         this.shapeDash = mem.shapeDash;
         this.shapeFill = mem.shapeFill;
+        this.shapeLineOn = mem.shapeOutline;
         this.shapeArrow = mem.shapeArrow;
         this.memSnap = JSON.stringify({ ...mem, sizes: { ...mem.sizes } });
     }
@@ -687,7 +729,7 @@ export class HandwritingView extends TextFileView {
     strokeJson(s: Stroke): string {
         const pts = s.points, n = pts.length;
         const f = pts[0], l = pts[n - 1], m = pts[n >> 1], q = pts[n >> 2];
-        const fp = `${n}|${f?.x},${f?.y}|${l?.x},${l?.y}|${m?.x},${m?.y}|${q?.x},${q?.y}|${s.width}|${s.color}|${s.rot ?? ''}|${s.dash ?? ''}|${s.fill ? 1 : 0}|${s.arrow ? 1 : 0}|${s.shape ?? ''}|${s.isHighlighter ? 1 : 0}|${s.poly ? 1 : 0}|${s.g ?? ''}|${s.lock ? 1 : 0}|${s.alpha ?? ''}`;
+        const fp = `${n}|${f?.x},${f?.y}|${l?.x},${l?.y}|${m?.x},${m?.y}|${q?.x},${q?.y}|${s.width}|${s.color}|${s.rot ?? ''}|${s.dash ?? ''}|${s.fill ? 1 : 0}|${s.fillAlpha ?? ''}|${s.noLine ? 1 : 0}|${s.arrow ? 1 : 0}|${s.shape ?? ''}|${s.isHighlighter ? 1 : 0}|${s.poly ? 1 : 0}|${s.g ?? ''}|${s.lock ? 1 : 0}|${s.alpha ?? ''}`;
         const hit = this.serCache.get(s);
         if (hit && hit.fp === fp) return hit.json;
         // Pressure is saved (as 0-100) only for strokes in which it varies.
@@ -900,9 +942,10 @@ export class HandwritingView extends TextFileView {
         // Palm rejection: remember the last pen activity (hovering over the screen included).
         const markPen = (e: PointerEvent) => {
             // "Activity" (pauses thumbnail rendering) is only writing / dragging – not mere hovering
-            // or using the minimap (otherwise thumbnails were not drawn while the mouse was over the minimap).
-            const onMinimap = !!this.minimapEl && this.minimapEl.contains(e.target as Node);
-            if (!onMinimap && (e.type === 'pointerdown' || e.buttons !== 0)) this.lastActivityAt = performance.now();
+            // or using the page rail / pages panel (otherwise thumbnails were not drawn while using them).
+            const t = e.target as Node;
+            const onNav = (!!this.railEl && this.railEl.contains(t)) || (!!this.pagesPanelEl && this.pagesPanelEl.contains(t));
+            if (!onNav && (e.type === 'pointerdown' || e.buttons !== 0)) this.lastActivityAt = performance.now();
             if (e.type === 'pointerdown' || e.type === 'pointermove') this.lastPointerType = e.pointerType;
             if (e.pointerType !== 'pen') return;
             this.lastPenAt = performance.now();
@@ -928,7 +971,7 @@ export class HandwritingView extends TextFileView {
             }
         }));
 
-        this.buildMinimap();
+        this.buildPageRail();
         this.setupOledCare();
 
         this.resizeObserver = new ResizeObserver(() => {
@@ -947,24 +990,27 @@ export class HandwritingView extends TextFileView {
         if (this.virtRaf !== null) window.cancelAnimationFrame(this.virtRaf);
         this.stopInertia();
         this.stopSnipWatch();
-        if (this.thumbTimer !== null) window.clearTimeout(this.thumbTimer);
+        this.closePagesPanel();
         if (this.snapTimer !== null) { window.clearTimeout(this.snapTimer); this.snapTimer = null; }
         if (this.attachTimer !== null) { window.clearTimeout(this.attachTimer); this.attachTimer = null; }
-        if (this.minimapHideTimer !== null) window.clearTimeout(this.minimapHideTimer);
+        if (this.railHideTimer !== null) window.clearTimeout(this.railHideTimer);
         if (this.roomTimer !== null) { window.clearTimeout(this.roomTimer); this.roomTimer = null; }
         this.closeContentsPanel();
         this.closeZoomPanel();
         this.thumbBitmaps.forEach(b => { if (b) b.close(); });
         this.thumbBitmaps.clear();
-        if (this.minimapCloseTimer !== null) window.clearTimeout(this.minimapCloseTimer);
-        if (this.minimapBadgeTimer !== null) window.clearTimeout(this.minimapBadgeTimer);
+        if (this.railBadgeTimer !== null) window.clearTimeout(this.railBadgeTimer);
         this.assetUrls.forEach(url => URL.revokeObjectURL(url));
         this.assetUrls.clear();
     }
 
-    // Called after the plugin settings change (palette, minimap, pressure...).
+    // Called after the plugin settings change (palette, page rail, pressure...).
     refreshSettings() {
-        this.buildMinimap();
+        // The pages panel is rebuilt so a changed side applies at once.
+        const panelOpen = !!this.pagesPanelEl;
+        if (panelOpen) this.closePagesPanel();
+        this.buildPageRail();
+        if (panelOpen) this.openPagesPanel();
         this.applyAllPageStyles();
         this.renderQuickSlots();
         if (this.refreshToolbarUI) this.refreshToolbarUI();
@@ -1031,7 +1077,7 @@ export class HandwritingView extends TextFileView {
         this.applyAllPageStyles();
         this.applyManualZoom();
         this.updateVirtualization();
-        this.buildMinimap();
+        this.buildPageRail();
     }
 
     /**
@@ -1047,5 +1093,5 @@ export class HandwritingView extends TextFileView {
 
 }
 
-export interface HandwritingView extends HistoryMethods, GeometryMethods, ImagesMethods, CanvasWindowMethods, ImageInsertMethods, PageToolsMethods, MinimapMethods, ToolbarMethods, PdfIOMethods, StrokeDrawMethods, CalcPanelMethods, ClipboardMethods, MenusMethods, SelectionEditMethods, VersionsMethods, PositionMethods, AssetsMethods, SelectionMethods, ContextMenuMethods, NavigationMethods, InputMethods, PageSizeMethods, ContentsMethods, OledCareMethods, ZoomPanelMethods, TouchMethods, PrintMethods {}
-Object.assign(HandwritingView.prototype, historyMixin, geometryMixin, imagesMixin, canvasWindowMixin, imageInsertMixin, pageToolsMixin, minimapMixin, toolbarMixin, pdfIOMixin, strokeDrawMixin, calcPanelMixin, clipboardMixin, menusMixin, selectionEditMixin, versionsMixin, positionMixin, assetsMixin, selectionMixin, contextMenuMixin, navigationMixin, inputMixin, pageSizeMixin, contentsMixin, oledCareMixin, zoomPanelMixin, touchMixin, printMixin);
+export interface HandwritingView extends HistoryMethods, GeometryMethods, ImagesMethods, CanvasWindowMethods, ImageInsertMethods, PageToolsMethods, ThumbsMethods, PageRailMethods, PagesPanelMethods, ToolbarMethods, PdfIOMethods, StrokeDrawMethods, CalcPanelMethods, ClipboardMethods, MenusMethods, SelectionEditMethods, VersionsMethods, PositionMethods, AssetsMethods, SelectionMethods, ContextMenuMethods, NavigationMethods, InputMethods, PageSizeMethods, ContentsMethods, OledCareMethods, ZoomPanelMethods, TouchMethods, PrintMethods {}
+Object.assign(HandwritingView.prototype, historyMixin, geometryMixin, imagesMixin, canvasWindowMixin, imageInsertMixin, pageToolsMixin, thumbsMixin, pageRailMixin, pagesPanelMixin, toolbarMixin, pdfIOMixin, strokeDrawMixin, calcPanelMixin, clipboardMixin, menusMixin, selectionEditMixin, versionsMixin, positionMixin, assetsMixin, selectionMixin, contextMenuMixin, navigationMixin, inputMixin, pageSizeMixin, contentsMixin, oledCareMixin, zoomPanelMixin, touchMixin, printMixin);
