@@ -323,5 +323,3 @@ version (e.g. `git tag 3.15.2 && git push origin 3.15.2`).
 
 [MIT License](LICENSE) – free to use, change and share, also commercially, as long as the copyright notice
 (with the link to this repository) and the license text are kept in all copies.
-=======
->>>>>>> 6ddd1353ee29a322439428ee3998a34ce99b9b43
