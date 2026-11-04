@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/banner.png" alt="Handwritten A4 Notebook - an Obsidian plugin for pen-first handwritten notes" width="100%"></p>
 
-# Handwritten notes
+# Handwritten A4 Notebook
 
 > **AI Notice!** This project is entirely vibe-coded using Claude Code.
 >
