@@ -10,7 +10,7 @@ import { r2, newId } from './src/utils';
 import { DEFAULT_QUICK_ACTIONS, QUICK_ACTIONS, TOOLBAR_ITEMS } from './src/quickActions';
 import { migrateNote, NOTE_FORMAT_VERSION } from './src/format';
 import { usesV4, isFormat, ENDLESS_MAX, pageWidth, pageHeight } from './src/pageFormat';
-import { VaultAdapter, writeDataMeta, moveDataFolder, trashDataFolder } from './src/dataFolder';
+import { VaultAdapter, writeDataMeta, moveDataFolder, trashDataFolder, isSafeRef, isSafeDataUrl } from './src/dataFolder';
 import { HandwritingSettings, LastPosition, defaultMemory, DEFAULT_PEN_PALETTE, DEFAULT_HIGHLIGHTER_PALETTE, DEFAULT_SETTINGS } from './src/settings';
 import { HandwritingSettingTab } from './src/settingTab';
 import { saveConverterScript, copyConverterCommand } from './src/converter';
@@ -780,8 +780,9 @@ export class HandwritingView extends TextFileView {
                     Array.isArray(pt) ? { x: pt[0], y: pt[1], pressure: typeof pt[2] === 'number' ? pt[2] / 100 : 0.5 } : pt)
             }));
             const page: PageData = { strokes };
-            if (p.bgPath) page.bgPath = p.bgPath;
-            if (p.bgImage) page.bgImage = p.bgImage;
+            // Notes may come from other people: only safe vault paths and inline data:image URLs are kept.
+            if (isSafeRef(p.bgPath)) page.bgPath = p.bgPath;
+            if (isSafeDataUrl(p.bgImage)) page.bgImage = p.bgImage;
             if (isTemplate(p.tpl)) page.tpl = p.tpl;
             if (isHexColor(p.paper)) page.paper = p.paper.toLowerCase();
             const num = (v: any, min: number, max: number) => typeof v === 'number' && Number.isFinite(v) ? Math.max(min, Math.min(max, v)) : undefined;
@@ -792,8 +793,14 @@ export class HandwritingView extends TextFileView {
             if (typeof p.title === 'string' && p.title.trim()) page.title = p.title.trim().slice(0, 200);
             if (Array.isArray(p.images)) {
                 page.images = p.images
-                    .filter((i: any) => i && typeof i.x === 'number' && typeof i.y === 'number' && typeof i.w === 'number' && typeof i.h === 'number' && (i.path || i.data))
-                    .map((i: any) => ({ ...i, id: i.id || newId() }));
+                    .filter((i: any) => i && typeof i.x === 'number' && typeof i.y === 'number' && typeof i.w === 'number' && typeof i.h === 'number')
+                    .map((i: any) => {
+                        const im = { ...i, id: typeof i.id === 'string' && i.id ? i.id : newId() };
+                        if (!isSafeRef(im.path)) delete im.path;
+                        if (!isSafeDataUrl(im.data)) delete im.data;
+                        return im;
+                    })
+                    .filter((i: any) => i.path || i.data);
             }
             return page;
         });

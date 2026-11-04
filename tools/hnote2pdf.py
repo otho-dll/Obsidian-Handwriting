@@ -159,7 +159,14 @@ def png_decode(data):
     if w is None or depth != 8 or interlace != 0 or ctype not in (0, 2, 3, 4, 6):
         return None
     channels = {0: 1, 2: 3, 3: 1, 4: 2, 6: 4}[ctype]
-    raw = zlib.decompress(b''.join(idat))
+    if w <= 0 or h <= 0 or w * h > 60_000_000:   # refuse absurd sizes (memory)
+        return None
+    # Decompress at most what the image can need, so a crafted PNG can't fill the memory.
+    expect = h * (1 + w * channels)
+    dec = zlib.decompressobj()
+    raw = dec.decompress(b''.join(idat), expect)
+    if len(raw) < expect:
+        return None
     stride = w * channels
     out = bytearray(h * stride)
     prev = bytearray(stride)
@@ -792,13 +799,19 @@ def data_dir_for(note_path):
 
 def read_ref(ref, note_path, vault):
     """Bytes of the image file referenced in the note, or None."""
-    if not ref:
+    if not ref or not isinstance(ref, str):
         return None
     if ref.startswith('data:'):
         try:
             return base64.b64decode(ref.split(',', 1)[1])
         except Exception:
             return None
+    # Notes can come from other people: only plain relative paths that stay inside the vault /
+    # the note's folder are followed (no "..", absolute paths, drive letters or backslashes).
+    rel_check = ref[2:] if ref.startswith('@/') else ref
+    if (len(ref) > 1024 or '\\' in ref or ':' in ref
+            or rel_check.startswith('/') or any(seg in ('', '.', '..') for seg in rel_check.split('/'))):
+        return None
     cands = []
     if ref.startswith('@/'):
         rel = ref[2:]
@@ -810,7 +823,11 @@ def read_ref(ref, note_path, vault):
         if vault:
             cands.append(os.path.join(vault, *ref.split('/')))
         cands.append(os.path.join(os.path.dirname(note_path), *ref.split('/')))
+    roots = [os.path.realpath(r) for r in (data_dir_for(note_path), vault, os.path.dirname(os.path.abspath(note_path))) if r]
     for p in cands:
+        real = os.path.realpath(p)
+        if not any(real == r or real.startswith(r + os.sep) for r in roots):
+            continue   # a symlink pointing outside
         if os.path.isfile(p):
             with open(p, 'rb') as f:
                 return f.read()

@@ -3,7 +3,10 @@ import { Notice, TFile, TFolder } from 'obsidian';
 import { IMAGE_MAX_SIDE } from '../constants';
 import { ImageItem, PageData } from '../types';
 import { mimeFromPath, extFromMime, canvasToBlob, newId } from '../utils';
-import { VaultAdapter, DATA_SUFFIX, LOCAL_PREFIX, dataDirFor, resolveRef, isLocalRef, historyAttachPath, ensureDir, writeDataMeta, readDataMeta, copyLocalRef } from '../dataFolder';
+import { VaultAdapter, isSafeRef, DATA_SUFFIX, LOCAL_PREFIX, dataDirFor, resolveRef, isLocalRef, historyAttachPath, ensureDir, writeDataMeta, readDataMeta, copyLocalRef } from '../dataFolder';
+
+/** File types the "move images into the hidden folder" command may move. */
+const MOVABLE_EXT = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'avif', 'pdf']);
 
 /** Image and attachment files of the note (hidden data folder, image URLs). */
 export const assetsMixin = defineMixin({
@@ -105,7 +108,8 @@ export const assetsMixin = defineMixin({
         const map = new Map<string, string>();
         for (const p of old) {
             const f = this.app.vault.getAbstractFileByPath(p);
-            if (!(f instanceof TFile)) continue;
+            // Only image / PDF files are moved – a crafted note can't make this command move other notes.
+            if (!(f instanceof TFile) || !MOVABLE_EXT.has(f.extension.toLowerCase())) continue;
             let name = f.name;
             if (await a.exists(`${dir}/${name}`)) name = `${newId()}.${f.extension}`;
             await a.writeBinary(`${dir}/${name}`, await this.app.vault.readBinary(f));
@@ -217,6 +221,7 @@ export const assetsMixin = defineMixin({
         if (!pending) {
             pending = (async () => {
                 try {
+                    if (!isSafeRef(ref)) return null;
                     const path = this.file ? resolveRef(this.file.path, ref) : ref;
                     const f = this.app.vault.getAbstractFileByPath(path);
                     const alt = this.file ? historyAttachPath(this.file.path, ref) : null;

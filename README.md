@@ -36,7 +36,7 @@ printing - in notes that stay readable even without Obsidian.
 - [Export to PDF and printing](#export-to-pdf-and-printing)
 - [Version history](#version-history)
 - [Where your data lives](#where-your-data-lives)
-- [PDF without Obsidian - `hnote2pdf.py`](#pdf-without-obsidian--hnote2pdfpy)
+- [PDF without Obsidian - `hnote2pdf.py`](#pdf-without-obsidian---hnote2pdfpy)
 - [Toolbar and the ⋯ menu](#toolbar-and-the--menu)
 - [Pen, touch and palm rejection](#pen-touch-and-palm-rejection)
 - [OLED care](#oled-care)
@@ -62,6 +62,7 @@ printing - in notes that stay readable even without Obsidian.
 | **Eraser** | Cuts strokes where you rub (it doesn't paint white). Its size on screen is the same at every zoom level; rub quickly and it grows up to 4×. The pen's eraser end and side button work too. You choose whether it erases shapes, and whether it leaves the highlighter alone, removes whole highlighter strokes or only the part you rub over. |
 | **Shapes** | Line (optionally with an arrow), rectangle, ellipse. Solid, dashed, dotted or dash-dot lines. Fill: outline only, solid, light (semi-transparent) with outline, or light fill only. Hold **Shift** for straight angles, squares and circles. |
 | **Selection** | Freehand lasso or rectangle. Select, move, scale, rotate, recolour, group and lock. |
+
 **Tap the active tool again** for its options: thickness (pen, highlighter, eraser, shapes), opacity (pen),
 what the eraser erases, the shape options, or the selection mode (lasso / rectangle - and the thickness of the
 selected strokes). Colours sit on the toolbar; in a narrow window they are in one panel under the colour button.
@@ -145,6 +146,7 @@ Give important pages a title: right-click a page → **Page title…**, the page
 ## Version history
 Versions are saved automatically: while you work (at most every N minutes), when you close the note, before pages are
 deleted and before an older version is restored. The same content is never stored twice, and empty notes are not stored.
+
 **⋯ → Version history…** shows the versions by day with a page preview. **Restore** a version (the current state is
 kept, so the restore can be undone), **open it as a copy**, **save a version now**, or **delete** single versions or all
 of them (each delete needs a second click). The last 24 hours keep every version; older days keep the last one of each
@@ -248,7 +250,9 @@ Settings → **OLED care** - each option on its own:
 
 ## Installation
 **From Community plugins:** Settings → Community plugins → Browse → search *Handwritten A4 Notebook* → Install → Enable.
+
 **Beta via BRAT:** install the *BRAT* plugin → *Add beta plugin* → `<github-user>/<repository>`.
+
 **Manually:** download `main.js`, `manifest.json` and `styles.css` from the latest release into
 `<your vault>/.obsidian/plugins/handwritten-notebook/`, then enable the plugin in Settings → Community plugins.
 

@@ -46,6 +46,22 @@ export function dataDirFor(notePath: string): string {
 export const isLocalRef = (p: string | undefined): p is string => !!p && p.startsWith(LOCAL_PREFIX);
 
 /**
+ * A file path stored in a note must stay inside the vault (and "@/…" paths inside the note's data folder).
+ * Notes can come from other people, so paths with "..", ".", absolute paths, drive letters, URL schemes
+ * or backslashes are rejected – otherwise a crafted note could read or write files elsewhere.
+ */
+export function isSafeRef(p: unknown): p is string {
+    if (typeof p !== 'string' || p.length === 0 || p.length > 1024) return false;
+    if (/[\\:\u0000-\u001f]/.test(p)) return false;
+    const rel = p.startsWith(LOCAL_PREFIX) ? p.slice(LOCAL_PREFIX.length) : p;
+    if (rel.startsWith('/')) return false;
+    return rel.split('/').every(seg => seg !== '' && seg !== '.' && seg !== '..');
+}
+
+/** Embedded image stored in a note: only inline "data:image/…" URLs (never remote or local URLs). */
+export const isSafeDataUrl = (d: unknown): d is string => typeof d === 'string' && /^data:image\/[a-z0-9.+-]+;base64,/i.test(d);
+
+/**
  * Files the note no longer uses but older versions (history) or undo still need
  * live in history/attachments/. The attachments/ folder therefore holds exactly the images present in the note.
  */
@@ -53,12 +69,13 @@ export const HISTORY_ATTACH = 'history/attachments';
 
 /** Fallback path of the file "@/attachments/x" in history/attachments/ (or null for other paths). */
 export function historyAttachPath(notePath: string, ref: string): string | null {
-    if (!isLocalRef(ref) || !ref.startsWith(`${LOCAL_PREFIX}attachments/`)) return null;
+    if (!isLocalRef(ref) || !ref.startsWith(`${LOCAL_PREFIX}attachments/`) || !isSafeRef(ref)) return null;
     return `${dataDirFor(notePath)}/${HISTORY_ATTACH}/${ref.slice(`${LOCAL_PREFIX}attachments/`.length)}`;
 }
 
 /** Vault path for a path stored in the note ("@/…" = relative to the note's data folder). */
 export function resolveRef(notePath: string, ref: string): string {
+    if (!isSafeRef(ref)) throw new Error('Unsafe path in note: ' + ref);
     return isLocalRef(ref) ? `${dataDirFor(notePath)}/${ref.slice(LOCAL_PREFIX.length)}` : ref;
 }
 
@@ -100,6 +117,7 @@ export async function readDataMeta(a: VaultAdapter, dir: string): Promise<{ id?:
  */
 export async function copyLocalRef(a: VaultAdapter, fromNote: string, toNote: string, ref: string, newName?: () => string): Promise<string> {
     if (!isLocalRef(ref)) return ref;
+    if (!isSafeRef(ref)) throw new Error('Unsafe path in note: ' + ref);
     const src = resolveRef(fromNote, ref);
     let rel = ref.slice(LOCAL_PREFIX.length);
     let dst = `${dataDirFor(toNote)}/${rel}`;
