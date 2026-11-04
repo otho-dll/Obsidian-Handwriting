@@ -42,5 +42,5 @@ Coordinates are in logical units: A4 = 800 × 1131, Y axis pointing down.
 
 ## For plugin developers
 
-The plugin embeds the script in `src/converterScript.ts`. After every change to `tools/hnote2pdf.py` run
-`python3 tools/embed_script.py` (from the plugin root folder) so the plugin saves the current version.
+The plugin embeds the script in `src/converterScript.ts`. After every change to `src/tools/hnote2pdf.py` run
+`npm run embed` (or `python3 src/tools/embed_script.py`) so the plugin saves the current version.

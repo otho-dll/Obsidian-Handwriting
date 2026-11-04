@@ -25,6 +25,16 @@ jobs:
           node-version: "24"
           cache: npm
 
+      - name: Check that the tag matches manifest.json
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          VERSION=$(node -p "require('./manifest.json').version")
+          if [ "$TAG" != "$VERSION" ]; then
+            echo "::error::Tag $TAG does not match manifest.json version $VERSION"
+            exit 1
+          fi
+
       - name: Build
         run: |
           npm ci
@@ -36,9 +46,9 @@ jobs:
         uses: actions/attest-build-provenance@v3
         with:
           subject-path: |
-            main.js
-            manifest.json
-            styles.css
+            build/main.js
+            build/manifest.json
+            build/styles.css
 
       - name: Create release
         env:
@@ -48,4 +58,4 @@ jobs:
           gh release create "$TAG" \
             --title "$TAG" \
             --generate-notes \
-            main.js manifest.json styles.css
+            build/main.js build/manifest.json build/styles.css

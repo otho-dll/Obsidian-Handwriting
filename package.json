@@ -1,18 +1,21 @@
 {
-  "name": "obsidian-handwriting",
+  "name": "handwritten-notebook",
   "version": "3.15.7",
+  "private": true,
+  "description": "Obsidian plugin for handwritten notes on A4 pages.",
+  "license": "MIT",
   "scripts": {
-    "dev": "esbuild main.ts --bundle --watch --format=cjs --external:obsidian --outfile=main.js",
-    "build": "esbuild main.ts --bundle --minify --format=cjs --external:obsidian --outfile=main.js",
+    "dev": "node scripts/esbuild.config.mjs --watch",
+    "build": "node scripts/esbuild.config.mjs",
+    "typecheck": "tsc -p src",
+    "embed": "python src/tools/embed_script.py",
     "deploy": "node scripts/deploy.mjs",
     "deploy:watch": "node scripts/deploy.mjs --watch",
     "deploy:local": "npm run build && npm run deploy"
   },
-  "dependencies": {
-    "obsidian": "latest"
-  },
   "devDependencies": {
     "esbuild": "^0.17.0",
-    "typescript": "^4.9.0"
+    "obsidian": "latest",
+    "typescript": "^5.6.0"
   }
 }

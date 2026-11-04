@@ -1,8 +1,8 @@
 import { defineMixin } from './mixin';
 import { Point, Stroke } from '../types';
-import type { PathCacheEntry } from '../../main';
+import type { PathCacheEntry } from '../main';
 
-/** Dash pattern for a line style (in page units, scaled with the line width); [] = solid. Same values in tools/hnote2pdf.py. */
+/** Dash pattern for a line style (in page units, scaled with the line width); [] = solid. Same values in src/tools/hnote2pdf.py. */
 export function dashPattern(dash: string | undefined, w: number): number[] {
     const long = w * 4 + 6, dot = w * 1.2 + 0.8;
     if (dash === 'dashed') return [long, w * 2.5 + 5];

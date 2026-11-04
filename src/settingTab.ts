@@ -6,7 +6,7 @@ import { setSvg, appendSvg } from './svg';
 import { CONVERTER_FILE, saveConverterScript, copyConverterCommand } from './converter';
 import { LOGO_FILE } from './constants';
 import { HandwritingSettings, DEFAULT_PEN_PALETTE, DEFAULT_HIGHLIGHTER_PALETTE } from './settings';
-import type HandwritingPlugin from '../main';
+import type HandwritingPlugin from './main';
 
 export class HandwritingSettingTab extends PluginSettingTab {
     constructor(app: App, private plugin: HandwritingPlugin) { super(app, plugin); }

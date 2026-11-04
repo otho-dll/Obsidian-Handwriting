@@ -179,7 +179,7 @@ python3 hnote2pdf.py MyVault -r -o ~/PDF/                         # every note i
 python3 hnote2pdf.py ".Lecture 1.hnote-data/history/20261019-212953_0f315cad_auto.hnote.gz"   # an old version
 ```
 Options: `--no-pattern` (plain paper), `--pressure 0.7` / `--no-pressure`, `--vault PATH`.
-The file format is documented at the top of the script and in [`tools/README.md`](tools/README.md).
+The file format is documented at the top of the script and in [`src/tools/README.md`](src/tools/README.md).
 
 ## Toolbar and the ⋯ menu
 Settings → **Toolbar** decides what sits on the toolbar:
@@ -274,21 +274,26 @@ Settings → **OLED care** - each option on its own:
 
 ## For developers
 ```
-main.ts                 plugin + the view (lifecycle, loading / saving notes)
+src/main.ts             plugin + the view (lifecycle, loading / saving notes)
+src/styles.css          all styles
 src/view/*.ts           view features as mixins (input, navigation, selection, pageRail, pagesPanel, toolbar, versions, …)
 src/format.ts           file format versions and migrations (v1 → v4)
 src/pageFormat.ts       page sizes (A4, landscape, endless)
 src/templates.ts        page patterns (shared geometry for screen, thumbnails, PDF)
 src/math/               calculator, expression parser, units, function plots
-tools/hnote2pdf.py      standalone converter; tools/embed_script.py copies it into src/converterScript.ts
-scripts/deploy.mjs      copies the built plugin into a vault for testing
+src/tools/hnote2pdf.py  standalone converter; src/tools/embed_script.py copies it into src/converterScript.ts
+scripts/                esbuild.config.mjs (build) and deploy.mjs (copies the build into a vault for testing)
+build/                  build output: main.js, manifest.json, styles.css (not committed)
+manifest.json           plugin manifest – stays in the repository root, Obsidian reads it from there
 .github/workflows/      builds and publishes a GitHub release when a version tag is pushed
 ```
 ```bash
 npm install
-npm run dev           # build and rebuild on change
-npm run build         # production build (main.js)
-npm run deploy:local  # build and copy main.js, manifest.json and styles.css into the vault folder set in .vault-plugin-dir
+npm run dev           # build into build/ and rebuild on change
+npm run build         # production build into build/
+npm run typecheck     # TypeScript check
+npm run embed         # after changing src/tools/hnote2pdf.py
+npm run deploy:local  # build and copy build/* into the vault folder set in .vault-plugin-dir
 ```
 
 ## License

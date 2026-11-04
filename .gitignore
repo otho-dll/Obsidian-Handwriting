@@ -1,8 +1,8 @@
 # Dependencies
 node_modules/
 
-# Build output – main.js is attached to GitHub releases, not committed
-main.js
+# Build output (npm run build → build/) – attached to GitHub releases, not committed
+build/
 *.js.map
 
 # Obsidian plugin data (personal settings of this vault, created by Obsidian)
@@ -35,4 +35,4 @@ desktop.ini
 .vault-plugin-dir
 
 # Private developer notes
-DEV-NOTES.md
+docs/DEV-NOTES.md

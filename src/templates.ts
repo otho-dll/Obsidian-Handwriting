@@ -29,7 +29,7 @@ export function inkForPaper(paper: string): PageInk {
 /*
  * Pattern geometry. Spacing is fixed (independent of the page size), so on landscape and endless pages
  * lines and squares have the same size as on A4. The same geometry draws the pattern on screen (CSS), in thumbnails,
- * in PDF export and in the tools/hnote2pdf.py script – make changes in all of these places.
+ * in PDF export and in the src/tools/hnote2pdf.py script – make changes in all of these places.
  */
 const GX = A4_W / 42;          // grid / dot step horizontally (≈ 5 mm)
 const GY = A4_H / 56;          // dot step vertically

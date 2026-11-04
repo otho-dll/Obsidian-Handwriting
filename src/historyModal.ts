@@ -1,5 +1,5 @@
 import { App, Modal, Notice, setIcon } from 'obsidian';
-import type { HandwritingView } from '../main';
+import type { HandwritingView } from './main';
 import { NoteData } from './types';
 import { REASON_LABEL, SnapshotInfo } from './versionStore';
 
