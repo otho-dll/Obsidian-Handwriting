@@ -10,17 +10,18 @@
 Write by hand on real pages - portrait, landscape or one endless page. Pen pressure, highlighter, shapes,
 lasso selection, images, imported PDFs, function plots, a calculator, a pages panel, version history, PDF export and
 printing - in notes that stay readable even without Obsidian.
-
+<!--
 ## Gallery 
 <p align="center">
   <img src="docs/Screenshots/blankPage.png" height="auto" width="400">
   <img src="docs/Screenshots/Pages.png" height="auto" width="400">
   <img src="docs/Screenshots/PageNavigation.png" height="auto" width="400">
-  <!-- <img src="docs/Screenshots/PagesAndPageStyle.png" height="auto" width="400"> -->
+  <img src="docs/Screenshots/PagesAndPageStyle.png" height="auto" width="400"> 
   <img src="docs/Screenshots/BuiltInCalculator.png" height="auto" width="400">
   <img src="docs/Screenshots/SciencetificCalculator.png" height="auto" width="400">
   <img src="docs/Screenshots/FunctionPloting.png" height="auto" width="400">
 </p>
+-->
 
 ## Contents
 - [Getting started](#getting-started)
