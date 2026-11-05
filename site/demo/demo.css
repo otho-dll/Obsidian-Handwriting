@@ -16,7 +16,7 @@ body.demo-page *, body.demo-page *::before, body.demo-page *::after { box-sizing
     background: var(--background-primary); border-bottom: 1px solid var(--background-modifier-border);
 }
 .demo-brand { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--text-normal); text-decoration: none; font-weight: 650; font-size: 15px; }
-.demo-brand .logo { flex: 0 0 auto; display: block; filter: drop-shadow(0 0 6px rgba(15, 73, 190, 0.4)); }
+.demo-brand .logo { flex: 0 0 auto; display: block; filter: drop-shadow(0 0 6px rgba(79, 117, 82, 0.4)); }
 .demo-brand-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .demo-brand:hover .demo-brand-name { text-decoration: underline; text-underline-offset: 2px; }
 .demo-badge { flex: 0 0 auto; padding: 2px 8px; border-radius: 5px; font-size: 12px; font-weight: 600; color: var(--text-accent); background: var(--background-modifier-active-hover); }

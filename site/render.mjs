@@ -29,11 +29,18 @@ export const ICONS = {
     chevronLeft: '<path d="m15 18-6-6 6-6"/>',
     chevronRight: '<path d="m9 18 6-6-6-6"/>',
     moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
+    grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+    shield: '<path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>',
 };
 const icon = (name, cls = '') => ICONS[name] ? `<svg${cls ? ` class="${cls}"` : ''} viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>` : '';
 
-/** The logo: a rounded square with a pen and a written line. Also used as favicon.svg. */
-export const LOGO_SVG = (size = 28) => `<svg class="logo" width="${size}" height="${size}" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#0f49be"/><path d="M11 47c4-9 8-9 11 0s8 9 12-1" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" opacity=".7"/><path d="M45 11a4.6 4.6 0 0 1 6.5 6.5L30 39l-9.5 3 3-9.5z" fill="#fff" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg>`;
+/**
+ * The logo: a handwritten (cursive) "H" in three strokes – top wave and left stem, the diagonal from the bottom loop,
+ * the right stem with its exit stroke – on a rounded green square. The same path is in src/settingTab.ts (settings)
+ * and docs/banner.svg (README). Also used as favicon.svg.
+ */
+export const LOGO_H_PATH = 'M12.4 14.8C14.4 11.2 18.2 10.3 20.7 12.2C22.7 13.8 24.6 13.7 26.1 12.4C26.5 22.5 26 33 24.4 43.5C23.8 48.2 21.7 52.6 18.8 53.2C16.2 53.7 15.4 50.7 17.6 47.9C19.9 45 23.6 43.4 27 41.4C33 35 39.5 25.5 45 15.8C47 12.2 47.2 8.6 44.6 8.6C42 8.6 40.9 11.6 41 15.4C41.3 27 41.7 38.5 42.3 46.8C42.6 51.6 45 54.2 47.7 53C50.2 51.9 51.6 49.2 52.2 46.6';
+export const LOGO_SVG = (size = 28) => `<svg class="logo" width="${size}" height="${size}" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#4f7552"/><path d="${LOGO_H_PATH}" fill="none" stroke="#fff" stroke-width="3.9" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 export const FAVICON_SVG = () => LOGO_SVG(64).replace('class="logo" ', 'xmlns="http://www.w3.org/2000/svg" ').replace(' aria-hidden="true"', '');
 
 /** Fills {{placeholders}} in all strings of the content (repeated, so placeholders may contain placeholders). */
@@ -57,7 +64,7 @@ const CSP_DEMO_EXTRA = " 'wasm-unsafe-eval'";
 const CSP = "default-src 'self'; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'";
 const CSP_DEMO = CSP.replace("script-src 'self'", "script-src 'self'" + CSP_DEMO_EXTRA);
 
-function head({ title, description, themeColor, root, css, scripts, dev, app = false }) {
+function head({ title, description, themeColor, root, css, scripts, dev, app = false, themeScript = true }) {
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -70,8 +77,7 @@ function head({ title, description, themeColor, root, css, scripts, dev, app = f
 <title>${attr(title)}</title>
 <meta name="description" content="${attr(description)}">
 <link rel="icon" href="${root}favicon.svg" type="image/svg+xml">
-<script src="${root}theme.js"></script>
-${css.map(c => `<link rel="stylesheet" href="${c}">`).join('\n')}
+${themeScript ? `<script src="${root}theme.js"></script>\n` : ''}${css.map(c => `<link rel="stylesheet" href="${c}">`).join('\n')}
 ${scripts.map(s => `<script type="module" src="${s}"></script>`).join('\n')}
 ${dev ? '<script src="/livereload.js"></script>' : ''}
 </head>`;
@@ -86,81 +92,60 @@ const button = (b, extra = '') => {
 };
 
 export function renderLanding(c, { dev = false } = {}) {
-    const slides = c.hero.slides ?? [];
-    return `${head({ title: c.site.title, description: c.site.description, themeColor: c.site.themeColor, root: '', css: ['site.css'], scripts: ['carousel.js'], dev })}
+    const h = c.hero;
+    const title = (id, text, extra = '') => `<h2 id="${id}" class="section-title">${LOGO_SVG(30)}<span>${text}</span></h2>${extra}`;
+    return `${head({ title: c.site.title, description: c.site.description, themeColor: c.site.themeColor, root: '', css: ['site.css'], scripts: [], dev, themeScript: false })}
 <body>
 <a class="skip-link" href="#features">Skip to the features</a>
 
-<header class="site-header">
-  <div class="wrap header-row">
-    <a class="brand" href="#top" aria-label="${attr(c.site.name)} – top of the page">${LOGO_SVG(30)}<span>${c.site.name}</span></a>
-    <div class="header-right">
-      <nav class="header-nav" aria-label="Sections">
-        ${c.nav.map(n => `<a${n.highlight ? ' class="nav-highlight"' : ''} href="${attr(n.href)}">${n.label}</a>`).join('\n        ')}
-      </nav>
-      ${themeToggle(c)}
-    </div>
-  </div>
-</header>
-
-<main id="top">
-  <section class="hero">
-    <div class="wrap hero-grid">
-      <h1 class="visually-hidden">${c.hero.title}</h1>
-      <div class="carousel" data-carousel data-interval="${Number(c.hero.slideSeconds) || 5}" role="region" aria-roledescription="carousel" aria-label="Screenshots">
-        <div class="carousel-frame">
-${slides.map((s, i) => `          <figure class="carousel-slide${i === 0 ? ' is-active' : ''}" role="group" aria-roledescription="slide" aria-label="${i + 1} of ${slides.length}"${i === 0 ? '' : ' aria-hidden="true"'}>
-            <img src="screenshots/${attr(s.file)}" alt="${attr(s.alt)}" width="2880" height="1700"${i === 0 ? ' fetchpriority="high"' : ' loading="lazy"'} decoding="async">
-          </figure>`).join('\n')}
-          <button type="button" class="carousel-arrow carousel-prev" data-carousel-prev aria-label="Previous screenshot">${icon('chevronLeft')}</button>
-          <button type="button" class="carousel-arrow carousel-next" data-carousel-next aria-label="Next screenshot">${icon('chevronRight')}</button>
-        </div>
-        <div class="carousel-bar">
-          <div class="carousel-dots" role="tablist" aria-label="Choose a screenshot">
-${slides.map((s, i) => `            <button type="button" class="carousel-dot" role="tab" data-carousel-dot="${i}" aria-label="Screenshot ${i + 1}: ${attr(s.alt)}" aria-selected="${i === 0}"></button>`).join('\n')}
-          </div>
-        </div>
+<main>
+  <!-- 1. Intro -->
+  <section class="intro" aria-labelledby="intro-title">
+    <div class="wrap intro-inner">
+      ${LOGO_SVG(84).replace('class="logo"', 'class="logo intro-logo"')}
+      <h1 id="intro-title" class="intro-name">${c.site.name}</h1>
+      <p class="intro-about">${h.about}</p>
+      <div class="intro-actions">
+        ${button({ ...h.demo, primary: true }, ' btn-hero')}
+        <nav class="intro-links" aria-label="More">
+          ${h.links.map(l => `<a class="chip" href="${attr(l.href)}"${/^https?:/.test(l.href) ? ' rel="noopener"' : ''}>${icon(l.icon)}<span>${l.label}</span></a>`).join('\n          ')}
+        </nav>
       </div>
-      <div class="hero-text">
-        <p class="pitch">${c.hero.pitch}</p>
-        <div class="hero-actions">
-          ${c.hero.buttons.map(b => button(b)).join('\n          ')}
-        </div>
-        <p class="hero-meta">${c.hero.meta}</p>
+      <p class="intro-meta">${h.meta}</p>
+    </div>
+  </section>
+
+  <!-- 2. Features and privacy -->
+  <section id="features" class="section" aria-labelledby="features-title">
+    <div class="wrap">
+      ${title('features-title', c.features.title, `<p class="section-lead">${c.features.lead}</p>`)}
+      <ul class="feature-grid">
+${c.features.items.map(f => `        <li class="card feature">
+          <span class="icon-box">${icon(f.icon)}</span>
+          <div><h3>${f.title}</h3><p>${f.text}</p></div>
+        </li>`).join('\n')}
+      </ul>
+      <div id="privacy" class="privacy card" aria-labelledby="privacy-title">
+        <h3 id="privacy-title"><span class="icon-box icon-box-small">${icon('shield')}</span>${c.privacy.title}</h3>
+        <ul class="check-list">
+          ${c.privacy.items.map(t => `<li>${t}</li>`).join('\n          ')}
+        </ul>
       </div>
     </div>
   </section>
 
-  <section class="section section-ai" aria-labelledby="ai-title">
+  <!-- 3. AI notice and installation -->
+  <section id="install" class="section section-alt" aria-labelledby="install-title">
     <div class="wrap">
-      <aside class="ai-notice">
+      ${title('install-title', c.install.title)}
+      <aside class="ai-notice" aria-labelledby="ai-title">
         <span class="icon-box ai-icon">${icon('sparkles')}</span>
         <div class="ai-body">
-          <h2 id="ai-title">${c.aiNotice.title}</h2>
+          <h3 id="ai-title">${c.aiNotice.title}</h3>
           <p class="ai-lead">${c.aiNotice.lead}</p>
           <p>${c.aiNotice.text}</p>
         </div>
       </aside>
-    </div>
-  </section>
-
-  <section id="features" class="section" aria-labelledby="features-title">
-    <div class="wrap">
-      <h2 id="features-title">${c.features.title}</h2>
-      <p class="section-lead">${c.features.lead}</p>
-      <ul class="feature-grid">
-${c.features.items.map(f => `        <li class="card">
-          <span class="icon-box">${icon(f.icon)}</span>
-          <h3>${f.title}</h3>
-          <p>${f.text}</p>
-        </li>`).join('\n')}
-      </ul>
-    </div>
-  </section>
-
-  <section id="install" class="section section-alt" aria-labelledby="install-title">
-    <div class="wrap">
-      <h2 id="install-title">${c.install.title}</h2>
       <div class="install-grid">
 ${c.install.steps.map((s, i) => `        <div class="card install-card">
           <span class="step-badge">${i + 1}</span>
@@ -170,22 +155,6 @@ ${c.install.steps.map((s, i) => `        <div class="card install-card">
         </div>`).join('\n')}
       </div>
       <p class="getting-started">${c.install.gettingStarted}</p>
-    </div>
-  </section>
-
-  <section id="privacy" class="section" aria-labelledby="privacy-title">
-    <div class="wrap two-col">
-      <div>
-        <h2 id="privacy-title">${c.privacy.title}</h2>
-        <ul class="check-list">
-          ${c.privacy.items.map(t => `<li>${t}</li>`).join('\n          ')}
-        </ul>
-      </div>
-      <div>
-        <h2>${c.data.title}</h2>
-        ${c.data.paragraphs.map(p => `<p>${p}</p>`).join('\n        ')}
-        ${c.data.code ? `<pre class="code-block"><code>${c.data.code.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</code></pre>` : ''}
-      </div>
     </div>
   </section>
 </main>

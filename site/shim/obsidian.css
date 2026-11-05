@@ -5,12 +5,12 @@
  * page around the demo is not affected.
  */
 :root {
-    --accent-h: 220;
-    --interactive-accent: #0f49be;
-    --interactive-accent-hover: #0b3a99;
+    --accent-h: 124;
+    --interactive-accent: #4f7552;
+    --interactive-accent-hover: #3e5d41;
     --text-on-accent: #ffffff;
-    --text-accent: #0f49be;
-    --text-accent-hover: #0b3a99;
+    --text-accent: #44664a;
+    --text-accent-hover: #3e5d41;
     --background-primary: #ffffff;
     --background-primary-alt: #fafafa;
     --background-secondary: #f1f3f7;
@@ -18,7 +18,7 @@
     --background-modifier-border: #dde1ea;
     --background-modifier-border-hover: #c8cedb;
     --background-modifier-hover: rgba(15, 30, 70, 0.07);
-    --background-modifier-active-hover: rgba(15, 73, 190, 0.12);
+    --background-modifier-active-hover: rgba(79, 117, 82, 0.14);
     --background-modifier-form-field: #ffffff;
     --background-modifier-error: #e93147;
     --background-modifier-success: #08b94e;
@@ -49,11 +49,11 @@
 
 /* Dark mode: set by site/theme.js (follows the system unless the toggle was used). */
 :root[data-theme="dark"] {
-    --interactive-accent: #0f49be;
-    --interactive-accent-hover: #2a63d6;
+    --interactive-accent: #4f7552;
+    --interactive-accent-hover: #618c65;
     --text-on-accent: #ffffff;
-    --text-accent: #6f9bff;
-    --text-accent-hover: #93b4ff;
+    --text-accent: #9cc7a0;
+    --text-accent-hover: #b5d6b8;
     --background-primary: #1a1a1a;
     --background-primary-alt: #1e1e1e;
     --background-secondary: #111111;
@@ -61,7 +61,7 @@
     --background-modifier-border: rgba(255, 255, 255, 0.15);
     --background-modifier-border-hover: rgba(255, 255, 255, 0.25);
     --background-modifier-hover: rgba(255, 255, 255, 0.08);
-    --background-modifier-active-hover: rgba(15, 73, 190, 0.3);
+    --background-modifier-active-hover: rgba(111, 158, 116, 0.28);
     --background-modifier-form-field: #222222;
     --interactive-normal: #262626;
     --interactive-hover: #303030;

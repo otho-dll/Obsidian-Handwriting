@@ -29,11 +29,11 @@ async function buildStatic() {
     const content = render.resolveContent(raw, { version: manifest.version, pluginId: manifest.id, year: String(new Date().getFullYear()) });
 
     fs.mkdirSync(path.join(out, 'demo'), { recursive: true });
-    fs.mkdirSync(path.join(out, 'screenshots'), { recursive: true });
 
     // Landing page: /
     fs.writeFileSync(path.join(out, 'index.html'), render.renderLanding(content, { dev: serve }));
-    // Backgrounds: site/background.jpg (dark mode) and site/background-light.jpg (light mode). With only one, both use it.
+    // Optional backgrounds: site/background.jpg (dark mode) and site/background-light.jpg (light mode). With only one, both
+    // use it; with none the pages have a plain colour (site.css).
     const pick = (base) => ['jpg', 'webp', 'png'].map(e => `${base}.${e}`).find(f => fs.existsSync(path.join(site, f)));
     const bgDark = pick('background'), bgLight = pick('background-light');
     /** CSS variable with the background of each mode (`prefix` = path from the stylesheet to the site root). */
@@ -44,17 +44,8 @@ async function buildStatic() {
     };
     fs.writeFileSync(path.join(out, 'site.css'), read(path.join(site, 'site.css')) + bgVars('', 'site-bg-image'));
     for (const f of [bgDark, bgLight]) if (f) fs.copyFileSync(path.join(site, f), path.join(out, f));
-    if (!bgDark && !bgLight) console.warn('warning: site/background.jpg is missing – the pages use the plain gradient');
     fs.writeFileSync(path.join(out, 'favicon.svg'), render.FAVICON_SVG());
     fs.copyFileSync(path.join(site, 'theme.js'), path.join(out, 'theme.js'));
-    fs.copyFileSync(path.join(site, 'carousel.js'), path.join(out, 'carousel.js'));
-    // Screenshots of the carousel, from docs/Screenshots (only the ones listed in content.mjs are published).
-    for (const { file } of content.hero.slides ?? []) {
-        const src = path.join(root, 'docs', 'Screenshots', file);
-        if (fs.existsSync(src)) fs.copyFileSync(src, path.join(out, 'screenshots', file));
-        else console.warn(`warning: docs/Screenshots/${file} (content.mjs → hero.slides) does not exist`);
-    }
-
     // Live demo: /demo/ – Obsidian variables and base styles, then the plugin's own styles, then the demo page.
     fs.writeFileSync(path.join(out, 'demo', 'index.html'), render.renderDemo(content, { dev: serve }));
     const css = [
@@ -120,7 +111,7 @@ if (serve) {
     await ctx.watch();
     // esbuild watches only imported files – content, templates, styles and images are watched here.
     const watched = [
-        'content.mjs', 'render.mjs', 'site.css', 'theme.js', 'carousel.js', 'background.jpg', 'background-light.jpg', 'shim/obsidian.css', 'demo/demo.css',
+        'content.mjs', 'render.mjs', 'site.css', 'theme.js', 'background.jpg', 'background-light.jpg', 'shim/obsidian.css', 'demo/demo.css',
     ].map(f => path.join(site, f)).concat([path.join(root, 'src', 'styles.css'), path.join(root, 'manifest.json')]);
     for (const f of watched) fs.watchFile(f, { interval: 400 }, () => { void ctx.rebuild(); });
     const { host } = await ctx.serve({ servedir: out, port });

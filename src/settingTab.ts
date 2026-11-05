@@ -16,10 +16,11 @@ export class HandwritingSettingTab extends PluginSettingTab {
         const m = this.plugin.manifest;
         const card = parent.createDiv({ cls: 'hw-about' });
         const logo = card.createDiv({ cls: 'hw-about-logo' });
-        // Built-in logo (pen + wavy line). A custom logo.png in the plugin folder still takes precedence.
+        // Built-in logo: the handwritten "H" on the plugin's green (same path as site/render.mjs → LOGO_H_PATH).
+        // A custom logo.png in the plugin folder still takes precedence.
         const placeholder = () => {
             logo.empty();
-            setSvg(logo, '<svg viewBox="0 0 64 64" width="100%" height="100%" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect width="64" height="64" style="fill:var(--interactive-accent)"/><path d="M9 48c4-9 8-9 11 0s8 9 12-1" style="stroke:var(--text-on-accent)" stroke-width="3.5" opacity=".7"/><path d="M45 11a4.6 4.6 0 0 1 6.5 6.5L30 39l-9.5 3 3-9.5z" style="fill:var(--text-on-accent);stroke:var(--text-on-accent)" stroke-width="2.5"/></svg>');
+            setSvg(logo, '<svg viewBox="0 0 64 64" width="100%" height="100%" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect width="64" height="64" fill="#4f7552"/><path d="M12.4 14.8C14.4 11.2 18.2 10.3 20.7 12.2C22.7 13.8 24.6 13.7 26.1 12.4C26.5 22.5 26 33 24.4 43.5C23.8 48.2 21.7 52.6 18.8 53.2C16.2 53.7 15.4 50.7 17.6 47.9C19.9 45 23.6 43.4 27 41.4C33 35 39.5 25.5 45 15.8C47 12.2 47.2 8.6 44.6 8.6C42 8.6 40.9 11.6 41 15.4C41.3 27 41.7 38.5 42.3 46.8C42.6 51.6 45 54.2 47.7 53C50.2 51.9 51.6 49.2 52.2 46.6" stroke="#ffffff" stroke-width="3.9"/></svg>');
         };
         const dir = m.dir ?? `.obsidian/plugins/${m.id}`;
         const path = `${dir}/${LOGO_FILE}`;
