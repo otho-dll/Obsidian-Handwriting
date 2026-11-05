@@ -3,7 +3,7 @@ import { PageTitleModal, GoToPageModal } from '../contentsModals';
 
 /**
  * Table of contents: pages may have titles (the page `title` field). Titles are shown in the "Contents" panel,
- * on the page rail (tick), in the pages panel (sections) and as bookmarks in PDF export.
+ * in the pages panel (sections) and as bookmarks in PDF export.
  */
 export const contentsMixin = defineMixin({
     /** Dialog for setting / changing a page title. */
@@ -20,7 +20,7 @@ export const contentsMixin = defineMixin({
         if ((page.title ?? '') === t) return;
         if (t) page.title = t; else delete page.title;
         this.requestSave();
-        this.buildPageRail();
+        this.buildPageIndicator();
         this.refreshContentsPanel();
     },
 

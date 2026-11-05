@@ -35,12 +35,6 @@ export interface HandwritingSettings {
     penPalette: string[];
     highlighterPalette: string[];
 
-    /** Page rail (thin strip along the edge for jumping through the note): always, while scrolling, off. Key kept from the old minimap. */
-    minimap: 'off' | 'always' | 'auto';
-    /** Side of the page rail. */
-    minimapSide: 'right' | 'left';
-    /** Page rail: 'fine' = moving away from the edge slows it down and snaps to sections, 'simple' = direct. */
-    railPrecision: 'fine' | 'simple';
     /** Side of the pages panel. */
     pagesPanelSide: 'right' | 'left';
     /** Thumbnail columns in the pages panel. */
@@ -86,7 +80,7 @@ export interface HandwritingSettings {
     oledIdleDim: boolean;
     /** After how many minutes without input the note view dims. */
     oledIdleMinutes: number;
-    /** Diagnostic log in the developer console (position memory, page rail). */
+    /** Diagnostic log in the developer console (position memory, page thumbnails). */
     debugLog: boolean;
     /** Canvas resolution: fewer pixels = smoother writing at high zoom, but less sharp strokes. */
     canvasQuality: 'high' | 'balanced' | 'fast';
@@ -127,6 +121,8 @@ export interface ToolMemory {
     customPen: string[];
     customHigh: string[];
     shapeColor: string;
+    /** Fill colour of new filled shapes ('' = the same as the outline). */
+    shapeFillColor: string;
     customShape: string[];
     shapeType: 'line' | 'rect' | 'ellipse';
     shapeDash: 'solid' | 'dashed' | 'dotted' | 'dashdot';
@@ -138,7 +134,7 @@ export interface ToolMemory {
 }
 
 export function defaultMemory(): ToolMemory {
-    return { sizes: { pen: 1, highlighter: 1, eraser: 1, shape: 1 }, penColor: '', penAlpha: 1, highlighterColor: '', customPen: [], customHigh: [], shapeColor: '', customShape: [], shapeType: 'rect', shapeDash: 'solid', shapeFill: 'none', shapeOutline: true, shapeArrow: false };
+    return { sizes: { pen: 1, highlighter: 1, eraser: 1, shape: 1 }, penColor: '', penAlpha: 1, highlighterColor: '', customPen: [], customHigh: [], shapeColor: '', shapeFillColor: '', customShape: [], shapeType: 'rect', shapeDash: 'solid', shapeFill: 'none', shapeOutline: true, shapeArrow: false };
 }
 
 export const DEFAULT_PEN_PALETTE = ['#000000', '#dc2626', '#2563eb', '#16a34a', '#737373'];
@@ -160,9 +156,6 @@ export const DEFAULT_SETTINGS: HandwritingSettings = {
     pinchZoom: true,
     penPalette: [...DEFAULT_PEN_PALETTE],
     highlighterPalette: [...DEFAULT_HIGHLIGHTER_PALETTE],
-    minimap: 'always',
-    minimapSide: 'right',
-    railPrecision: 'fine',
     pagesPanelSide: 'right',
     pagesPanelColumns: 2,
     defaultTemplate: 'dots',

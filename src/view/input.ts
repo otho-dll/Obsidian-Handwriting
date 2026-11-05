@@ -277,6 +277,7 @@ export const inputMixin = defineMixin({
                 const closed = this.shapeType !== 'line';
                 currentStroke.fill = this.shapeFill !== 'none' && closed;
                 if (currentStroke.fill && this.shapeFill === 'light') currentStroke.fillAlpha = LIGHT_FILL_ALPHA;
+                if (currentStroke.fill && this.shapeFillColor) currentStroke.fillColor = this.shapeFillColor;
                 if (currentStroke.fill && this.shapeFill === 'light' && !this.shapeLineOn) currentStroke.noLine = true;
                 currentStroke.arrow = this.shapeArrow && this.shapeType === 'line';
             }

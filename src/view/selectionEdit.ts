@@ -151,6 +151,29 @@ export const selectionEditMixin = defineMixin({
         return s.every(x => x.color.toLowerCase() === c) ? c : null;
     },
 
+    /** Selected filled shapes (rectangles / ellipses) – the ones with a separate fill colour. */
+    selectionFilledShapes(): Stroke[] {
+        return (this.selection?.strokes ?? []).filter(x => x.shape && x.shape !== 'line' && x.fill);
+    },
+
+    /** Shared fill colour of the selected filled shapes (the outline colour when they have none); null = mixed / none. */
+    selectionFillColor(): string | null {
+        const s = this.selectionFilledShapes();
+        if (s.length === 0) return null;
+        const of = (x: Stroke) => (x.fillColor ?? x.color).toLowerCase();
+        const c = of(s[0]);
+        return s.every(x => of(x) === c) ? c : null;
+    },
+
+    /** Fill colour of the selected filled shapes (null = back to the outline colour). */
+    setSelectionFillColor(color: string | null) {
+        const sel = this.selection;
+        const items = this.selectionFilledShapes();
+        if (!sel || items.length === 0) return;
+        const c = color ? color.toLowerCase() : undefined;
+        this.commitAttrs(sel.page, items, () => ({ fillColor: c }), 'fillColor');
+    },
+
     sizesFor(s: Stroke): number[] {
         return s.isHighlighter ? this.highSizes : s.shape ? this.shapeSizes : this.penSizes;
     },

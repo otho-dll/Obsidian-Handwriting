@@ -124,7 +124,7 @@ export const navigationMixin = defineMixin({
 
     /**
      * Applies the current zoom / position. Only the clamping and the CSS transform happen at once (cheap); everything
-     * else (rail, current-page frame, edge shadows, canvas windows, position memory) runs once per frame – touch and
+     * else (current page, its frame, edge shadows, canvas windows, position memory) runs once per frame – touch and
      * pen report 120–240 events per second, and each of those steps reads the layout.
      */
     applyManualZoom() {
@@ -214,7 +214,7 @@ export const navigationMixin = defineMixin({
             el.style.bottom = `${Math.max(0, viewportHeight - (this.pagePositionY + scaledHeight))}px`;
         }
         this.refreshZoomButton();
-        this.updatePageRail();
+        this.updateCurrentPage();
         this.posTrack();
     },
 

@@ -106,7 +106,8 @@
 .hw-color-palette {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 7px;
+    padding: 4px;   /* room for the selection ring (a scrolling toolbar would clip it) */
 }
 
 button.hw-swatch.hw-swatch.hw-swatch {
@@ -125,7 +126,8 @@ button.hw-swatch.hw-swatch.hw-swatch {
     transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 button.hw-swatch:hover { transform: scale(1.1); }
-button.hw-swatch.active {
+/* same specificity as the base rule above (otherwise its box-shadow hid the ring of the chosen colour) */
+button.hw-swatch.hw-swatch.hw-swatch.active {
     box-shadow: inset 0 0 0 1px rgba(128,128,128,0.45),
                 0 0 0 2px var(--background-primary),
                 0 0 0 4px var(--interactive-accent);
@@ -856,74 +858,11 @@ button.hw-selmode-opt.active .hw-selmode-check { border-color: var(--interactive
 .hw-oled-dark .hw-oled-inv .hw-page-bg { filter: invert(1) hue-rotate(180deg) brightness(0.88); }
 .handwriting-container .hw-toolbar { transition: opacity 0.6s ease; }
 .hw-oled-ui-dim .hw-toolbar { opacity: 0.18; }
-.hw-oled-dark .hw-pp-cell.hw-oled-inv canvas,
-.hw-oled-dark .hw-rail-preview.hw-oled-inv canvas { filter: invert(1) hue-rotate(180deg) brightness(0.88); }
+.hw-oled-dark .hw-pp-cell.hw-oled-inv canvas { filter: invert(1) hue-rotate(180deg) brightness(0.88); }
 
 /* ============================================================
-   3.15.0: page navigation – page rail (thin strip along the edge) and pages panel
+   3.15.0: page navigation – pages panel
    ============================================================ */
-.hw-rail {
-    position: absolute; top: 8px; bottom: 8px; width: 24px; z-index: 25;
-    display: flex; justify-content: center; touch-action: none; user-select: none; cursor: pointer;
-    transition: opacity 0.25s ease;
-}
-.hw-rail-right { right: 0; }
-.hw-rail-left { left: 0; }
-.hw-rail-auto { opacity: 0; pointer-events: none; }
-.hw-rail-auto.hw-rail-visible, .hw-rail-auto.hw-rail-active { opacity: 1; pointer-events: auto; }
-.hw-rail-track {
-    position: relative; width: 6px; height: 100%; border-radius: 3px;
-    background: color-mix(in srgb, var(--text-muted) 16%, transparent);
-    transition: width 0.15s ease, background 0.15s ease;
-}
-.hw-rail:hover .hw-rail-track, .hw-rail-active .hw-rail-track { width: 12px; background: color-mix(in srgb, var(--text-muted) 26%, transparent); }
-.hw-rail-tick { position: absolute; left: -3px; right: -3px; height: 2px; margin-top: -1px; border-radius: 1px; background: color-mix(in srgb, var(--text-muted) 70%, transparent); }
-.hw-rail-vp { position: absolute; left: 0; right: 0; border-radius: 3px; background: color-mix(in srgb, var(--interactive-accent) 75%, transparent); }
-.hw-rail-vp.is-scrubbing { background: var(--interactive-accent); box-shadow: 0 0 0 2px var(--background-primary); }
-.hw-rail-badge {
-    position: absolute; z-index: 26; padding: 2px 8px; border-radius: 10px; font-size: 12px; line-height: 18px;
-    color: var(--text-normal); background: var(--background-primary); border: 1px solid var(--background-modifier-border);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18); pointer-events: none; opacity: 0; transition: opacity 0.2s ease;
-}
-.hw-rail-badge-right { right: 30px; }
-.hw-rail-badge-left { left: 30px; }
-.hw-rail-badge.hw-rail-badge-on { opacity: 1; }
-.hw-rail-preview {
-    position: absolute; z-index: 27; width: 168px; padding: 10px; box-sizing: content-box;
-    border-radius: 12px; background: var(--background-primary); border: 1px solid var(--background-modifier-border);
-    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.35); display: none; flex-direction: column; gap: 6px; pointer-events: none;
-}
-.hw-rail-preview-right { right: 40px; }
-.hw-rail-preview-left { left: 40px; }
-.hw-rail-preview.hw-rail-preview-on { display: flex; }
-.hw-rail-preview canvas { display: block; width: 168px; border-radius: 3px; box-shadow: 0 0 0 1px rgba(128, 128, 128, 0.35); background: #fff; }
-/* the part of the page the jump will show: an accent frame, the rest of the page slightly dimmed */
-.hw-rail-preview-sheet { position: relative; overflow: hidden; border-radius: 3px; }
-.hw-rail-preview-view {
-    position: absolute; display: none; box-sizing: border-box; pointer-events: none;
-    border: 3px solid var(--interactive-accent); border-radius: 2px;
-    /* white inner line for contrast on dark ink, darkened area outside the frame */
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.9), 0 0 0 999px rgba(0, 0, 0, 0.35);
-    transition: top 0.08s linear, height 0.08s linear;
-}
-.hw-rail-preview-view.is-on { display: block; }
-.hw-rail-preview-view.is-whole { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.9); }
-.hw-rail-preview-view.is-below { border-style: dashed; }
-.hw-rail-preview-view.is-more { border-bottom-style: dashed; }
-.hw-rail-preview-whole-tag { display: none; font-size: 11px; font-weight: 600; color: var(--interactive-accent); margin-left: auto; }
-.hw-rail-preview-whole .hw-rail-preview-whole-tag { display: inline; }
-.hw-rail-preview-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-.hw-rail-preview-num { font-weight: 700; font-size: 15px; color: var(--text-normal); }
-.hw-rail-preview-sec { font-size: 12px; font-weight: 600; color: var(--interactive-accent); }
-.hw-rail-preview-title { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: -2px; }
-.hw-rail-preview-title:empty { display: none; }
-.hw-rail-preview-fine { box-shadow: 0 0 0 2px var(--interactive-accent), 0 12px 34px rgba(0, 0, 0, 0.35); }
-.hw-rail-preview-fine .hw-rail-preview-sec::after { content: " · fine"; color: var(--text-muted); font-weight: 500; }
-.handwriting-container .hw-rail { transition: opacity 0.6s ease; }
-.hw-oled-ui-dim .hw-rail, .hw-oled-ui-dim .hw-rail-badge { opacity: 0.18; }
-/* the panel covers the rail on its side */
-.hw-pp-open-right .hw-rail-right, .hw-pp-open-left .hw-rail-left, .hw-pp-open-sheet .hw-rail { visibility: hidden; }
-
 /* --- pages panel --- */
 .hw-pp {
     position: absolute; top: 0; bottom: 0; z-index: 40; width: 292px; max-width: calc(100% - 24px);
@@ -1105,3 +1044,32 @@ button.hw-pp-cols { width: auto; padding: 0 6px; gap: 3px; }
     font: 11px/1.35 var(--font-monospace); padding: 4px 8px; border-radius: 6px;
     color: #fff; background: rgba(0, 0, 0, 0.72);
 }
+
+/* --- shape colours: outline / fill fields before the palette --- */
+.hw-color-targets { display: flex; gap: 3px; padding: 2px; border-radius: 8px; background: var(--background-modifier-hover); }
+button.hw-color-target.hw-color-target {
+    width: 30px; height: 30px; min-width: 30px; padding: 0; display: flex; align-items: center; justify-content: center;
+    border: none; border-radius: 6px; background: transparent; box-shadow: none; cursor: pointer;
+}
+button.hw-color-target.hw-color-target.active { background: var(--background-primary); box-shadow: 0 0 0 2px var(--interactive-accent); }
+.hw-ct-chip { width: 16px; height: 16px; border-radius: 3px; box-sizing: border-box; }
+.hw-ct-line .hw-ct-chip { border: 3px solid var(--c); box-shadow: 0 0 0 1px rgba(128, 128, 128, 0.45); }
+.hw-ct-fill .hw-ct-chip { background: var(--c); box-shadow: inset 0 0 0 1px rgba(128, 128, 128, 0.45); }
+/* fill "same as outline": a small diagonal mark */
+.hw-ct-fill.is-auto .hw-ct-chip { background: linear-gradient(135deg, var(--c) 0 45%, transparent 45% 55%, var(--c) 55%); }
+.hw-color-palette-host { display: flex; align-items: center; }
+
+/* --- current page indicator "12 / 40" (beside the page; tap = pages panel) --- */
+button.hw-page-num.hw-page-num {
+    position: absolute; left: 0; top: 0; z-index: 24; height: 26px; min-width: 0; padding: 0 9px; margin: 0;
+    border-radius: 13px; border: 1px solid var(--background-modifier-border); box-shadow: none;
+    background: var(--background-primary); color: var(--text-muted);
+    font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; cursor: pointer;
+    opacity: 0.7; transition: opacity 0.3s ease;
+}
+button.hw-page-num.hw-page-num:hover, button.hw-page-num.is-recent { opacity: 1; color: var(--text-normal); }
+/* no room beside the page: over the page edge, only for a moment after scrolling */
+button.hw-page-num.is-over { opacity: 0; pointer-events: none; }
+button.hw-page-num.is-over.is-recent { opacity: 0.95; pointer-events: auto; }
+.hw-pp-open-right .hw-page-num, .hw-pp-open-sheet .hw-page-num { visibility: hidden; }
+.hw-oled-ui-dim .hw-page-num { opacity: 0.18; }

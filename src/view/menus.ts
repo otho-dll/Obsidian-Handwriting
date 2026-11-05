@@ -72,7 +72,6 @@ export const menusMixin = defineMixin({
             for (const it of items) menu.addItem(i => { i.setTitle(it.title).setIcon(it.icon).onClick(it.run); if (it.checked) i.setChecked(true); });
         }
         if (any) menu.addSeparator();
-        menu.addItem(i => i.setTitle('Page rail').setIcon('map').setChecked(st.minimap !== 'off').onClick(() => change(() => { st.minimap = st.minimap === 'off' ? 'always' : 'off'; })));
         menu.addItem(i => i.setTitle('Pen pressure').setIcon('pen-tool').setChecked(st.pressureEnabled).onClick(() => change(() => { st.pressureEnabled = !st.pressureEnabled; })));
         menu.addItem(i => i.setTitle('Palm rejection').setIcon('hand').setChecked(st.palmRejection !== 'off').onClick(() => change(() => { st.palmRejection = st.palmRejection === 'off' ? 'auto' : 'off'; })));
         menu.addItem(i => i.setTitle('Settings').setIcon('settings').onClick(() => this.openPluginSettings()));

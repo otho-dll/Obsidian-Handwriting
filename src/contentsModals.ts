@@ -8,7 +8,7 @@ export class PageTitleModal extends Modal {
     onOpen() {
         this.titleEl.setText(this.current ? `Rename page ${this.pageNo}` : `Title for page ${this.pageNo}`);
         this.contentEl.addClass('hw-title-modal');
-        this.contentEl.createEl('p', { cls: 'setting-item-description', text: 'Titled pages appear in the table of contents, on the page rail, in the pages panel and as bookmarks in exported PDFs.' });
+        this.contentEl.createEl('p', { cls: 'setting-item-description', text: 'Titled pages appear in the table of contents, in the pages panel and as bookmarks in exported PDFs.' });
         const input = this.contentEl.createEl('input', { type: 'text', cls: 'hw-title-input' });
         input.value = this.current;
         input.placeholder = 'e.g. Lecture 3 – Integrals';

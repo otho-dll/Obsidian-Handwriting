@@ -29,7 +29,7 @@ printing - in notes that stay readable even without Obsidian.
 - [Getting started](#getting-started)
 - [Writing tools](#writing-tools)
 - [Selection](#selection)
-- [Moving around: scroll, zoom, page rail](#moving-around-scroll-zoom-page-rail)
+- [Moving around: scroll, zoom, current page](#moving-around-scroll-zoom-current-page)
 - [Pages panel](#pages-panel)
 - [Page style: size, pattern, paper](#page-style-size-pattern-paper)
 - [Page titles and contents](#page-titles-and-contents)
@@ -77,20 +77,16 @@ selected strokes). Colours sit on the toolbar; in a narrow window they are in on
   send to back, align, rotate 90°, duplicate, copy, cut, delete.
 - Locked items can't be selected, moved or erased - right-click the page → *Unlock*.
 
-## Moving around: scroll, zoom, page rail
+## Moving around: scroll, zoom, current page
 - **Fingers / trackpad:** one finger scrolls (with inertia), two fingers pinch-zoom. **Mouse:** wheel scrolls, Ctrl + wheel zooms.
 - **Zoom button** (shows the current zoom, e.g. *135%*): − / + in 10 % steps, *Fit width*, *100%*, and up to four
   **favourite zoom levels** - save the zoom you like to write at, one tap brings it back. *Open notes at …* makes every
   note open at that zoom (otherwise each note keeps its last zoom).
 - Notes remember **where you stopped** and open at that place.
-- The **current page** has a thin accent frame (the same at every zoom level).
-- **Page rail** - a thin strip along the edge of the note, like a scrollbar: top = first page, bottom = last page,
-  ticks = pages with a title. **Drag along it** to see a preview of the page under your finger (*74 / 120* and the
-  section title); let go to jump there. A tap jumps at once. A frame on the preview shows which part of the page
-  you will land on (the top of the page, or - when you are zoomed in on a long page - the place you point at).
-  - *Fine* precision (default): move your finger away from the edge and the rail slows down 4× - handy with hundreds
-    of pages - and the preview snaps to section starts. *Simple* follows your finger 1:1.
-  - Settings → Pages and view → Page navigation: always visible / while scrolling / off, side, precision.
+- The **current page** has an accent frame (the same at every zoom level) and the other pages are slightly dimmed.
+- A small **page number** (*12 / 40*) sits beside the current page; tap it to open the pages panel. When you are
+  zoomed in and there is no room beside the page, it shows at the edge of the view for a moment after scrolling.
+- To jump through the note use the **pages panel** (thumbnails, sections, contents).
 - In a very narrow window the toolbar scrolls sideways (finger, mouse wheel or the ‹ › arrows).
 
 ## Pages panel
@@ -120,7 +116,7 @@ toolbar shortcut. It opens at the side of the view. At the top choose which page
 ## Page titles and contents
 Give important pages a title: right-click a page → **Page title…**, the pages panel, or the command
 *Set title of the current page*.
-- Titled pages start sections in the pages panel, are ticks on the page rail and are listed in the **Contents** tab.
+- Titled pages start sections in the pages panel, are listed in the **Contents** tab.
 - **Go to page…** (command) searches titles and page numbers.
 - Titles become **bookmarks** in exported PDFs.
 
@@ -193,7 +189,7 @@ Settings → **Toolbar** decides what sits on the toolbar:
   (×); the rest can be added from *Available*.
 
 Anything that isn't on the toolbar is in the **⋯ menu** - nothing appears twice. The ⋯ menu also has quick switches
-(page rail, pen pressure, palm rejection) and *Settings*.
+(pen pressure, palm rejection) and *Settings*.
 
 ## Pen, touch and palm rejection
 
@@ -210,7 +206,7 @@ Anything that isn't on the toolbar is in the **⋯ menu** - nothing appears twic
 Settings → **OLED care** - each option on its own:
 - **Dark paper on screen** - light pages are shown dark with light ink (colours keep their hue). Display only: files and
   exports are unchanged.
-- **Fade the toolbar while writing** - the toolbar and the page rail fade and come back when the pen or cursor gets close.
+- **Fade the toolbar while writing** - the toolbar and the page number fade and come back when the pen or cursor gets close.
 - **Pixel shift** - the view moves by 1-2 px every few minutes.
 - **Dim when idle** - after 1-30 minutes without input the note dims almost to black; the first tap only wakes it.
 
@@ -243,7 +239,7 @@ Settings → **OLED care** - each option on its own:
 |---|---|
 | Pen and touch | pressure, palm rejection, pinch to zoom, long-press menu, pen side button, what the eraser erases, default selection mode |
 | Colors | five quick colours for the pen and for the highlighter |
-| Pages and view | default page pattern and paper colour, favourite zoom levels, zoom when opening a note, page rail (visibility, side, precision), pages panel (side, columns) |
+| Pages and view | default page pattern and paper colour, favourite zoom levels, zoom when opening a note, pages panel (side, columns) |
 | Toolbar | tools and shortcut buttons on the toolbar (the rest goes to ⋯) |
 | Files and export | where images are stored, the Python converter, new-note naming, PDF export location and resolution |
 | Version history | on / off, interval, how long to keep versions, space limit per note |
@@ -279,7 +275,7 @@ Settings → **OLED care** - each option on its own:
 ```
 src/main.ts             plugin + the view (lifecycle, loading / saving notes)
 src/styles.css          all styles
-src/view/*.ts           view features as mixins (input, navigation, selection, pageRail, pagesPanel, toolbar, versions, …)
+src/view/*.ts           view features as mixins (input, navigation, selection, currentPage, pagesPanel, toolbar, versions, …)
 src/format.ts           file format versions and migrations (v1 → v4)
 src/pageFormat.ts       page sizes (A4, landscape, endless)
 src/templates.ts        page patterns (shared geometry for screen, thumbnails, PDF)

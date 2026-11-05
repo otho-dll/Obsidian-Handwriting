@@ -21,7 +21,7 @@ import { canvasWindowMixin, CanvasWindowMethods } from './view/canvasWindow';
 import { imageInsertMixin, ImageInsertMethods } from './view/imageInsert';
 import { pageToolsMixin, PageToolsMethods } from './view/pageTools';
 import { thumbsMixin, ThumbsMethods } from './view/thumbs';
-import { pageRailMixin, PageRailMethods } from './view/pageRail';
+import { currentPageMixin, CurrentPageMethods } from './view/currentPage';
 import { pagesPanelMixin, PagesPanelMethods } from './view/pagesPanel';
 import { toolbarMixin, ToolbarMethods } from './view/toolbar';
 import { pdfIOMixin, PdfIOMethods } from './view/pdfIO';
@@ -251,7 +251,8 @@ export default class HandwritingPlugin extends Plugin {
         this.settings.highlighterPalette = fix(this.settings.highlighterPalette, DEFAULT_HIGHLIGHTER_PALETTE);
         const st = this.settings as any;
         if (!['ask', 'folder', 'note'].includes(st.pdfExportMode)) st.pdfExportMode = 'ask';
-        if (!['fine', 'simple'].includes(st.railPrecision)) st.railPrecision = 'fine';
+        // 3.20: the page rail was removed (the pages panel does the same) – its settings are dropped.
+        for (const k of ['railPrecision', 'minimap', 'minimapSide']) delete st[k];
         if (!['right', 'left'].includes(st.pagesPanelSide)) st.pagesPanelSide = 'right';
         if (![1, 2, 3].includes(st.pagesPanelColumns)) st.pagesPanelColumns = 2;
         // 3.15: the pages panel replaces the old Pages dialog – put its button on the toolbar once.
@@ -324,6 +325,7 @@ export default class HandwritingPlugin extends Plugin {
         mem.customPen = cl(m.customPen);
         mem.customHigh = cl(m.customHigh);
         if (isHexColor(m.shapeColor)) mem.shapeColor = m.shapeColor.toLowerCase();
+        mem.shapeFillColor = isHexColor(m.shapeFillColor) ? m.shapeFillColor.toLowerCase() : '';
         mem.customShape = cl(m.customShape);
         if (['line', 'rect', 'ellipse'].includes(m.shapeType)) mem.shapeType = m.shapeType;
         if (['solid', 'dashed', 'dotted', 'dashdot'].includes(m.shapeDash)) mem.shapeDash = m.shapeDash;
@@ -369,7 +371,7 @@ export default class HandwritingPlugin extends Plugin {
         if (all[oldPath]) { all[newPath] = all[oldPath]; delete all[oldPath]; void this.saveSettings(); }
     }
 
-    /** Refreshes open views after a settings change (palette, page rail...). */
+    /** Refreshes open views after a settings change (palette, pressure...). */
     refreshViews() {
         this.app.workspace.getLeavesOfType(VIEW_TYPE_HANDWRITING).forEach(leaf => {
             const v = leaf.view as any;
@@ -452,6 +454,10 @@ export class HandwritingView extends TextFileView {
     customPen: string[] = [];
     customHigh: string[] = [];
     shapeColor = '#000000';
+    /** Fill colour of new filled shapes ('' = the same as the outline). */
+    shapeFillColor = '';
+    /** What the palette changes for the shape tool / selected shapes: the outline or the fill colour. */
+    shapeColorTarget: 'line' | 'fill' = 'line';
     customShape: string[] = [];
 
     /** Remembered thickness, separately for each tool. */
@@ -477,6 +483,7 @@ export class HandwritingView extends TextFileView {
         m.customPen = [...this.customPen];
         m.customHigh = [...this.customHigh];
         m.shapeColor = this.shapeColor;
+        m.shapeFillColor = this.shapeFillColor;
         m.customShape = [...this.customShape];
         m.shapeType = this.shapeType;
         m.shapeDash = this.shapeDash;
@@ -530,7 +537,7 @@ export class HandwritingView extends TextFileView {
     viewRaf: number | null = null;
     /**
      * "Wet ink" layer: one screen-sized canvas above the pages (outside the zoomed page column) on which the pen stroke
-     * being written is drawn. Its size does not depend on the zoom, and it uses the browser's low-latency canvas mode.
+     * being written is drawn. Its size does not depend on the zoom.
      * After the pen is lifted the stroke goes to the page canvas and this layer is cleared.
      */
     inkCanvas: HTMLCanvasElement | null = null;
@@ -575,10 +582,6 @@ export class HandwritingView extends TextFileView {
     lastActivityAt = 0;
     lastPenButtonAt = 0;
     cancelTouchGestures: (() => void) | null = null;
-    /** Cancels a finger scrub on the page rail (palm / pen detected); set by buildPageRail. */
-    cancelRailTouch: (() => void) | null = null;
-    /** All touch contacts currently on the screen (also those on the rail and toolbar). */
-    touchIds = new Set<number>();
 
     // Moving the selection between pages
     ghostPage: number | null = null;
@@ -587,24 +590,16 @@ export class HandwritingView extends TextFileView {
     /** Ready stroke paths (Path2D) – redrawing while scrolling and zooming does not rebuild them. */
     pathCache: WeakMap<Stroke, PathCacheEntry> = new WeakMap();
 
-    // Page rail (src/view/pageRail.ts)
-    railEl: HTMLElement | null = null;
-    railVp: HTMLElement | null = null;
-    railBadge: HTMLElement | null = null;
-    railPreview: HTMLElement | null = null;
-    railTicks: number[] = [];
+    // Current page (src/view/currentPage.ts)
+    currentPageIdx = -1;
+    /** "12 / 40" indicator beside the current page. */
+    pageNumEl: HTMLElement | null = null;
+    pageNumW = 0;
+    pageNumTimer: number | null = null;
     /** Accent frame around the current page (screen pixels, see placeCurrentFrame). */
     curFrame: HTMLElement | null = null;
     /** Page element currently marked as the current page (the others are dimmed). */
     curPageEl: HTMLElement | null = null;
-    railDragging = false;
-    railCurrent = -1;
-    railPreviewPage = -1;
-    railPreviewRaf = 0;
-    railHideTimer: number | null = null;
-    railBadgeTimer: number | null = null;
-    /** Rendered scrub previews (page index -> canvas), most recently used last. */
-    previewCache: Map<number, HTMLCanvasElement> = new Map();
     // Pages panel (src/view/pagesPanel.ts)
     pagesPanelEl: HTMLElement | null = null;
     ppHead: HTMLElement | null = null;
@@ -716,6 +711,7 @@ export class HandwritingView extends TextFileView {
         this.customPen = [...mem.customPen];
         this.customHigh = [...mem.customHigh];
         this.shapeColor = mem.shapeColor || plugin.settings.penPalette[0] || '#000000';
+        this.shapeFillColor = mem.shapeFillColor || '';
         this.customShape = [...mem.customShape];
         this.shapeType = mem.shapeType;
         this.shapeDash = mem.shapeDash;
@@ -792,7 +788,7 @@ export class HandwritingView extends TextFileView {
     strokeJson(s: Stroke): string {
         const pts = s.points, n = pts.length;
         const f = pts[0], l = pts[n - 1], m = pts[n >> 1], q = pts[n >> 2];
-        const fp = `${n}|${f?.x},${f?.y}|${l?.x},${l?.y}|${m?.x},${m?.y}|${q?.x},${q?.y}|${s.width}|${s.color}|${s.rot ?? ''}|${s.dash ?? ''}|${s.fill ? 1 : 0}|${s.fillAlpha ?? ''}|${s.noLine ? 1 : 0}|${s.arrow ? 1 : 0}|${s.shape ?? ''}|${s.isHighlighter ? 1 : 0}|${s.poly ? 1 : 0}|${s.g ?? ''}|${s.lock ? 1 : 0}|${s.alpha ?? ''}`;
+        const fp = `${n}|${f?.x},${f?.y}|${l?.x},${l?.y}|${m?.x},${m?.y}|${q?.x},${q?.y}|${s.width}|${s.color}|${s.rot ?? ''}|${s.dash ?? ''}|${s.fill ? 1 : 0}|${s.fillColor ?? ''}|${s.fillAlpha ?? ''}|${s.noLine ? 1 : 0}|${s.arrow ? 1 : 0}|${s.shape ?? ''}|${s.isHighlighter ? 1 : 0}|${s.poly ? 1 : 0}|${s.g ?? ''}|${s.lock ? 1 : 0}|${s.alpha ?? ''}`;
         const hit = this.serCache.get(s);
         if (hit && hit.fp === fp) return hit.json;
         // Pressure is saved (as 0-100) only for strokes in which it varies.
@@ -1013,9 +1009,9 @@ export class HandwritingView extends TextFileView {
         // Palm rejection: remember the last pen activity (hovering over the screen included).
         const markPen = (e: PointerEvent) => {
             // "Activity" (pauses thumbnail rendering) is only writing / dragging – not mere hovering
-            // or using the page rail / pages panel (otherwise thumbnails were not drawn while using them).
+            // or using the pages panel (otherwise thumbnails were not drawn while using them).
             const t = e.target as Node;
-            const onNav = (!!this.railEl && this.railEl.contains(t)) || (!!this.pagesPanelEl && this.pagesPanelEl.contains(t));
+            const onNav = !!this.pagesPanelEl && this.pagesPanelEl.contains(t);
             if (!onNav && (e.type === 'pointerdown' || e.buttons !== 0)) this.lastActivityAt = performance.now();
             if (e.type === 'pointerdown' || e.type === 'pointermove') this.lastPointerType = e.pointerType;
             if (e.pointerType !== 'pen') return;
@@ -1028,24 +1024,7 @@ export class HandwritingView extends TextFileView {
                 return;
             }
             if (e.type === 'pointerdown' && this.plugin.settings.palmRejection !== 'off' && this.cancelTouchGestures) this.cancelTouchGestures();
-            if (e.type === 'pointerdown') this.cancelRailTouch?.();
         };
-        // Every touch on the screen is counted (window, capture – before the rail sees it): a second contact while a
-        // finger scrubs the page rail means a resting hand, so the scrub is cancelled.
-        const trackTouch = (e: PointerEvent) => {
-            if (e.pointerType !== 'touch') return;
-            if (e.type === 'pointerdown') {
-                // the primary touch = no other finger on the screen (clears ids whose pointerup got lost)
-                if (e.isPrimary) this.touchIds.clear();
-                this.touchIds.add(e.pointerId);
-                if (this.touchIds.size > 1) this.cancelRailTouch?.();
-            } else {
-                this.touchIds.delete(e.pointerId);
-            }
-        };
-        this.registerDomEvent(window, 'pointerdown', trackTouch, { capture: true });
-        this.registerDomEvent(window, 'pointerup', trackTouch, { capture: true });
-        this.registerDomEvent(window, 'pointercancel', trackTouch, { capture: true });
         this.registerDomEvent(this.scrollArea, 'pointerdown', markPen, { capture: true });
         this.registerDomEvent(this.scrollArea, 'pointermove', markPen, { capture: true });
         this.registerDomEvent(this.scrollArea, 'pointerup', markPen, { capture: true });
@@ -1059,7 +1038,7 @@ export class HandwritingView extends TextFileView {
             }
         }));
 
-        this.buildPageRail();
+        this.buildPageIndicator();
         this.setupOledCare();
         this.applyPerfOverlay();
 
@@ -1087,23 +1066,22 @@ export class HandwritingView extends TextFileView {
         this.closePagesPanel();
         if (this.snapTimer !== null) { window.clearTimeout(this.snapTimer); this.snapTimer = null; }
         if (this.attachTimer !== null) { window.clearTimeout(this.attachTimer); this.attachTimer = null; }
-        if (this.railHideTimer !== null) window.clearTimeout(this.railHideTimer);
+        if (this.pageNumTimer !== null) { window.clearTimeout(this.pageNumTimer); this.pageNumTimer = null; }
         if (this.roomTimer !== null) { window.clearTimeout(this.roomTimer); this.roomTimer = null; }
         this.closeContentsPanel();
         this.closeZoomPanel();
         this.thumbBitmaps.forEach(b => { if (b) b.close(); });
         this.thumbBitmaps.clear();
-        if (this.railBadgeTimer !== null) window.clearTimeout(this.railBadgeTimer);
         this.assetUrls.forEach(url => URL.revokeObjectURL(url));
         this.assetUrls.clear();
     }
 
-    // Called after the plugin settings change (palette, page rail, pressure...).
+    // Called after the plugin settings change (palette, pressure...).
     refreshSettings() {
         // The pages panel is rebuilt so a changed side applies at once.
         const panelOpen = !!this.pagesPanelEl;
         if (panelOpen) this.closePagesPanel();
-        this.buildPageRail();
+        this.buildPageIndicator();
         if (panelOpen) this.openPagesPanel();
         this.applyAllPageStyles();
         this.renderQuickSlots();
@@ -1175,7 +1153,7 @@ export class HandwritingView extends TextFileView {
         this.applyAllPageStyles();
         this.applyManualZoom();
         this.updateVirtualization();
-        this.buildPageRail();
+        this.buildPageIndicator();
     }
 
     /**
@@ -1191,5 +1169,5 @@ export class HandwritingView extends TextFileView {
 
 }
 
-export interface HandwritingView extends HistoryMethods, GeometryMethods, ImagesMethods, CanvasWindowMethods, ImageInsertMethods, PageToolsMethods, ThumbsMethods, PageRailMethods, PagesPanelMethods, ToolbarMethods, PdfIOMethods, StrokeDrawMethods, CalcPanelMethods, ClipboardMethods, MenusMethods, SelectionEditMethods, VersionsMethods, PositionMethods, AssetsMethods, SelectionMethods, ContextMenuMethods, NavigationMethods, InputMethods, PageSizeMethods, ContentsMethods, OledCareMethods, ZoomPanelMethods, TouchMethods, PrintMethods, InkLayerMethods, PerfOverlayMethods {}
-Object.assign(HandwritingView.prototype, historyMixin, geometryMixin, imagesMixin, canvasWindowMixin, imageInsertMixin, pageToolsMixin, thumbsMixin, pageRailMixin, pagesPanelMixin, toolbarMixin, pdfIOMixin, strokeDrawMixin, calcPanelMixin, clipboardMixin, menusMixin, selectionEditMixin, versionsMixin, positionMixin, assetsMixin, selectionMixin, contextMenuMixin, navigationMixin, inputMixin, pageSizeMixin, contentsMixin, oledCareMixin, zoomPanelMixin, touchMixin, printMixin, inkLayerMixin, perfOverlayMixin);
+export interface HandwritingView extends HistoryMethods, GeometryMethods, ImagesMethods, CanvasWindowMethods, ImageInsertMethods, PageToolsMethods, ThumbsMethods, CurrentPageMethods, PagesPanelMethods, ToolbarMethods, PdfIOMethods, StrokeDrawMethods, CalcPanelMethods, ClipboardMethods, MenusMethods, SelectionEditMethods, VersionsMethods, PositionMethods, AssetsMethods, SelectionMethods, ContextMenuMethods, NavigationMethods, InputMethods, PageSizeMethods, ContentsMethods, OledCareMethods, ZoomPanelMethods, TouchMethods, PrintMethods, InkLayerMethods, PerfOverlayMethods {}
+Object.assign(HandwritingView.prototype, historyMixin, geometryMixin, imagesMixin, canvasWindowMixin, imageInsertMixin, pageToolsMixin, thumbsMixin, currentPageMixin, pagesPanelMixin, toolbarMixin, pdfIOMixin, strokeDrawMixin, calcPanelMixin, clipboardMixin, menusMixin, selectionEditMixin, versionsMixin, positionMixin, assetsMixin, selectionMixin, contextMenuMixin, navigationMixin, inputMixin, pageSizeMixin, contentsMixin, oledCareMixin, zoomPanelMixin, touchMixin, printMixin, inkLayerMixin, perfOverlayMixin);

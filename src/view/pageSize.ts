@@ -46,7 +46,7 @@ export const pageSizeMixin = defineMixin({
         p.h = need;
         this.applyPageSize(i);
         this.applyPageStyle(i);
-        this.updatePageRailSize(i);
+        this.updateCurrentPage();
         this.applyManualZoom();
         if (this.pageViews[i]?.active) { this.sizeCanvases(i); this.redrawPage(i); }
         this.requestSave();

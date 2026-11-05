@@ -16,7 +16,6 @@ const DEMO_SETTINGS = {
     pagesPanelIntro: true,
     toolbarHidden: [],
     quickActions: ['calculator', 'zoom', 'contents', 'pages'],
-    minimap: 'always',
 };
 
 interface DemoState { app: App; vault: Vault; plugin: HandwritingPlugin; leaf: WorkspaceLeaf; }

@@ -383,7 +383,9 @@ export const toolbarMixin = defineMixin({
 
         const currentColor = () => {
             const t = this.currentTool;
-            return t === 'pen' ? this.penColor : t === 'shape' ? this.shapeColor : t === 'highlighter' ? this.highlighterColor : t === 'lasso' ? (this.selectionColor() ?? '') : '';
+            // a shape with a light fill and no outline shows its fill colour
+            const shapeCol = this.shapeFill === 'light' && !this.shapeLineOn && this.shapeType !== 'line' ? (this.shapeFillColor || this.shapeColor) : this.shapeColor;
+            return t === 'pen' ? this.penColor : t === 'shape' ? shapeCol :t === 'highlighter' ? this.highlighterColor : t === 'lasso' ? (this.selectionColor() ?? '') : '';
         };
         const updateSizeBtn = () => {
             // the thickness dots show the current colour
@@ -398,6 +400,63 @@ export const toolbarMixin = defineMixin({
             updateSizeBtn();
         };
 
+        /**
+         * Shape colours: with a fill, two small fields "Outline" / "Fill" before the palette – the palette changes the
+         * colour of the active one. Right click / long press on "Fill" = the same colour as the outline again.
+         * `fill` = null: no fill (only the outline colour, as before). `noLine` = fill without an outline: only the fill
+         * colour is offered (the palette changes the fill).
+         */
+        const renderShapeColors = (line: string, fill: string | null, fillAuto: boolean, setLine: (c: string) => void, setFill: (c: string | null) => void, noLine = false) => {
+            const st = this.plugin.settings;
+            secColor.empty();
+            if (fill !== null && noLine) {
+                this.renderPalette(secColor, st.penPalette, fill, 'shape', (c) => { setFill(c); updateStyleBtn(); });
+                return;
+            }
+            if (fill === null) {
+                this.shapeColorTarget = 'line';
+                this.renderPalette(secColor, st.penPalette, line, 'shape', (c) => { setLine(c); updateStyleBtn(); });
+                return;
+            }
+            const seg = secColor.createDiv({ cls: 'hw-color-targets' });
+            const mk = (t: 'line' | 'fill', text: string) => {
+                const b = seg.createEl('button', { cls: `hw-color-target hw-ct-${t}` });
+                b.createSpan({ cls: 'hw-ct-chip' });
+                label(b, text);
+                b.toggleClass('active', this.shapeColorTarget === t);
+                b.onclick = () => { if (this.shapeColorTarget !== t) { this.shapeColorTarget = t; updateSharedUI(); } };
+                return b;
+            };
+            const lineBtn = mk('line', 'Outline colour');
+            const fillBtn = mk('fill', fillAuto ? 'Fill colour (same as outline) – the palette now changes the fill' : 'Fill colour – right click or long press: same as outline');
+            const paint = (l: string, f: string, auto: boolean) => {
+                lineBtn.style.setProperty('--c', l || 'transparent');
+                fillBtn.style.setProperty('--c', f || 'transparent');
+                fillBtn.toggleClass('is-auto', auto);
+            };
+            paint(line, fill, fillAuto);
+            const resetFill = () => { setFill(null); updateSharedUI(); };
+            fillBtn.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); resetFill(); });
+            let lpTimer = 0, longPressed = false;
+            fillBtn.addEventListener('pointerdown', (e) => {
+                if (e.pointerType === 'mouse') return;
+                longPressed = false;
+                window.clearTimeout(lpTimer);
+                lpTimer = window.setTimeout(() => { longPressed = true; resetFill(); }, 550);
+            });
+            for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) fillBtn.addEventListener(ev, () => window.clearTimeout(lpTimer));
+            fillBtn.addEventListener('click', (e) => { if (longPressed) { longPressed = false; e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+            const host = secColor.createDiv({ cls: 'hw-color-palette-host' });
+            let curLine = line, curFill = fill, auto = fillAuto;
+            const target = this.shapeColorTarget;
+            this.renderPalette(host, st.penPalette, target === 'fill' ? fill : line, 'shape', (c) => {
+                if (target === 'fill') { setFill(c); curFill = c; auto = false; }
+                else { setLine(c); curLine = c; if (auto) curFill = c; }
+                paint(curLine, curFill, auto);
+                updateStyleBtn();
+            });
+        };
+
         const updateSharedUI = () => {
             const allSizeBtns = [btnSm, btnMd, btnLg];
             const st = this.plugin.settings;
@@ -409,7 +468,11 @@ export const toolbarMixin = defineMixin({
                 alphaUI();
             } else if (this.currentTool === 'shape') {
                 allSizeBtns.forEach(b => b.disabled = false);
-                this.renderPalette(secColor, st.penPalette, this.shapeColor, 'shape', (c) => { this.shapeColor = c; this.persistMemory(); updateStyleBtn(); });
+                const filled = this.shapeFill !== 'none' && this.shapeType !== 'line';
+                renderShapeColors(this.shapeColor, filled ? (this.shapeFillColor || this.shapeColor) : null, !this.shapeFillColor,
+                    (c) => { this.shapeColor = c; this.persistMemory(); },
+                    (c) => { this.shapeFillColor = c ? c.toLowerCase() : ''; this.persistMemory(); },
+                    filled && this.shapeFill === 'light' && !this.shapeLineOn);
             } else if (this.currentTool === 'highlighter') {
                 allSizeBtns.forEach(b => b.disabled = false);
                 this.renderPalette(secColor, st.highlighterPalette, this.highlighterColor, 'highlighter', (c) => { this.highlighterColor = c; this.persistMemory(); updateStyleBtn(); });
@@ -420,7 +483,14 @@ export const toolbarMixin = defineMixin({
                 // Selected strokes: colour and thickness change the selection.
                 const kind = this.selectionStyleKind();
                 allSizeBtns.forEach(b => b.disabled = !kind);
-                if (kind) {
+                const filledSel = kind === 'pen' ? this.selectionFilledShapes() : [];
+                if (kind && filledSel.length > 0) {
+                    // filled shapes in the selection: outline / fill colour fields like for the shape tool
+                    renderShapeColors(this.selectionColor() ?? '', this.selectionFillColor() ?? '', filledSel.every(x => !x.fillColor),
+                        (c) => this.setSelectionColor(c), (c) => this.setSelectionFillColor(c),
+                        (this.selection?.strokes ?? []).every(x => !x.isHighlighter && x.shape && x.shape !== 'line' && x.fill && x.noLine));
+                    renderAlpha(this.selectionAlpha(), this.selectionColor() ?? '', (a) => this.setSelectionAlpha(a));
+                } else if (kind) {
                     const pal = kind === 'highlighter' ? st.highlighterPalette : st.penPalette;
                     this.renderPalette(secColor, pal, this.selectionColor() ?? '', kind, (c) => { this.setSelectionColor(c); updateStyleBtn(); });
                     if (kind === 'pen') renderAlpha(this.selectionAlpha(), this.selectionColor() ?? '', (a) => this.setSelectionAlpha(a));

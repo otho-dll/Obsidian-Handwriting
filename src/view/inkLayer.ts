@@ -3,8 +3,8 @@ import { defineMixin } from './mixin';
 /**
  * "Wet ink" layer (see HandwritingView.inkCanvas): the pen stroke being written is drawn on one screen-sized canvas
  * above the pages instead of the page's top canvas. The page canvases are scaled with the zoom (up to millions of
- * pixels each); this layer always has the size of the view, sits outside the zoomed page column and uses the
- * browser's low-latency ("desynchronized") canvas mode – the cost of a pen frame no longer grows with the zoom.
+ * pixels each); this layer always has the size of the view and sits outside the zoomed page column – the cost of a
+ * pen frame no longer grows with the zoom.
  */
 export const inkLayerMixin = defineMixin({
     setupInkLayer() {
@@ -15,10 +15,11 @@ export const inkLayerMixin = defineMixin({
         if (!this.scrollArea || !this.plugin.settings.lowLatencyInk) return;
         const c = document.createElement('canvas');
         c.className = 'hw-ink-layer';
-        // right above the page column (below the rail, badges and panels)
+        // right above the page column (below the page number and panels)
         if (this.pagesWrapper && this.pagesWrapper.parentElement === this.scrollArea) this.pagesWrapper.after(c);
         else this.scrollArea.appendChild(c);
-        const ctx = c.getContext('2d', { desynchronized: true }) as CanvasRenderingContext2D | null;
+        // No "desynchronized" (low-latency) mode: on some devices it made the layer an opaque grey sheet over the pages.
+        const ctx = c.getContext('2d');
         if (!ctx) { c.remove(); return; }
         this.inkCanvas = c;
         this.inkCtx = ctx;

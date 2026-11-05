@@ -136,7 +136,9 @@ export const strokeDrawMixin = defineMixin({
             // Light fill: the colour with reduced opacity; the outline stays fully opaque.
             const a = ctx.globalAlpha;
             ctx.globalAlpha = a * Math.max(0, Math.min(1, stroke.fillAlpha ?? 1));
+            if (stroke.fillColor) ctx.fillStyle = stroke.fillColor;   // own fill colour (otherwise the outline colour)
             ctx.fill();
+            ctx.fillStyle = stroke.color;
             ctx.globalAlpha = a;
         }
         if (!(filled && stroke.noLine)) ctx.stroke();

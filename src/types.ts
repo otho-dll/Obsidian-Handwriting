@@ -15,6 +15,7 @@ export interface Stroke {
     fillAlpha?: number;   // fill opacity 0–1 of a filled shape (missing = 1, solid)
     noLine?: boolean;     // filled shape drawn without its outline
     fill?: boolean;
+    fillColor?: string;   // fill colour of a filled shape (missing = the outline colour)
     arrow?: boolean;
     poly?: boolean;       // freehand stroke drawn as a polyline (pieces of cut shapes)
     rot?: number;         // rotation of a rectangle / ellipse around its centre (radians)

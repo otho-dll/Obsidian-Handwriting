@@ -202,30 +202,6 @@ export class HandwritingSettingTab extends PluginSettingTab {
 
             c.createEl('h4', { text: 'Page navigation', cls: 'hw-set-sub' });
             new Setting(c)
-                .setName('Page rail')
-                .setDesc('A thin strip along the edge of the note: top = first page, bottom = last page, ticks = pages with a title. Drag along it to see a preview of the page, let go to jump there; a tap jumps at once.')
-                .addDropdown(d => d
-                    .addOption('always', 'Always visible')
-                    .addOption('auto', 'Show while scrolling')
-                    .addOption('off', 'Off')
-                    .setValue(st.minimap)
-                    .onChange(async (v) => { st.minimap = v as HandwritingSettings['minimap']; await this.plugin.saveSettings(); this.plugin.refreshViews(); }));
-            new Setting(c)
-                .setName('Page rail side')
-                .addDropdown(d => d
-                    .addOption('right', 'Right')
-                    .addOption('left', 'Left')
-                    .setValue(st.minimapSide)
-                    .onChange(async (v) => { st.minimapSide = v as HandwritingSettings['minimapSide']; await this.plugin.saveSettings(); this.plugin.refreshViews(); }));
-            new Setting(c)
-                .setName('Page rail precision')
-                .setDesc('Fine: move your finger away from the edge while dragging and the rail slows down 4× (for an exact page); the preview also snaps to section starts. Simple: the rail always follows your finger 1:1.')
-                .addDropdown(d => d
-                    .addOption('fine', 'Fine (slow down away from the edge)')
-                    .addOption('simple', 'Simple')
-                    .setValue(st.railPrecision)
-                    .onChange(async (v) => { st.railPrecision = v as HandwritingSettings['railPrecision']; await this.plugin.saveSettings(); }));
-            new Setting(c)
                 .setName('Pages panel side')
                 .setDesc('Where the pages panel (thumbnails, adding / moving / deleting pages, page style) opens. On a phone it slides up from the bottom.')
                 .addDropdown(d => d
@@ -523,7 +499,7 @@ export class HandwritingSettingTab extends PluginSettingTab {
                 .addToggle(t => t.setValue(st.oledDarkPaper).onChange(async (v) => { st.oledDarkPaper = v; await save(); }));
             new Setting(c)
                 .setName('Fade the toolbar while writing')
-                .setDesc('A moment after you start writing, the toolbar and the page rail fade. They come back when the cursor or pen gets close to them, or when you tap them.')
+                .setDesc('A moment after you start writing, the toolbar and the page number fade. They come back when the cursor or pen gets close to them, or when you tap them.')
                 .addToggle(t => t.setValue(st.oledDimToolbar).onChange(async (v) => { st.oledDimToolbar = v; await save(); }));
             new Setting(c)
                 .setName('Pixel shift')

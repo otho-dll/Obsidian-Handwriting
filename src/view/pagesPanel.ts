@@ -126,7 +126,7 @@ export const pagesPanelMixin = defineMixin({
 
         this.renderPanelChrome();
         this.buildPanelList();
-        this.ppReveal(this.railCurrent >= 0 ? this.railCurrent : this.pageIndexAtViewCenter(), false);
+        this.ppReveal(this.currentPageIdx >= 0 ? this.currentPageIdx : this.pageIndexAtViewCenter(), false);
     },
 
     setPanelColumns(c: 1 | 2 | 3) {
@@ -147,18 +147,18 @@ export const pagesPanelMixin = defineMixin({
         if (inp) { inp.value = ''; inp.placeholder = tab === 'pages' ? 'Go to page or title…' : 'Search titles…'; }
         this.renderPanelChrome();
         this.buildPanelList();
-        if (tab === 'pages') this.ppReveal(Math.max(0, this.railCurrent), false);
+        if (tab === 'pages') this.ppReveal(Math.max(0, this.currentPageIdx), false);
     },
 
     /** Contents view: titled pages as a list (tap = go, right click / long press = rename). */
     buildContentsList(list: HTMLElement) {
         const titled = this.titledPages();
-        const cur = Math.max(0, this.railCurrent);
+        const cur = Math.max(0, this.currentPageIdx);
         let section = -1;
         for (const t of titled) if (t.index <= cur) section = t.index;
         const f = this.ppFilter;
         const rows = titled.filter(t => !f || t.title.toLowerCase().includes(f));
-        if (titled.length === 0) list.createDiv({ cls: 'hw-pp-empty', text: 'No titled pages yet. Give a page a title (right-click it, or the button below) – titled pages start sections here, are ticks on the page rail and bookmarks in exported PDFs.' });
+        if (titled.length === 0) list.createDiv({ cls: 'hw-pp-empty', text: 'No titled pages yet. Give a page a title (right-click it, or the button below) – titled pages start sections here and become bookmarks in exported PDFs.' });
         else if (rows.length === 0) list.createDiv({ cls: 'hw-pp-empty', text: 'No page title matches.' });
         const n = this.noteData.pages.length;
         rows.forEach(t => {
@@ -219,7 +219,7 @@ export const pagesPanelMixin = defineMixin({
             close.setAttribute('aria-label', 'Close pages panel');
             setIcon(close, 'x');
             close.onclick = () => this.closePagesPanel();
-            const cur = Math.max(0, this.railCurrent);
+            const cur = Math.max(0, this.currentPageIdx);
             const has = !!this.noteData.pages[cur]?.title;
             const t = foot.createEl('button', { cls: 'hw-pp-add mod-cta', text: has ? `Rename page ${cur + 1}…` : `Title page ${cur + 1}…` });
             t.disabled = !this.canEdit();
@@ -351,7 +351,7 @@ export const pagesPanelMixin = defineMixin({
         }
         if (f && shown === 0) list.createDiv({ cls: 'hw-pp-empty', text: 'No page title matches.' });
         list.scrollTop = keep;
-        this.markPanelCurrent(this.railCurrent);
+        this.markPanelCurrent(this.currentPageIdx);
     },
 
     buildPanelCell(grid: HTMLElement, i: number) {
@@ -558,7 +558,7 @@ export const pagesPanelMixin = defineMixin({
     /** Replaces the page list; deleting pages first saves a version. The previous list can be restored from the toast. */
     applyPagesArray(next: PageData[], focus: number, toast: string | null) {
         const prev = this.noteData.pages;
-        const prevFocus = Math.max(0, this.railCurrent);
+        const prevFocus = Math.max(0, this.currentPageIdx);
         if (prev.some(p => !next.includes(p))) void this.snapshotNow('delete');
         if (next.length === 0) next.push(newPage(this.noteData));
         this.noteData.pages = next;

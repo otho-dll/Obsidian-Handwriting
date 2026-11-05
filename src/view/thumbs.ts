@@ -4,7 +4,7 @@ import { pageWidth, pageHeight } from '../pageFormat';
 import { Stroke, ImageItem, PageData } from '../types';
 import { PageTemplate, drawPageTemplate, inkForPaper } from '../templates';
 
-/** Page thumbnails drawn from vector data: pages panel, scrub preview of the page rail, version history. */
+/** Page thumbnails drawn from vector data: pages panel, version history. */
 export const thumbsMixin = defineMixin({
     // Downscaled image copy for thumbnails (so large bitmaps aren't kept in memory).
     // Successful copies are cached; after a failure we retry at the earliest after 4 s.

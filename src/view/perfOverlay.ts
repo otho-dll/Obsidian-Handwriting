@@ -45,7 +45,7 @@ export const perfOverlayMixin = defineMixin({
                 if (!v.active || !c) return;
                 for (const ctx of [c.bottomCtx, c.topCtx, c.highCtx]) px += ctx.canvas.width * ctx.canvas.height;
             });
-            const cur = Math.max(0, this.railCurrent);
+            const cur = Math.max(0, this.currentPageIdx);
             const strokes = this.noteData.pages[cur]?.strokes.length ?? 0;
             const lt = longTasks.length ? Math.round(Math.max(...longTasks.map(x => x.d))) : 0;
             el.setText(
