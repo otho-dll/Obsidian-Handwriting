@@ -5,12 +5,12 @@ import { QUICK_ACTIONS } from '../quickActions';
 export const menusMixin = defineMixin({
     /** Shows a menu right below the toolbar (not over it), aligned to the button. */
     showMenuBelow(menu: Menu, anchor: HTMLElement) {
-        const tb = this.contentEl.querySelector('.hw-toolbar') as HTMLElement | null;
+        const tb = this.contentEl.querySelector<HTMLElement>('.hw-toolbar');
         const r = anchor.getBoundingClientRect();
         const y = (tb ? tb.getBoundingClientRect().bottom : r.bottom) + 2;
         // Button in the right half of the window: menu aligned to its right edge (opens to the left),
         // in the left half – to the left edge. Previously a wide menu was pushed far away from the button.
-        if (r.left + r.width / 2 > window.innerWidth / 2) menu.showAtPosition({ x: r.right, y, left: true } as any);
+        if (r.left + r.width / 2 > window.innerWidth / 2) menu.showAtPosition({ x: r.right, y, left: true });
         else menu.showAtPosition({ x: Math.max(8, r.left), y });
     },
 
@@ -81,7 +81,8 @@ export const menusMixin = defineMixin({
 
     /** Opens the plugin settings (Toolbar section: what's on the toolbar and what's in the ⋯ menu). */
     openPluginSettings() {
-        const setting = (this.app as any).setting;
+        // App.setting is not in the public API typings.
+        const setting = (this.app as unknown as { setting?: { open?: () => void; openTabById?: (id: string) => void } }).setting;
         if (!setting?.open) { new Notice('Open Settings → Community plugins → Handwriting → Toolbar.'); return; }
         setting.open();
         setting.openTabById?.(this.plugin.manifest.id);

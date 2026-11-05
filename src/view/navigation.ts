@@ -207,7 +207,6 @@ export const navigationMixin = defineMixin({
             const x1 = Math.min(viewportWidth, this.pagePositionX + (this.pageOffsetX(i) + this.pageW(i)) * z);
             el.style.left = `${x0}px`;
             el.style.width = `${Math.max(0, x1 - x0)}px`;
-            el.style.right = 'auto';
         };
         if (more.top) fit(this.edgeEls.top, this.pageAtWrapperY(-this.pagePositionY / z).i);
         if (more.bottom) fit(this.edgeEls.bottom, this.pageAtWrapperY((viewportHeight - this.pagePositionY) / z).i);

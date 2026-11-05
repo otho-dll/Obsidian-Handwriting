@@ -9,7 +9,7 @@ export function svgElement(svg: string): SVGElement | null {
     const doc = new DOMParser().parseFromString(src, 'image/svg+xml');
     const root = doc.documentElement;
     if (!root || root.nodeName !== 'svg' || doc.getElementsByTagName('parsererror').length) return null;
-    return document.importNode(root, true) as unknown as SVGElement;
+    return activeDocument.importNode(root, true) as unknown as SVGElement;
 }
 
 /** Replaces the element content with an SVG icon. */

@@ -159,8 +159,8 @@ export class CalculatorCore {
         const tab = this.st.tab ?? 'basic';
         for (const k of ['basic', 'sci'] as const) this.tabBtns[k].toggleClass('is-active', k === tab);
         this.main.toggleClass('is-sci', tab === 'sci');
-        this.sciEl.style.display = tab === 'sci' ? '' : 'none';
-        this.unitsEl.style.display = this.st.unitsOpen ? '' : 'none';
+        this.sciEl.toggle(tab === 'sci');
+        this.unitsEl.toggle(!!this.st.unitsOpen);
         if (notify) this.onLayout?.();
     }
 
@@ -200,7 +200,7 @@ export class CalculatorCore {
 
     private setHistoryOpen(open: boolean, notify = true) {
         this.st.historyOpen = open;
-        this.histPane.style.display = open ? '' : 'none';
+        this.histPane.toggle(open);
         this.histBtn.toggleClass('is-active', open);
         if (open) this.histEl.scrollTop = this.histEl.scrollHeight;
         if (notify) this.onLayout?.();

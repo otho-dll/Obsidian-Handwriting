@@ -31,7 +31,7 @@ export const clipboardMixin = defineMixin({
                     const c = { ...im };
                     if (isLocalRef(im.path)) {
                         try { c.path = await copyLocalRef(a, from, here, im.path, newId); }
-                        catch (e) { new Notice('An image could not be copied to this note.'); continue; }
+                        catch { new Notice('An image could not be copied to this note.'); continue; }
                     }
                     images.push(c);
                 }

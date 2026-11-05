@@ -9,6 +9,15 @@ import { PdfTarget, cleanFileName, joinPath, PdfTargetModal } from '../pdfTarget
 import { PDF_TARGET_WIDTH, PDF_MAX_HEIGHT } from '../constants';
 import { PageData } from '../types';
 
+/** The part of pdf.js (bundled with Obsidian, see loadPdfJs) used for PDF import. */
+interface PdfViewport { width: number; height: number }
+interface PdfPageProxy {
+    getViewport(options: { scale: number }): PdfViewport;
+    render(options: { canvasContext: CanvasRenderingContext2D; viewport: PdfViewport }): { promise: Promise<void> };
+}
+interface PdfDocumentProxy { numPages: number; getPage(n: number): Promise<PdfPageProxy> }
+interface PdfJsLib { getDocument(src: { data: ArrayBuffer }): { promise: Promise<PdfDocumentProxy> } }
+
 export const pdfIOMixin = defineMixin({
     // --- PDF EXPORT ---
     // Pages are redrawn from vector data at high resolution (not from the screen canvases),
@@ -43,7 +52,7 @@ export const pdfIOMixin = defineMixin({
      */
     async renderPageForExport(i: number, scale: number): Promise<HTMLCanvasElement> {
         const page = this.noteData.pages[i];
-        const canvas = document.createElement('canvas');
+        const canvas = createEl('canvas');
         const PW = this.pageW(i), PH = this.pageH(i);
         // Long ("endless") page: lower resolution so the canvas fits the browser limits.
         const S = Math.min(scale, 30000 / PH, Math.sqrt(160e6 / (PW * PH)));
@@ -83,7 +92,7 @@ export const pdfIOMixin = defineMixin({
 
         // Strokes: highlighter (semi-transparent) under the pen
         const hasHigh = page.strokes.some(s => s.isHighlighter);
-        const bottom = document.createElement('canvas');
+        const bottom = createEl('canvas');
         bottom.width = canvas.width;
         bottom.height = canvas.height;
         const bCtx = bottom.getContext('2d')!;
@@ -91,7 +100,7 @@ export const pdfIOMixin = defineMixin({
         let hCtx: CanvasRenderingContext2D | null = null;
         let high: HTMLCanvasElement | null = null;
         if (hasHigh) {
-            high = document.createElement('canvas');
+            high = createEl('canvas');
             high.width = canvas.width;
             high.height = canvas.height;
             hCtx = high.getContext('2d')!;
@@ -170,10 +179,10 @@ export const pdfIOMixin = defineMixin({
                 new Notice(`PDF saved: ${target.handle.name ?? 'file'}`, 6000);
             } else {
                 const url = URL.createObjectURL(new Blob([buffer], { type: 'application/pdf' }));
-                const a = document.createElement('a');
+                const a = createEl('a');
                 a.href = url;
                 a.download = target.name;
-                document.body.appendChild(a);
+                activeDocument.body.appendChild(a);
                 a.click();
                 a.remove();
                 window.setTimeout(() => URL.revokeObjectURL(url), 10000);
@@ -193,7 +202,7 @@ export const pdfIOMixin = defineMixin({
         const only = this.noteData.pages.length === 1 ? this.noteData.pages[0] : null;
         const blankEndless = !!only && only.endless && only.strokes.length === 0 && !(only.images?.length) && !only.bgPath && !only.bgImage;
         if (!blankEndless && this.endlessBlocksPages()) return;
-        const input = document.createElement('input');
+        const input = createEl('input');
         input.type = 'file';
         input.accept = 'application/pdf';
         input.onchange = () => {
@@ -209,7 +218,7 @@ export const pdfIOMixin = defineMixin({
             const arrayBuffer = await file.arrayBuffer();
 
             // pdf.js built into Obsidian – nothing downloaded from the internet (works offline too).
-            const pdfjsLib = await loadPdfJs();
+            const pdfjsLib = (await loadPdfJs()) as PdfJsLib;
             const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
             const newPages: PageData[] = [];
@@ -222,7 +231,7 @@ export const pdfIOMixin = defineMixin({
                 const scale = Math.min(PDF_TARGET_WIDTH / base.width, PDF_MAX_HEIGHT / base.height);
                 const viewport = page.getViewport({ scale });
 
-                const canvas = document.createElement('canvas');
+                const canvas = createEl('canvas');
                 canvas.width = Math.round(viewport.width);
                 canvas.height = Math.round(viewport.height);
                 const ctx = canvas.getContext('2d')!;

@@ -22,12 +22,15 @@ export function detectVersion(raw: unknown): number {
     return typeof v === 'number' && Number.isFinite(v) && v >= 1 ? Math.floor(v) : 1;
 }
 
-type Migration = (d: any) => any;
+/** Note data as read from JSON – not validated yet (normalizeNote does that). */
+type RawNote = unknown;
+type Migration = (d: RawNote) => RawNote;
 
 const MIGRATIONS: Record<number, Migration> = {
     // v1 -> v2: a single stroke list becomes the first page.
     1: (d) => {
-        if (d && Array.isArray(d.strokes) && !Array.isArray(d.pages)) return { pages: [{ strokes: d.strokes }] };
+        const o = d && typeof d === 'object' ? d as { strokes?: unknown; pages?: unknown } : null;
+        if (o && Array.isArray(o.strokes) && !Array.isArray(o.pages)) return { pages: [{ strokes: o.strokes }] };
         return d ?? { pages: [] };
     },
     // v2 -> v3: the new fields are optional; normalizeNote assigns the note id on load.
@@ -38,7 +41,7 @@ const MIGRATIONS: Record<number, Migration> = {
 
 export interface MigrationResult {
     /** Data in the current format (ready for normalization). */
-    data: any;
+    data: RawNote;
     /** Version the note was loaded from. */
     from: number;
     /** The note comes from a newer plugin version – we open it read-only. */
@@ -48,7 +51,7 @@ export interface MigrationResult {
 export function migrateNote(raw: unknown): MigrationResult {
     const from = detectVersion(raw);
     if (from > NOTE_FORMAT_VERSION) return { data: raw, from, tooNew: true };
-    let d: any = raw;
+    let d: RawNote = raw;
     for (let v = from; v < NOTE_FORMAT_VERSION; v++) {
         const m = MIGRATIONS[v];
         if (m) d = m(d);

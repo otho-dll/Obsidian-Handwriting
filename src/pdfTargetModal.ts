@@ -1,11 +1,18 @@
 import { App, Modal, Notice } from 'obsidian';
 import { pickDiskFolder } from './disk';
 
+/** The part of the File System Access API used for "Save as…" (Chromium; not in every TypeScript DOM library). */
+export interface SaveFileHandle {
+    name?: string;
+    createWritable(): Promise<{ write(data: Uint8Array | Blob): Promise<void>; close(): Promise<void> }>;
+}
+type SaveFilePicker = (options: { suggestedName: string; types: { description: string; accept: Record<string, string[]> }[] }) => Promise<SaveFileHandle>;
+
 export type PdfTarget =
     | { kind: 'vault'; path: string }
     | { kind: 'disk'; folder: string; name: string }
     | { kind: 'download'; name: string }
-    | { kind: 'handle'; handle: any };
+    | { kind: 'handle'; handle: SaveFileHandle };
 
 export const cleanFileName = (n: string) => (n.replace(/\.pdf$/i, '').replace(/[\\/:*?"<>|]/g, '-').trim() || 'Note') + '.pdf';
 export const joinPath = (folder: string, name: string) => { const f = folder.replace(/^\/+|\/+$/g, ''); return f ? `${f}/${name}` : name; };
@@ -40,7 +47,7 @@ export class PdfTargetModal extends Modal {
         const tabs = contentEl.createDiv({ cls: 'hw-pdf-tabs' });
         const tVault = tabs.createEl('button', { text: 'Folder in the vault' });
         const tDisk = tabs.createEl('button', { text: 'Folder on this computer' });
-        if (!canDisk) tDisk.style.display = 'none';
+        if (!canDisk) tDisk.hide();
 
         const vaultRow = contentEl.createDiv({ cls: 'hw-pdf-row' });
         vaultRow.createEl('label', { text: 'Folder in the vault (empty = vault root)' });
@@ -71,8 +78,8 @@ export class PdfTargetModal extends Modal {
         const bSave = btns.createEl('button', { cls: 'mod-cta' });
 
         const refreshKind = () => {
-            vaultRow.style.display = kind === 'vault' ? '' : 'none';
-            diskRow.style.display = kind === 'disk' ? '' : 'none';
+            vaultRow.toggle(kind === 'vault');
+            diskRow.toggle(kind === 'disk');
             tVault.toggleClass('is-active', kind === 'vault');
             tDisk.toggleClass('is-active', kind === 'disk');
             bSave.setText(kind === 'vault' ? 'Save in vault' : 'Save to computer');
@@ -95,7 +102,7 @@ export class PdfTargetModal extends Modal {
         bCancel.onclick = () => this.finish(null);
         bElse.onclick = async () => {
             const name = cleanFileName(nameIn.value);
-            const picker = (window as any).showSaveFilePicker;
+            const picker = (window as unknown as { showSaveFilePicker?: SaveFilePicker }).showSaveFilePicker;
             if (typeof picker === 'function') {
                 try {
                     // We get the handle right away (user gesture); saving happens after the pages are rendered.

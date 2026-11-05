@@ -68,10 +68,9 @@ export function parseSnapshotName(path: string): Omit<SnapshotInfo, 'size'> | nu
 
 /** Gzip compression (CompressionStream). When the browser doesn't support it, returns null and we save plain text. */
 async function gzip(text: string): Promise<ArrayBuffer | null> {
-    const CS = (globalThis as any).CompressionStream;
-    if (typeof CS !== 'function') return null;
+    if (typeof CompressionStream !== 'function') return null;
     try {
-        const stream = new Blob([text]).stream().pipeThrough(new CS('gzip'));
+        const stream = new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'));
         return await new Response(stream).arrayBuffer();
     } catch {
         return null;
@@ -79,9 +78,8 @@ async function gzip(text: string): Promise<ArrayBuffer | null> {
 }
 
 async function gunzip(buf: ArrayBuffer): Promise<string> {
-    const DS = (globalThis as any).DecompressionStream;
-    if (typeof DS !== 'function') throw new Error('This device cannot read compressed history files.');
-    const stream = new Blob([buf]).stream().pipeThrough(new DS('gzip'));
+    if (typeof DecompressionStream !== 'function') throw new Error('This device cannot read compressed history files.');
+    const stream = new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'));
     return await new Response(stream).text();
 }
 

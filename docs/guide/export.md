@@ -22,7 +22,7 @@ Retention and a size limit per note: Settings → Version history.
 ## PDF without Obsidian - `hnote2pdf.py`
 A small Python script (3.8+, no extra packages; Pillow optional) turns `.hnote` notes into vector PDFs on any computer.
 
-1. Settings → Files and export → **Save hnote2pdf.py**, or the command *Copy command to convert this note to PDF with
+1. Settings → Files and export → **Save hnote2pdf.py**, or the command *Copy terminal line to convert this note to PDF with
    Python*.
 2. Run it:
 

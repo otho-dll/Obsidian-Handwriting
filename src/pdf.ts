@@ -9,12 +9,11 @@ const pdfText = (t: string) => { let hex = 'FEFF'; for (let i = 0; i < t.length;
 
 export async function encodeCanvasForPdf(canvas: HTMLCanvasElement): Promise<PdfPageImage | null> {
     const w = canvas.width, h = canvas.height;
-    const CS = (window as any).CompressionStream;
-    if (CS) {
+    if (typeof CompressionStream === 'function') {
         const px = canvas.getContext('2d')!.getImageData(0, 0, w, h).data;
         const rgb = new Uint8Array(w * h * 3);
         for (let i = 0, j = 0; i < px.length; i += 4, j += 3) { rgb[j] = px[i]; rgb[j + 1] = px[i + 1]; rgb[j + 2] = px[i + 2]; }
-        const stream = new Blob([rgb]).stream().pipeThrough(new CS('deflate'));
+        const stream = new Blob([rgb]).stream().pipeThrough(new CompressionStream('deflate'));
         return { w, h, filter: 'FlateDecode', data: new Uint8Array(await new Response(stream).arrayBuffer()) };
     }
     // Fallback (very old browsers): high-quality JPEG

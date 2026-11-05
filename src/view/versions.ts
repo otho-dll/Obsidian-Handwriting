@@ -16,7 +16,7 @@ const PRUNE_EVERY_MS = 3600e3;
  * - When the note is closed and before risky operations (deleting pages, restoring a version).
  */
 export const versionsMixin = defineMixin({
-    adapter(): VaultAdapter { return this.app.vault.adapter as VaultAdapter; },
+    adapter(): VaultAdapter { return this.app.vault.adapter; },
 
     historyOn(): boolean { return this.plugin.settings.historyEnabled && !this.readOnly && !!this.file; },
 
@@ -45,9 +45,10 @@ export const versionsMixin = defineMixin({
     /** Whether the note is empty (only empty pages) – such a version is not worth keeping. */
     isBlankNote(text: string): boolean {
         try {
-            const d = JSON.parse(text);
-            const pages = Array.isArray(d?.pages) ? d.pages : (Array.isArray(d?.strokes) ? [d] : []);
-            return pages.every((p: any) => !(p?.strokes?.length) && !(p?.images?.length) && !p?.bgPath && !p?.bgImage);
+            type RawPage = { strokes?: unknown[]; images?: unknown[]; bgPath?: unknown; bgImage?: unknown } | null;
+            const d = JSON.parse(text) as { pages?: unknown; strokes?: unknown } | null;
+            const pages = (Array.isArray(d?.pages) ? d.pages : (Array.isArray(d?.strokes) ? [d] : [])) as RawPage[];
+            return pages.every(p => !(p?.strokes?.length) && !(p?.images?.length) && !p?.bgPath && !p?.bgImage);
         } catch { return false; }
     },
 
@@ -294,8 +295,10 @@ export const versionsMixin = defineMixin({
     async openVersionAsCopy(text: string, time: number) {
         const file = this.file;
         if (!file) return;
-        let data: any;
-        try { data = JSON.parse(text); } catch { new Notice('This version could not be read.'); return; }
+        type RawPage = { bgPath?: string; images?: { path?: string }[] };
+        let data: { id?: unknown; pages?: RawPage[] };
+        try { data = JSON.parse(text) as typeof data; } catch { new Notice('This version could not be read.'); return; }
+        if (!data || typeof data !== 'object') { new Notice('This version could not be read.'); return; }
         delete data.id;   // the copy gets its own history
         const d = new Date(time);
         const p = (n: number) => String(n).padStart(2, '0');

@@ -15,7 +15,7 @@ src/tools/hnote2pdf.py  standalone converter; src/tools/embed_script.py copies i
 scripts/                esbuild.config.mjs (build), build-site.mjs (website), deploy.mjs (copy the build into a vault)
 site/                   website + live demo: content.mjs (texts and links), render.mjs, site.css, shim/ (fake Obsidian API)
 manifest.json           plugin manifest – stays in the repository root, Obsidian reads it from there
-.github/workflows/      release.yml: GitHub release on a version tag · pages.yml: the website on GitHub Pages
+.github/workflows/      release.yml: GitHub release on a version tag · pages.yml: the website on every push to master
 build/                  build output (not committed)
 ```
 
@@ -33,4 +33,4 @@ npm run site:build    # website into build/site/
 
 ## Releasing
 Set the same version in `manifest.json` and `package.json`, then push a tag with that version (no `v` prefix).
-`release.yml` builds the plugin and creates the GitHub release; `pages.yml` publishes the website.
+`release.yml` builds the plugin and creates the GitHub release. The website (`pages.yml`) is published on every push to `master`.

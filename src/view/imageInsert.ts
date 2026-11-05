@@ -1,5 +1,5 @@
 import { defineMixin } from './mixin';
-import { electronClipboard, openExternal } from '../desktop';
+import { electronClipboard, openExternal, type NativeImage } from '../desktop';
 import { Notice } from 'obsidian';
 import { blobToDataUrl, newId } from '../utils';
 import { ImageItem, ImageSnap } from '../types';
@@ -98,7 +98,7 @@ export const imageInsertMixin = defineMixin({
         const clipboard = electronClipboard();
 
         // Short "signature" of the clipboard image, to tell a new screenshot from the one already there.
-        const sig = (img: any): string => {
+        const sig = (img: NativeImage | null | undefined): string => {
             try {
                 if (!img || img.isEmpty()) return '';
                 const sz = img.getSize();
@@ -107,7 +107,7 @@ export const imageInsertMixin = defineMixin({
                 let h = 0;
                 for (let i = 0; i + 2 < b.length; i += step) h = (h * 31 + b[i] + b[i + 1] * 7 + b[i + 2] * 13) | 0;
                 return `${sz.width}x${sz.height}:${h}`;
-            } catch (e) { return ''; }
+            } catch { return ''; }
         };
         const baseline = clipboard ? sig(clipboard.readImage()) : '';
 
@@ -117,7 +117,7 @@ export const imageInsertMixin = defineMixin({
                 if (!(await openExternal(uri))) window.open(uri);
                 launched = true;
                 break;
-            } catch (e) { /* try the next one */ }
+            } catch { /* try the next one */ }
         }
         if (!launched) {
             new Notice('Could not start the Snipping Tool. Press Win+Shift+S and paste the result with Ctrl+V.');
@@ -143,7 +143,7 @@ export const imageInsertMixin = defineMixin({
     },
 
     importImages(at?: { clientX: number; clientY: number }) {
-        const input = document.createElement('input');
+        const input = createEl('input');
         input.type = 'file';
         input.accept = 'image/*';
         input.multiple = true;
@@ -163,12 +163,12 @@ export const imageInsertMixin = defineMixin({
                 const type = item.types.find(t => t.startsWith('image/'));
                 if (type) blobs.push(await item.getType(type));
             }
-        } catch (e) { /* no permission or empty clipboard */ }
+        } catch { /* no permission or empty clipboard */ }
         if (blobs.length === 0) {
             try {
                 const img = electronClipboard()?.readImage?.();
                 if (img && !img.isEmpty()) blobs.push(new Blob([img.toPNG()], { type: 'image/png' }));
-            } catch (e) { /* no Electron (phone) */ }
+            } catch { /* no Electron (phone) */ }
         }
         if (blobs.length === 0) {
             new Notice('No image found in the clipboard.');

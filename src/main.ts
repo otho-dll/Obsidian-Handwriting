@@ -6,12 +6,12 @@ import { CalculatorModal, CalcState, newCalcState } from './math/calculator';
 import { VIEW_TYPE_HANDWRITING } from './constants';
 import { isTemplate, isHexColor } from './templates';
 import { Stroke, ImageItem, PageData, NoteData, BBox, PageView, HistoryEntry, Selection } from './types';
-import { r2, newId } from './utils';
+import { r2, newId, shrinkCanvas } from './utils';
 import { DEFAULT_QUICK_ACTIONS, QUICK_ACTIONS, TOOLBAR_ITEMS } from './quickActions';
 import { migrateNote, NOTE_FORMAT_VERSION } from './format';
 import { usesV4, isFormat, ENDLESS_MAX, pageWidth, pageHeight } from './pageFormat';
 import { VaultAdapter, writeDataMeta, moveDataFolder, trashDataFolder, isSafeRef, isSafeDataUrl } from './dataFolder';
-import { HandwritingSettings, LastPosition, defaultMemory, DEFAULT_PEN_PALETTE, DEFAULT_HIGHLIGHTER_PALETTE, DEFAULT_SETTINGS } from './settings';
+import { HandwritingSettings, LastPosition, ToolMemory, defaultMemory, DEFAULT_PEN_PALETTE, DEFAULT_HIGHLIGHTER_PALETTE, DEFAULT_SETTINGS } from './settings';
 import { HandwritingSettingTab } from './settingTab';
 import { saveConverterScript, copyConverterCommand } from './converter';
 import { historyMixin, HistoryMethods } from './view/history';
@@ -153,8 +153,8 @@ export default class HandwritingPlugin extends Plugin {
             },
         });
         this.addCommand({
-            id: 'copy-python-pdf-command',
-            name: 'Copy command to convert this note to PDF with Python (hnote2pdf.py)',
+            id: 'copy-python-pdf-line',
+            name: 'Copy terminal line to convert this note to PDF with Python (hnote2pdf.py)',
             checkCallback: (checking: boolean) => {
                 const v = this.app.workspace.getActiveViewOfType(HandwritingView);
                 if (!v || !v.file) return false;
@@ -242,106 +242,124 @@ export default class HandwritingPlugin extends Plugin {
     }
 
     async loadSettings() {
-        const saved = await this.loadData();
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
-        const fix = (arr: any, def: string[]) => Array.isArray(arr) && arr.length === 5 && arr.every(c => typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c)) ? arr.map((c: string) => c.toLowerCase()) : [...def];
-        if (!isTemplate(this.settings.defaultTemplate)) this.settings.defaultTemplate = 'dots';
-        if (!isHexColor(this.settings.defaultPaper)) this.settings.defaultPaper = '#ffffff';
-        this.settings.penPalette = fix(this.settings.penPalette, DEFAULT_PEN_PALETTE);
-        this.settings.highlighterPalette = fix(this.settings.highlighterPalette, DEFAULT_HIGHLIGHTER_PALETTE);
-        const st = this.settings as any;
-        if (!['ask', 'folder', 'note'].includes(st.pdfExportMode)) st.pdfExportMode = 'ask';
-        // 3.20: the page rail was removed (the pages panel does the same) – its settings are dropped.
+        // Saved data comes from disk (older versions, hand edits): everything is checked before it is used.
+        const loaded: unknown = await this.loadData();
+        const saved: Record<string, unknown> | null = loaded && typeof loaded === 'object' ? loaded as Record<string, unknown> : null;
+        const st: Record<string, unknown> = Object.assign({}, DEFAULT_SETTINGS, saved);
+        const oneOf = <T>(v: unknown, ok: readonly T[]): v is T => (ok as readonly unknown[]).includes(v);
+        const strings = (v: unknown): string[] => Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+        const fix = (arr: unknown, def: string[]) => Array.isArray(arr) && arr.length === 5 && arr.every(isHexColor) ? (arr).map(c => c.toLowerCase()) : [...def];
+        if (!isTemplate(st.defaultTemplate)) st.defaultTemplate = 'dots';
+        if (!isHexColor(st.defaultPaper)) st.defaultPaper = '#ffffff';
+        st.penPalette = fix(st.penPalette, DEFAULT_PEN_PALETTE);
+        st.highlighterPalette = fix(st.highlighterPalette, DEFAULT_HIGHLIGHTER_PALETTE);
+        // 3.16: the page rail was removed (the pages panel does the same) – its settings are dropped.
         for (const k of ['railPrecision', 'minimap', 'minimapSide']) delete st[k];
-        if (!['right', 'left'].includes(st.pagesPanelSide)) st.pagesPanelSide = 'right';
-        if (![1, 2, 3].includes(st.pagesPanelColumns)) st.pagesPanelColumns = 2;
+        if (!oneOf(st.pagesPanelSide, ['right', 'left'])) st.pagesPanelSide = 'right';
+        if (!oneOf(st.pagesPanelColumns, [1, 2, 3])) st.pagesPanelColumns = 2;
         // 3.15: the pages panel replaces the old Pages dialog – put its button on the toolbar once.
         if (!st.pagesPanelIntro) {
             st.pagesPanelIntro = true;
-            if (Array.isArray(st.quickActions) && !st.quickActions.includes('pages')) st.quickActions = [...st.quickActions, 'pages'];
+            if (Array.isArray(st.quickActions) && !st.quickActions.includes('pages')) st.quickActions = [...strings(st.quickActions), 'pages'];
         }
         for (const k of ['minimapStyle', 'minimapSize', 'minimapThumbs', 'minimapLength']) delete st[k];
         if (typeof st.pdfExportFolder !== 'string') st.pdfExportFolder = '';
         if (typeof st.pdfLastFolder !== 'string') st.pdfLastFolder = '';
-        if (!['none', 'snip', 'menu', 'undo', 'redo'].includes(st.penButtonAction)) st.penButtonAction = DEFAULT_SETTINGS.penButtonAction;
-        if (!['off', 'whole', 'partial'].includes(st.highlighterErase)) st.highlighterErase = 'whole';
-        // v3.x: "erase shapes" switch + whole/partial merged into one off/whole/partial setting.
+        if (!oneOf(st.penButtonAction, ['none', 'snip', 'menu', 'undo', 'redo'])) st.penButtonAction = DEFAULT_SETTINGS.penButtonAction;
+        if (!oneOf(st.highlighterErase, ['off', 'whole', 'partial'])) st.highlighterErase = 'whole';
+        // 3.16: "erase shapes" switch + whole/partial merged into one off/whole/partial setting.
         if (st.shapeEraseOn === false) st.shapeErase = 'off';
         delete st.shapeEraseOn;
         if (typeof st.longPressMenu !== 'boolean') st.longPressMenu = true;
-        if (!['folderDate', 'folder', 'date'].includes(st.nameMode)) st.nameMode = st.dateFormat === 'none' ? 'folder' : 'folderDate';
-        if (!['-', '.', '_', ' '].includes(st.dateSeparator)) st.dateSeparator = '-';
-        if (!['dmy', 'dm'].includes(st.dateParts)) st.dateParts = 'dmy';
+        if (!oneOf(st.nameMode, ['folderDate', 'folder', 'date'])) st.nameMode = st.dateFormat === 'none' ? 'folder' : 'folderDate';
+        if (!oneOf(st.dateSeparator, ['-', '.', '_', ' '])) st.dateSeparator = '-';
+        if (!oneOf(st.dateParts, ['dmy', 'dm'])) st.dateParts = 'dmy';
         delete st.dateFormat;
-        if (!['ask', 'folder', 'disk', 'note'].includes(st.pdfExportMode)) st.pdfExportMode = 'ask';
+        if (!oneOf(st.pdfExportMode, ['ask', 'folder', 'disk', 'note'])) st.pdfExportMode = 'ask';
         if (typeof st.pdfExportDiskFolder !== 'string') st.pdfExportDiskFolder = '';
         if (typeof st.pdfLastDisk !== 'string') st.pdfLastDisk = '';
         if (st.pdfLastKind !== 'vault' && st.pdfLastKind !== 'disk') st.pdfLastKind = 'vault';
-        if (!Array.isArray(st.quickActions)) st.quickActions = [...DEFAULT_QUICK_ACTIONS];
-        st.quickActions = st.quickActions.map((x: any) => x === 'pagestyle' ? 'pages' : x).filter((x: any, i: number, a: any[]) => typeof x === 'string' && QUICK_ACTIONS.some(q => q.id === x) && a.indexOf(x) === i);
+        let quick = Array.isArray(st.quickActions) ? strings(st.quickActions) : [...DEFAULT_QUICK_ACTIONS];
+        quick = quick.map(x => x === 'pagestyle' ? 'pages' : x).filter((x, i, a) => QUICK_ACTIONS.some(q => q.id === x) && a.indexOf(x) === i);
         // v3.10: first run with the configurable toolbar – add the contents button.
-        if (!Array.isArray(saved?.toolbarHidden) && saved && !st.quickActions.includes('contents')) st.quickActions.push('contents');
-        st.toolbarHidden = Array.isArray(st.toolbarHidden) ? st.toolbarHidden.filter((x: any, i: number, a: any[]) => TOOLBAR_ITEMS.some(t => t.id === x) && a.indexOf(x) === i) : [];
+        if (saved && !Array.isArray(saved.toolbarHidden) && !quick.includes('contents')) quick.push('contents');
+        st.toolbarHidden = strings(st.toolbarHidden).filter((x, i, a) => TOOLBAR_ITEMS.some(t => t.id === x) && a.indexOf(x) === i);
         if (typeof st.debugLog !== 'boolean') st.debugLog = false;
         // v3.16: "writing zoom" replaced by the zoom button (current zoom + favourites). The previously saved zoom
         // becomes the first favourite and the zoom button takes the place of the previous zoom buttons on the toolbar.
-        const okZ = (z: any) => typeof z === 'number' && z >= 0.4 && z <= 4;
+        const okZ = (z: unknown): z is number => typeof z === 'number' && z >= 0.4 && z <= 4;
+        let presets = Array.isArray(st.zoomPresets) ? (st.zoomPresets as unknown[]).filter(okZ) : [];
         if (saved && saved.zoomPresets === undefined) {
             const wz = saved.writingZoom;
-            st.zoomPresets = okZ(wz) ? [Math.round(wz * 100) / 100] : [];
-            st.openZoom = okZ(wz) && saved.openAtWritingZoom !== false ? st.zoomPresets[0] : 0;
-            const had = st.quickActions.includes('writingzoom') || st.quickActions.includes('fit');
-            let at = Math.max(st.quickActions.indexOf('writingzoom'), st.quickActions.indexOf('fit'));
-            if (at < 0) at = st.quickActions.indexOf('calculator') + 1;
-            st.quickActions = st.quickActions.filter((x: string) => x !== 'writingzoom' && x !== 'fit');
-            if (had || !st.quickActions.includes('zoom')) st.quickActions.splice(Math.max(0, Math.min(at, st.quickActions.length)), 0, 'zoom');
+            presets = okZ(wz) ? [Math.round(wz * 100) / 100] : [];
+            st.openZoom = okZ(wz) && saved.openAtWritingZoom !== false ? presets[0] : 0;
+            const had = quick.includes('writingzoom') || quick.includes('fit');
+            let at = Math.max(quick.indexOf('writingzoom'), quick.indexOf('fit'));
+            if (at < 0) at = quick.indexOf('calculator') + 1;
+            quick = quick.filter(x => x !== 'writingzoom' && x !== 'fit');
+            if (had || !quick.includes('zoom')) quick.splice(Math.max(0, Math.min(at, quick.length)), 0, 'zoom');
         }
+        st.quickActions = quick;
         delete st.writingZoom; delete st.openAtWritingZoom;
-        st.zoomPresets = Array.isArray(st.zoomPresets) ? st.zoomPresets.filter(okZ).slice(0, 4).sort((a: number, b: number) => a - b) : [];
-        if (!(st.openZoom === 0 || (okZ(st.openZoom) && st.zoomPresets.includes(st.openZoom)))) st.openZoom = 0;
+        presets = presets.slice(0, 4).sort((a, b) => a - b);
+        st.zoomPresets = presets;
+        if (!(st.openZoom === 0 || (okZ(st.openZoom) && presets.includes(st.openZoom)))) st.openZoom = 0;
         if (typeof st.pinchZoom !== 'boolean') st.pinchZoom = true;
         for (const k of ['oledDarkPaper', 'oledDimToolbar', 'oledPixelShift', 'oledIdleDim']) if (typeof st[k] !== 'boolean') st[k] = false;
-        if (![1, 2, 3, 5, 10, 15, 30].includes(st.oledIdleMinutes)) st.oledIdleMinutes = 3;
+        if (!oneOf(st.oledIdleMinutes, [1, 2, 3, 5, 10, 15, 30])) st.oledIdleMinutes = 3;
         if (typeof st.longPressMs !== 'number' || !(st.longPressMs >= 150 && st.longPressMs <= 1500)) st.longPressMs = 350;
-        if (!['high', 'balanced', 'fast'].includes(st.canvasQuality)) st.canvasQuality = 'balanced';
+        if (!oneOf(st.canvasQuality, ['high', 'balanced', 'fast'])) st.canvasQuality = 'balanced';
         if (typeof st.lowLatencyInk !== 'boolean') st.lowLatencyInk = true;
         if (typeof st.perfOverlay !== 'boolean') st.perfOverlay = false;
-        if (!['off', 'whole', 'partial'].includes(st.shapeErase)) st.shapeErase = 'partial';
+        if (!oneOf(st.shapeErase, ['off', 'whole', 'partial'])) st.shapeErase = 'partial';
         if (st.attachmentLocation !== 'hidden' && st.attachmentLocation !== 'vault') st.attachmentLocation = 'hidden';
         if (typeof st.historyEnabled !== 'boolean') st.historyEnabled = true;
-        if (![5, 10, 15, 30, 60].includes(st.historyInterval)) st.historyInterval = 10;
-        if (![7, 30, 90, 365].includes(st.historyKeepDays)) st.historyKeepDays = 30;
-        if (![10, 50, 200, 1000].includes(st.historyMaxMB)) st.historyMaxMB = 50;
-        const m: any = saved?.memory ?? {};
+        if (!oneOf(st.historyInterval, [5, 10, 15, 30, 60])) st.historyInterval = 10;
+        if (!oneOf(st.historyKeepDays, [7, 30, 90, 365])) st.historyKeepDays = 30;
+        if (!oneOf(st.historyMaxMB, [10, 50, 200, 1000])) st.historyMaxMB = 50;
+        st.memory = this.readMemory(saved?.memory);
+        st.lastPositions = this.readLastPositions(saved?.lastPositions);
+        this.settings = st as unknown as HandwritingSettings;
+    }
+
+    /** Tool memory (colours, sizes, shape options) from saved data – unknown or invalid values fall back to defaults. */
+    readMemory(raw: unknown): ToolMemory {
+        const m: Record<string, unknown> = raw && typeof raw === 'object' ? raw as Record<string, unknown> : {};
         const mem = defaultMemory();
+        const sizes: Record<string, unknown> = m.sizes && typeof m.sizes === 'object' ? m.sizes as Record<string, unknown> : {};
         for (const k of ['pen', 'highlighter', 'eraser', 'shape'] as const) {
-            const v = m.sizes?.[k];
+            const v = sizes[k];
             if (v === 0 || v === 1 || v === 2) mem.sizes[k] = v;
         }
         if (isHexColor(m.penColor)) mem.penColor = m.penColor.toLowerCase();
         if (typeof m.penAlpha === 'number' && m.penAlpha >= 0.1 && m.penAlpha <= 1) mem.penAlpha = m.penAlpha;
         if (isHexColor(m.highlighterColor)) mem.highlighterColor = m.highlighterColor.toLowerCase();
-        const cl = (a: any) => Array.isArray(a) ? a.filter((c: any) => isHexColor(c)).map((c: string) => c.toLowerCase()).slice(0, 3) : [];
+        const cl = (a: unknown) => Array.isArray(a) ? a.filter(isHexColor).map(c => c.toLowerCase()).slice(0, 3) : [];
         mem.customPen = cl(m.customPen);
         mem.customHigh = cl(m.customHigh);
         if (isHexColor(m.shapeColor)) mem.shapeColor = m.shapeColor.toLowerCase();
         mem.shapeFillColor = isHexColor(m.shapeFillColor) ? m.shapeFillColor.toLowerCase() : '';
         mem.customShape = cl(m.customShape);
-        if (['line', 'rect', 'ellipse'].includes(m.shapeType)) mem.shapeType = m.shapeType;
-        if (['solid', 'dashed', 'dotted', 'dashdot'].includes(m.shapeDash)) mem.shapeDash = m.shapeDash;
+        if (m.shapeType === 'line' || m.shapeType === 'rect' || m.shapeType === 'ellipse') mem.shapeType = m.shapeType;
+        if (m.shapeDash === 'solid' || m.shapeDash === 'dashed' || m.shapeDash === 'dotted' || m.shapeDash === 'dashdot') mem.shapeDash = m.shapeDash;
         // Older versions stored the fill as true / false.
-        mem.shapeFill = m.shapeFill === true ? 'solid' : (['none', 'solid', 'light'].includes(m.shapeFill) ? m.shapeFill : 'none');
+        mem.shapeFill = m.shapeFill === true ? 'solid' : (m.shapeFill === 'none' || m.shapeFill === 'solid' || m.shapeFill === 'light' ? m.shapeFill : 'none');
         mem.shapeOutline = m.shapeOutline !== false;
         mem.shapeArrow = m.shapeArrow === true;
-        this.settings.memory = mem;
+        return mem;
+    }
+
+    /** "Where I stopped" positions from saved data (invalid entries are dropped). */
+    readLastPositions(raw: unknown): Record<string, LastPosition> {
         const lp: Record<string, LastPosition> = {};
-        const rawLp = saved?.lastPositions;
-        if (rawLp && typeof rawLp === 'object') {
-            for (const [k, v] of Object.entries(rawLp as Record<string, any>)) {
-                if (v && Number.isFinite(v.page) && Number.isFinite(v.off) && Number.isFinite(v.zoom)) lp[k] = { page: v.page, off: v.off, zoom: v.zoom, t: Number.isFinite(v.t) ? v.t : 0 };
-            }
+        if (!raw || typeof raw !== 'object') return lp;
+        const num = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
+        for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+            if (!v || typeof v !== 'object') continue;
+            const p = v as Record<string, unknown>;
+            if (num(p.page) && num(p.off) && num(p.zoom)) lp[k] = { page: p.page, off: p.off, zoom: p.zoom, t: num(p.t) ? p.t : 0 };
         }
-        this.settings.lastPositions = lp;
+        return lp;
     }
 
     setLastPosition(path: string, pos: LastPosition) {
@@ -374,8 +392,7 @@ export default class HandwritingPlugin extends Plugin {
     /** Refreshes open views after a settings change (palette, pressure...). */
     refreshViews() {
         this.app.workspace.getLeavesOfType(VIEW_TYPE_HANDWRITING).forEach(leaf => {
-            const v = leaf.view as any;
-            if (v && typeof v.refreshSettings === 'function') v.refreshSettings();
+            if (leaf.view instanceof HandwritingView) leaf.view.refreshSettings();
         });
     }
 
@@ -428,6 +445,7 @@ export default class HandwritingPlugin extends Plugin {
     }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging -- mixins: the interface below lists the methods added by Object.assign
 export class HandwritingView extends TextFileView {
     noteData: NoteData = { pages: [{ strokes: [] }] };
     pageContexts: { highCtx: CanvasRenderingContext2D, bottomCtx: CanvasRenderingContext2D, topCtx: CanvasRenderingContext2D }[] = [];
@@ -762,7 +780,7 @@ export class HandwritingView extends TextFileView {
         if (!this.contentEl) return;
         if (!this.readOnly) { this.readOnlyBanner?.remove(); this.readOnlyBanner = null; return; }
         if (this.readOnlyBanner) return;
-        const b = document.createElement('div');
+        const b = createDiv();
         b.className = 'hw-readonly-banner';
         b.textContent = ('This note was saved by a newer version of the Handwriting plugin. It is open read-only so nothing gets lost — update the plugin to edit it.');
         const tb = this.contentEl.querySelector('.hw-toolbar');
@@ -808,7 +826,7 @@ export class HandwritingView extends TextFileView {
     /** Serializes a note to file text (always the same text for the same content). */
     serializeNote(note: NoteData): string {
         const pageStrs = note.pages.map(p => {
-            const rest: any = {};
+            const rest: Record<string, unknown> = {};
             if (p.bgPath) rest.bgPath = p.bgPath;
             if (p.bgImage) rest.bgImage = p.bgImage;
             if (p.tpl) rest.tpl = p.tpl;
@@ -828,45 +846,52 @@ export class HandwritingView extends TextFileView {
         return '{"v":' + v + id + (d !== undefined ? ',"defaults":' + JSON.stringify(d) : '') + ',"pages":[' + pageStrs.join(',') + ']}';
     }
 
-    normalizeNote(input: any): NoteData {
-        let parsed = input;
+    normalizeNote(input: unknown): NoteData {
+        type Obj = Record<string, unknown>;
+        const obj = (v: unknown): Obj | null => v && typeof v === 'object' ? v as Obj : null;
+        const list = (v: unknown): unknown[] => Array.isArray(v) ? v : [];
+        let parsed = obj(input);
         if (parsed && parsed.strokes && !parsed.pages) parsed = { pages: [{ strokes: parsed.strokes }] };
         if (!parsed || !Array.isArray(parsed.pages) || parsed.pages.length === 0) parsed = { pages: [{ strokes: [] }] };
-        const pages: PageData[] = parsed.pages.map((p: any) => {
-            const strokes: Stroke[] = (Array.isArray(p.strokes) ? p.strokes : []).map((s: any) => ({
-                ...s,
-                points: (Array.isArray(s.points) ? s.points : []).map((pt: any) =>
-                    Array.isArray(pt) ? { x: pt[0], y: pt[1], pressure: typeof pt[2] === 'number' ? pt[2] / 100 : 0.5 } : pt)
-            }));
+        const pages: PageData[] = list(parsed.pages).map((raw) => {
+            const p = obj(raw) ?? {};
+            // Unknown stroke fields are kept (a newer version may have added them); points come as [x, y, pressure 0-100].
+            const strokes = list(p.strokes).map((rs) => {
+                const s = obj(rs) ?? {};
+                const points = list(s.points).map((pt) =>
+                    Array.isArray(pt) ? { x: pt[0] as number, y: pt[1] as number, pressure: typeof pt[2] === 'number' ? pt[2] / 100 : 0.5 } : pt);
+                return { ...s, points } as unknown as Stroke;
+            });
             const page: PageData = { strokes };
             // Notes may come from other people: only safe vault paths and inline data:image URLs are kept.
             if (isSafeRef(p.bgPath)) page.bgPath = p.bgPath;
             if (isSafeDataUrl(p.bgImage)) page.bgImage = p.bgImage;
             if (isTemplate(p.tpl)) page.tpl = p.tpl;
             if (isHexColor(p.paper)) page.paper = p.paper.toLowerCase();
-            const num = (v: any, min: number, max: number) => typeof v === 'number' && Number.isFinite(v) ? Math.max(min, Math.min(max, v)) : undefined;
+            const num = (v: unknown, min: number, max: number) => typeof v === 'number' && Number.isFinite(v) ? Math.max(min, Math.min(max, v)) : undefined;
             const w = num(p.w, 200, 4000), h = num(p.h, 200, ENDLESS_MAX);
             if (w !== undefined) page.w = w;
             if (h !== undefined) page.h = h;
             if (p.endless === true) page.endless = true;
             if (typeof p.title === 'string' && p.title.trim()) page.title = p.title.trim().slice(0, 200);
             if (Array.isArray(p.images)) {
-                page.images = p.images
-                    .filter((i: any) => i && typeof i.x === 'number' && typeof i.y === 'number' && typeof i.w === 'number' && typeof i.h === 'number')
-                    .map((i: any) => {
-                        const im = { ...i, id: typeof i.id === 'string' && i.id ? i.id : newId() };
+                page.images = list(p.images)
+                    .map(obj)
+                    .filter((i): i is Obj => !!i && typeof i.x === 'number' && typeof i.y === 'number' && typeof i.w === 'number' && typeof i.h === 'number')
+                    .map((i) => {
+                        const im: Obj = { ...i, id: typeof i.id === 'string' && i.id ? i.id : newId() };
                         if (!isSafeRef(im.path)) delete im.path;
                         if (!isSafeDataUrl(im.data)) delete im.data;
-                        return im;
+                        return im as unknown as ImageItem;
                     })
-                    .filter((i: any) => i.path || i.data);
+                    .filter((i) => i.path || i.data);
             }
             return page;
         });
-        const d = parsed.defaults;
-        const defaults = d && typeof d === 'object' ? { tpl: isTemplate(d.tpl) ? d.tpl : undefined, paper: isHexColor(d.paper) ? d.paper.toLowerCase() : undefined, format: isFormat(d.format) ? d.format : undefined } : undefined;
+        const d = obj(parsed.defaults);
+        const defaults = d ? { tpl: isTemplate(d.tpl) ? d.tpl : undefined, paper: isHexColor(d.paper) ? d.paper.toLowerCase() : undefined, format: isFormat(d.format) ? d.format : undefined } : undefined;
         const hasId = typeof parsed.id === 'string' && /^[\w-]{4,64}$/.test(parsed.id);
-        const id = hasId ? parsed.id : newId();
+        const id = hasId ? parsed.id as string : newId();
         this.idAssigned = !hasId;
         return { pages, defaults, id };
     }
@@ -879,7 +904,7 @@ export class HandwritingView extends TextFileView {
             const mig = migrateNote(data ? JSON.parse(data) : null);
             if (mig.tooNew) { this.readOnly = true; this.rawData = data; }
             this.noteData = this.normalizeNote(mig.data);
-        } catch (e) {
+        } catch {
             this.noteData = { pages: [{ strokes: [] }], id: newId() };
         }
         this.onNoteLoaded(data);
@@ -913,8 +938,8 @@ export class HandwritingView extends TextFileView {
         this.renderToolbar(container);
         this.updateReadOnlyBanner();
 
-        this.scrollArea = container.createEl("div", { cls: "hw-scroll-area" });
-        this.pagesWrapper = this.scrollArea.createEl("div", { cls: "hw-pages-wrapper" });
+        this.scrollArea = container.createDiv({ cls: "hw-scroll-area" });
+        this.pagesWrapper = this.scrollArea.createDiv({ cls: "hw-pages-wrapper" });
 
         this.setupTouchPanZoom(this.scrollArea);
         this.setupWheel(this.scrollArea);
@@ -922,7 +947,7 @@ export class HandwritingView extends TextFileView {
 
         // Edge shadows: show that the page continues beyond the screen (when zoomed in).
         for (const side of ['top', 'right', 'bottom', 'left'] as const) {
-            this.edgeEls[side] = this.scrollArea.createEl('div', { cls: `hw-edge hw-edge-${side}` });
+            this.edgeEls[side] = this.scrollArea.createDiv({ cls: `hw-edge hw-edge-${side}` });
         }
 
         // Context menu: right mouse button (a long finger press is handled by setupTouchPanZoom).
@@ -968,9 +993,9 @@ export class HandwritingView extends TextFileView {
         });
 
         // Pasting images (screenshots, images from the clipboard)
-        this.registerDomEvent(document, 'paste', (e: ClipboardEvent) => {
+        this.registerDomEvent(activeDocument, 'paste', (e: ClipboardEvent) => {
             const target = e.target as HTMLElement | null;
-            if (!target || !(target === document.body || this.contentEl.contains(target))) return;
+            if (!target || !(target === activeDocument.body || this.contentEl.contains(target))) return;
             if (typingInField(e) || this.readOnly) return;
             if (this.app.workspace.getActiveViewOfType(HandwritingView) !== this) return;
             const items = e.clipboardData?.items;
@@ -1101,8 +1126,8 @@ export class HandwritingView extends TextFileView {
         this.clearHistory();
 
         this.noteData.pages.forEach((pageData, index) => {
-            const singlePageContainer = this.pagesWrapper.createEl("div", { cls: "hw-single-page-container" });
-            const pageContainer = singlePageContainer.createEl("div", { cls: "hw-page-a4" });
+            const singlePageContainer = this.pagesWrapper.createDiv({ cls: "hw-single-page-container" });
+            const pageContainer = singlePageContainer.createDiv({ cls: "hw-page-a4" });
 
             // Background from a PDF as a locked image underneath (its URL is set only when the page gets close to the view)
             let bgEl: HTMLImageElement | null = null;
@@ -1112,7 +1137,7 @@ export class HandwritingView extends TextFileView {
                 bgEl.decoding = 'async';
                 pageContainer.addClass('hw-has-bg'); // no dots when the page is an imported PDF
             }
-            const imgLayer = pageContainer.createEl("div", { cls: "hw-image-layer" });
+            const imgLayer = pageContainer.createDiv({ cls: "hw-image-layer" });
 
             // Active page (for menus and the pages dialog): the one under the mouse, or the one touched / drawn on.
             singlePageContainer.addEventListener('pointerenter', (e) => {
@@ -1126,8 +1151,7 @@ export class HandwritingView extends TextFileView {
             // Veil that dims pages other than the current one (see placeCurrentFrame).
             pageContainer.createDiv({ cls: "hw-page-dim" });
             for (const c of [highCanvas, bottomCanvas, topCanvas]) {
-                c.width = 1; c.height = 1;
-                c.style.width = '1px'; c.style.height = '1px';
+                shrinkCanvas(c);
             }
 
             this.pageViews[index] = {
@@ -1169,5 +1193,6 @@ export class HandwritingView extends TextFileView {
 
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging -- the view's mixin methods (src/view/*.ts), added to the class right below
 export interface HandwritingView extends HistoryMethods, GeometryMethods, ImagesMethods, CanvasWindowMethods, ImageInsertMethods, PageToolsMethods, ThumbsMethods, CurrentPageMethods, PagesPanelMethods, ToolbarMethods, PdfIOMethods, StrokeDrawMethods, CalcPanelMethods, ClipboardMethods, MenusMethods, SelectionEditMethods, VersionsMethods, PositionMethods, AssetsMethods, SelectionMethods, ContextMenuMethods, NavigationMethods, InputMethods, PageSizeMethods, ContentsMethods, OledCareMethods, ZoomPanelMethods, TouchMethods, PrintMethods, InkLayerMethods, PerfOverlayMethods {}
 Object.assign(HandwritingView.prototype, historyMixin, geometryMixin, imagesMixin, canvasWindowMixin, imageInsertMixin, pageToolsMixin, thumbsMixin, currentPageMixin, pagesPanelMixin, toolbarMixin, pdfIOMixin, strokeDrawMixin, calcPanelMixin, clipboardMixin, menusMixin, selectionEditMixin, versionsMixin, positionMixin, assetsMixin, selectionMixin, contextMenuMixin, navigationMixin, inputMixin, pageSizeMixin, contentsMixin, oledCareMixin, zoomPanelMixin, touchMixin, printMixin, inkLayerMixin, perfOverlayMixin);

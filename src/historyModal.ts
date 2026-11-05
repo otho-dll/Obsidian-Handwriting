@@ -130,7 +130,7 @@ export class VersionHistoryModal extends Modal {
 
     private showEmpty() {
         this.current = null;
-        this.canvas.style.display = 'none';
+        this.canvas.hide();
         this.pagerLabel.setText('');
         this.prevBtn.disabled = this.nextBtn.disabled = true;
         this.restoreBtn.disabled = this.copyBtn.disabled = this.deleteBtn.disabled = true;
@@ -179,7 +179,7 @@ export class VersionHistoryModal extends Modal {
             const { text, note } = await this.view.loadVersion(v);
             if (token !== this.loadToken) return;
             this.current = { info: v, text, note };
-            this.canvas.style.display = '';
+            this.canvas.show();
             this.restoreBtn.disabled = this.copyBtn.disabled = this.deleteBtn.disabled = false;
             const n = note.pages.length;
             const strokes = note.pages.reduce((s, p) => s + p.strokes.length, 0);

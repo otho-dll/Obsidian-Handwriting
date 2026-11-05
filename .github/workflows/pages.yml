@@ -1,12 +1,11 @@
 # Builds the website (landing page + live demo, see scripts/build-site.mjs) and publishes it on GitHub Pages.
-# Runs when a version tag is pushed (together with the release) and manually from the Actions tab.
+# Runs on every push to master and manually from the Actions tab.
 # One-time setup: repository Settings → Pages → Source: "GitHub Actions"; custom domain as in site/content.mjs.
 name: Website
 
 on:
   push:
-    tags:
-      - "*"
+    branches: ["master"]
   workflow_dispatch:
 
 permissions:

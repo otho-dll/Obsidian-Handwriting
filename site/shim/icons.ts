@@ -59,7 +59,11 @@ export function getIcon(id: string): SVGSVGElement | null {
     const c = custom.get(id);
     if (c !== undefined) {
         svg.setAttribute('viewBox', '0 0 100 100');
-        svg.innerHTML = c;
+        // The icon content is parsed as SVG (XML), not assigned as HTML.
+        const doc = new DOMParser().parseFromString(`<svg xmlns="${SVG_NS}">${c}</svg>`, 'image/svg+xml');
+        if (!doc.getElementsByTagName('parsererror').length) {
+            for (const n of Array.from(doc.documentElement.childNodes)) svg.appendChild(document.importNode(n, true));
+        }
         return svg;
     }
     const node = LUCIDE[key];

@@ -1,8 +1,7 @@
 import { defineMixin } from './mixin';
 import { Menu, setIcon } from 'obsidian';
-import { ICON_PEN, ICON_ERASER, ICON_HIGHLIGHTER, ICON_LASSO, ICON_UNDO, ICON_REDO, ICON_TRASH, ICON_SELECT_RECT, ICON_MORE, ICON_SHAPE_LINE, ICON_SHAPE_RECT, ICON_SHAPE_ELLIPSE, ICON_FILL, ICON_FILL_NONE, ICON_FILL_LIGHT, ICON_NO_OUTLINE, ICON_LASSO_LOOP, ICON_ARROW, ICON_DASH_SOLID, ICON_DASH_DASHED, ICON_DASH_DOTTED, ICON_DASH_DASHDOT } from '../icons';
+import { ICON_PEN, ICON_ERASER, ICON_HIGHLIGHTER, ICON_UNDO, ICON_REDO, ICON_TRASH, ICON_SELECT_RECT, ICON_MORE, ICON_SHAPE_LINE, ICON_SHAPE_RECT, ICON_SHAPE_ELLIPSE, ICON_FILL, ICON_FILL_NONE, ICON_FILL_LIGHT, ICON_NO_OUTLINE, ICON_LASSO_LOOP, ICON_ARROW, ICON_DASH_SOLID, ICON_DASH_DASHED, ICON_DASH_DOTTED, ICON_DASH_DASHDOT } from '../icons';
 import { Stroke } from '../types';
-import type { HandwritingSettings } from '../settings';
 import { setSvg } from '../svg';
 
 export const toolbarMixin = defineMixin({
@@ -25,7 +24,7 @@ export const toolbarMixin = defineMixin({
     // Colour palette: round swatches with a clear selection ring; custom colours are remembered next to the presets.
     renderPalette(container: HTMLElement, presets: string[], activeColor: string, kind: 'pen' | 'highlighter' | 'shape', onChange: (c: string) => void) {
         container.empty();
-        const wrapper = container.createEl("div", { cls: "hw-color-palette" });
+        const wrapper = container.createDiv({ cls: "hw-color-palette" });
         const swatches: HTMLElement[] = [];
         let current = activeColor.toLowerCase();
 
@@ -61,7 +60,7 @@ export const toolbarMixin = defineMixin({
             const menu = (e: MouseEvent | PointerEvent) => {
                 const m = new Menu();
                 m.addItem(i => i.setTitle('Remove color').setIcon('trash-2').onClick(() => removeCustom(c)));
-                m.showAtMouseEvent(e as MouseEvent);
+                m.showAtMouseEvent(e);
             };
             b.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); menu(e); });
             let timer = 0, longPressed = false;
@@ -96,12 +95,12 @@ export const toolbarMixin = defineMixin({
     },
 
     renderToolbar(container: HTMLElement) {
-        const toolbar = container.createEl("div", { cls: "hw-toolbar" });
+        const toolbar = container.createDiv({ cls: "hw-toolbar" });
         const label = (el: HTMLElement, text: string) => { el.setAttribute('aria-label', text); el.setAttribute('title', text); };
 
         let markHiddenTool = () => { };
         // --- TOOLS ---
-        const secTools = toolbar.createEl("div", { cls: "hw-tool-section" });
+        const secTools = toolbar.createDiv({ cls: "hw-tool-section" });
         const penBtn = this.createToolBtn(secTools, ICON_PEN, true);
         label(penBtn, 'Pen');
         const eraserBtn = this.createToolBtn(secTools, ICON_ERASER);
@@ -114,14 +113,14 @@ export const toolbarMixin = defineMixin({
         label(lassoBtn, selLabel());
 
         // Shapes menu (next to the other tools)
-        const secShapes = secTools.createEl("div", { cls: "hw-shapes-section" });
+        const secShapes = secTools.createDiv({ cls: "hw-shapes-section" });
         const shapeBtn = this.createToolBtn(secShapes, this.shapeIcon());
         label(shapeBtn, 'Shapes');
 
-        toolbar.createEl("div", { cls: "hw-toolbar-divider" });
+        toolbar.createDiv({ cls: "hw-toolbar-divider" });
 
         // --- HISTORY ---
-        const secHistory = toolbar.createEl("div", { cls: "hw-tool-section" });
+        const secHistory = toolbar.createDiv({ cls: "hw-tool-section" });
         this.undoBtn = this.createToolBtn(secHistory, ICON_UNDO);
         label(this.undoBtn, 'Undo (Ctrl+Z)');
         this.undoBtn.onclick = () => this.undo();
@@ -140,36 +139,36 @@ export const toolbarMixin = defineMixin({
         const smb = this.selMenuBtn;
         smb.onclick = () => this.showSelectionMenu(smb);
 
-        const styleDivider = toolbar.createEl("div", { cls: "hw-toolbar-divider" });
+        const styleDivider = toolbar.createDiv({ cls: "hw-toolbar-divider" });
 
         // --- STYLE: thickness and colour ---
         // Tools are always on the toolbar; on a narrow screen thickness and colours move into a menu under one button.
-        const styleInline = toolbar.createEl("div", { cls: "hw-tool-section hw-style-inline" });
+        const styleInline = toolbar.createDiv({ cls: "hw-tool-section hw-style-inline" });
         // Thickness and opacity: one button (a dot in the current thickness, colour and opacity),
         // with the choice in a small menu – the toolbar stays readable.
         // Thickness and opacity are not on the toolbar: tapping the active tool again opens them (sizePop).
-        const sizePop = document.body.createEl("div", { cls: "hw-menu hw-size-pop" });
-        sizePop.style.display = 'none';
+        const sizePop = activeDocument.body.createDiv({ cls: "hw-menu hw-size-pop" });
+        sizePop.hide();
         this.register(() => sizePop.remove());
         const thGroup = sizePop.createDiv({ cls: "hw-menu-group" });
         thGroup.createDiv({ cls: "hw-menu-title", text: "Thickness" });
         const thicknessWrapper = thGroup.createDiv({ cls: "hw-menu-row hw-thickness-presets" });
         const btnSm = thicknessWrapper.createEl("button", { cls: "hw-thickness-btn" });
-        btnSm.createEl("div", { cls: "hw-dot hw-dot-sm" });
+        btnSm.createDiv({ cls: "hw-dot hw-dot-sm" });
         const btnMd = thicknessWrapper.createEl("button", { cls: "hw-thickness-btn active" });
-        btnMd.createEl("div", { cls: "hw-dot hw-dot-md" });
+        btnMd.createDiv({ cls: "hw-dot hw-dot-md" });
         const btnLg = thicknessWrapper.createEl("button", { cls: "hw-thickness-btn" });
-        btnLg.createEl("div", { cls: "hw-dot hw-dot-lg" });
+        btnLg.createDiv({ cls: "hw-dot hw-dot-lg" });
         const alphaGroup = sizePop.createDiv({ cls: "hw-menu-group" });
         alphaGroup.createDiv({ cls: "hw-menu-title", text: "Opacity" });
         const secAlpha = alphaGroup.createDiv({ cls: "hw-menu-row hw-alpha-row" });
-        const secColor = styleInline.createEl("div", { cls: "hw-tool-section" });
+        const secColor = styleInline.createDiv({ cls: "hw-tool-section" });
         const ALPHAS = [1, 0.75, 0.5, 0.25];
         let alphaNow: number | null = 1;
         /** Opacity in the thickness menu (null = a tool without opacity – the group is hidden). */
         const renderAlpha = (current: number | null, color: string, onPick: ((a: number) => void) | null) => {
             secAlpha.empty();
-            alphaGroup.style.display = onPick ? '' : 'none';
+            alphaGroup.toggle(!!onPick);
             alphaNow = onPick ? current : 1;
             if (!onPick) return;
             for (const a of ALPHAS) {
@@ -187,7 +186,7 @@ export const toolbarMixin = defineMixin({
                 };
             }
         };
-        const closeSizePop = () => { sizePop.style.display = 'none'; };
+        const closeSizePop = () => { sizePop.hide(); };
 
         // What the eraser erases (only shown for the eraser): shapes and highlighter – off / whole / partial each.
         const eraseGroup = sizePop.createDiv({ cls: "hw-menu-group hw-erase-opts" });
@@ -214,28 +213,28 @@ export const toolbarMixin = defineMixin({
         const refreshShapes = eraseRow('Shapes', 'shapes', () => this.plugin.settings.shapeErase, (v) => { this.plugin.settings.shapeErase = v; });
         const refreshHl = eraseRow('Highlighter', 'the highlighter', () => this.plugin.settings.highlighterErase, (v) => { this.plugin.settings.highlighterErase = v; });
         const refreshEraseGroup = () => {
-            eraseGroup.style.display = this.currentTool === 'eraser' ? '' : 'none';
+            eraseGroup.toggle(this.currentTool === 'eraser');
             refreshShapes();
             refreshHl();
         };
 
         const styleBtn = toolbar.createEl("button", { cls: "hw-tool-btn hw-style-btn" });
-        styleBtn.createEl("span", { cls: "hw-style-dot" });
+        styleBtn.createSpan({ cls: "hw-style-dot" });
         label(styleBtn, 'Color');
-        styleBtn.style.display = 'none';
+        styleBtn.hide();
 
-        toolbar.createEl("div", { cls: "hw-toolbar-spacer" });
+        toolbar.createDiv({ cls: "hw-toolbar-spacer" });
 
         // --- VIEW / MORE ---
-        const secView = toolbar.createEl("div", { cls: "hw-tool-section" });
-        this.quickHost = secView.createEl('div', { cls: 'hw-quick-slots' });
+        const secView = toolbar.createDiv({ cls: "hw-tool-section" });
+        this.quickHost = secView.createDiv({ cls: 'hw-quick-slots' });
         this.renderQuickSlots();
         const moreBtn = this.createToolBtn(secView, ICON_MORE);
         label(moreBtn, 'More');
 
         // --- Popup panels (attached to <body> so the scrolling toolbar doesn't clip them) ---
         const placeBelow = (menu: HTMLElement, anchor: HTMLElement) => {
-            menu.style.display = 'flex';
+            menu.show();
             const r = anchor.getBoundingClientRect();
             const mw = menu.offsetWidth, mh = menu.offsetHeight;
             let left = r.left;
@@ -246,17 +245,17 @@ export const toolbarMixin = defineMixin({
             menu.style.top = `${top}px`;
         };
 
-        const shapeMenu = document.body.createEl("div", { cls: "hw-menu" });
-        shapeMenu.style.display = 'none';
+        const shapeMenu = activeDocument.body.createDiv({ cls: "hw-menu" });
+        shapeMenu.hide();
         this.register(() => shapeMenu.remove());
-        const stylePop = document.body.createEl("div", { cls: "hw-menu hw-style-pop" });
-        stylePop.style.display = 'none';
+        const stylePop = activeDocument.body.createDiv({ cls: "hw-menu hw-style-pop" });
+        stylePop.hide();
         this.register(() => stylePop.remove());
 
         const addGroup = (title: string) => {
-            const g = shapeMenu.createEl("div", { cls: "hw-menu-group" });
-            g.createEl("div", { cls: "hw-menu-title", text: title });
-            return g.createEl("div", { cls: "hw-menu-row" });
+            const g = shapeMenu.createDiv({ cls: "hw-menu-group" });
+            g.createDiv({ cls: "hw-menu-title", text: title });
+            return g.createDiv({ cls: "hw-menu-row" });
         };
         const addOpt = (row: HTMLElement, icon: string, text: string, onClick: () => void) => {
             const b = this.createToolBtn(row, icon);
@@ -270,7 +269,7 @@ export const toolbarMixin = defineMixin({
         shapeThRow.addClass('hw-thickness-presets');
         const shapeThBtns = ['sm', 'md', 'lg'].map((sz, i) => {
             const b = shapeThRow.createEl('button', { cls: 'hw-thickness-btn' });
-            b.createEl('div', { cls: `hw-dot hw-dot-${sz}` });
+            b.createDiv({ cls: `hw-dot hw-dot-${sz}` });
             b.setAttribute('aria-label', ['Thin', 'Medium', 'Thick'][i]);
             b.onclick = () => pickSize(i);
             return b;
@@ -312,20 +311,20 @@ export const toolbarMixin = defineMixin({
             const line = this.shapeFill === 'light' ? this.shapeLineOn : true;
             fillOpts.forEach(([f, l, b]) => b.toggleClass('active', this.shapeFill === f && l === line));
             arrowBtn.toggleClass('active', this.shapeArrow);
-            fillGroup.style.display = this.shapeType === 'line' ? 'none' : '';
-            arrowGroup.style.display = this.shapeType === 'line' ? '' : 'none';
+            fillGroup.toggle(!(this.shapeType === 'line'));
+            arrowGroup.toggle(this.shapeType === 'line');
             setSvg(shapeBtn, this.iconSvg(this.shapeIcon()));
             this.persistMemory();
             if (this.refreshToolbarUI) this.refreshToolbarUI();
         };
 
         const openShapeMenu = () => { closeStylePop(); placeBelow(shapeMenu, shapeBtn); };
-        const closeShapeMenu = () => { shapeMenu.style.display = 'none'; };
+        const closeShapeMenu = () => { shapeMenu.hide(); };
         const openStylePop = () => { closeShapeMenu(); placeBelow(stylePop, styleBtn); };
-        const closeStylePop = () => { stylePop.style.display = 'none'; };
+        const closeStylePop = () => { stylePop.hide(); };
 
         // Close panels when clicking outside them (capture, because the canvas stops propagation).
-        this.registerDomEvent(document, 'pointerdown', (e: PointerEvent) => {
+        this.registerDomEvent(activeDocument, 'pointerdown', (e: PointerEvent) => {
             const t = e.target as Node;
             if (!secShapes.contains(t) && !shapeMenu.contains(t)) closeShapeMenu();
             const inSize = sizePop.contains(t);
@@ -372,13 +371,13 @@ export const toolbarMixin = defineMixin({
         };
 
         const updateStyleBtn = () => {
-            const dot = styleBtn.querySelector('.hw-style-dot') as HTMLElement | null;
+            const dot = styleBtn.querySelector<HTMLElement>('.hw-style-dot');
             if (!dot) return;
             const t = this.currentTool;
             const color = t === 'pen' ? this.penColor : t === 'shape' ? this.shapeColor : t === 'highlighter' ? this.highlighterColor : t === 'lasso' ? (this.selectionColor() ?? '') : '';
             dot.style.setProperty('--sw', color || 'var(--text-faint)');
             // narrow screen only, and only for tools with colours
-            styleBtn.style.display = compact && !styleInline.hasClass('hw-no-colors') ? '' : 'none';
+            styleBtn.toggle(!!compact && !styleInline.hasClass('hw-no-colors'));
         };
 
         const currentColor = () => {
@@ -562,8 +561,8 @@ export const toolbarMixin = defineMixin({
             placeBelow(selModePop, lassoBtn);
         };
         // Selection mode: just two icons (lasso / rectangle).
-        const selModePop = document.body.createEl('div', { cls: 'hw-menu hw-selmode-pop' });
-        selModePop.style.display = 'none';
+        const selModePop = activeDocument.body.createDiv({ cls: 'hw-menu hw-selmode-pop' });
+        selModePop.hide();
         this.register(() => selModePop.remove());
         const selGroup = selModePop.createDiv({ cls: 'hw-menu-group' });
         selGroup.createDiv({ cls: 'hw-menu-title', text: 'Selection' });
@@ -587,8 +586,8 @@ export const toolbarMixin = defineMixin({
             return [mode, b] as const;
         });
         const refreshSelModePop = () => selModeBtns.forEach(([m, b]) => b.toggleClass('active', this.plugin.settings.selectMode === m));
-        const closeSelModePop = () => { selModePop.style.display = 'none'; };
-        this.registerDomEvent(document, 'pointerdown', (e: PointerEvent) => {
+        const closeSelModePop = () => { selModePop.hide(); };
+        this.registerDomEvent(activeDocument, 'pointerdown', (e: PointerEvent) => {
             const t = e.target as Node;
             if (!selModePop.contains(t) && !lassoBtn.contains(t)) { closeSelModePop(); }
         }, { capture: true });

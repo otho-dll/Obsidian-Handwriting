@@ -89,10 +89,11 @@ code { font-family: var(--site-mono); font-size: 0.88em; background: var(--site-
 
 /* ---- 1. intro: the whole first screen ---- */
 .intro {
-    position: relative; min-height: 100vh; min-height: 100svh; display: flex; align-items: center;
+    position: relative; min-height: 100vh; display: flex; align-items: center;
     padding: 72px 0 48px; text-align: center;
     background: radial-gradient(60% 50% at 50% 38%, var(--site-accent-soft), transparent 70%);
 }
+@supports (min-height: 100svh) { .intro { min-height: 100svh; } }
 .intro-inner { display: flex; flex-direction: column; align-items: center; }
 .intro-logo { width: clamp(64px, 12vw, 96px); height: auto; margin-bottom: 22px; filter: drop-shadow(0 0 22px var(--site-glow)); }
 .intro-name { font-size: clamp(2.1rem, 1.3rem + 3.6vw, 3.6rem); font-weight: 800; letter-spacing: -0.025em; margin-bottom: 0.35em; }
@@ -204,7 +205,7 @@ code { font-family: var(--site-mono); font-size: 0.88em; background: var(--site-
 .footer-bottom p { margin: 0 0 0.5rem 0; }
 .footer-bottom a { color: #e0e0e0; }
 .footer-bottom a:hover { color: #ffffff; text-shadow: 0 0 10px var(--site-glow-strong); }
-.footer-project { margin-bottom: 1rem !important; }
+.footer-bottom .footer-project { margin-bottom: 1rem; }
 .heart { color: var(--site-success); }
 .version { font-variant-numeric: tabular-nums; }
 @media (max-width: 768px) {

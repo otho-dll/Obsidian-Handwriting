@@ -3,7 +3,7 @@
 This script converts handwritten notes to PDF. It only needs Python 3.8+ – nothing else to install.
 
 **Where to get it:** the plugin saves it in the vault root folder – plugin settings → Files and export →
-"PDF without Obsidian (Python)" → *Save hnote2pdf.py*. The command "Copy command to convert this note to PDF with Python"
+"PDF without Obsidian (Python)" → *Save hnote2pdf.py*. The command "Copy terminal line to convert this note to PDF with Python"
 copies a ready-to-run command for the open note (just paste it into a terminal).
 
 ```bash

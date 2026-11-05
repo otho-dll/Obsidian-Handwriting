@@ -18,7 +18,7 @@ export const thumbsMixin = defineMixin({
             const el = url ? await loadImageEl(url) : null;
             if (!el || el.naturalWidth <= 0) throw new Error('image could not be loaded');
             const k = Math.min(1, 220 / Math.max(el.naturalWidth, el.naturalHeight));
-            const sprite = document.createElement('canvas');
+            const sprite = createEl('canvas');
             sprite.width = Math.max(1, Math.round(el.naturalWidth * k));
             sprite.height = Math.max(1, Math.round(el.naturalHeight * k));
             sprite.getContext('2d')!.drawImage(el, 0, 0, sprite.width, sprite.height);

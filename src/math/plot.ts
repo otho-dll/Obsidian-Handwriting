@@ -207,7 +207,7 @@ export function fitPoints(pts: { x: number; y: number }[], type: FitType): FitRe
     if (!f) return null;
     const mean = Y.reduce((s, y) => s + y, 0) / Y.length;
     const ssTot = Y.reduce((s, y) => s + (y - mean) ** 2, 0);
-    const ssRes = pts.reduce((s, p) => s + (p.y - f!(p.x)) ** 2, 0);
+    const ssRes = pts.reduce((s, p) => s + (p.y - f(p.x)) ** 2, 0);
     return { f, label, r2: ssTot > 0 ? 1 - ssRes / ssTot : 1 };
 }
 
@@ -643,7 +643,7 @@ export function renderPlot(canvas: HTMLCanvasElement, spec: PlotSpec, scale = 1,
 }
 
 export function plotToPng(spec: PlotSpec, scale = 2): Promise<Blob | null> {
-    const c = document.createElement('canvas');
+    const c = createEl('canvas');
     renderPlot(c, spec, scale);
     return new Promise(res => c.toBlob(b => res(b), 'image/png'));
 }

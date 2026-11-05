@@ -63,21 +63,21 @@ export const inputMixin = defineMixin({
         const ensureLassoSvg = () => {
             if (lassoSvg && lassoEl) return lassoEl;
             const NS = 'http://www.w3.org/2000/svg';
-            lassoSvg = document.createElementNS(NS, 'svg');
+            lassoSvg = activeDocument.createElementNS(NS, 'svg');
             lassoSvg.setAttribute('class', 'hw-lasso-svg');
             lassoSvg.setAttribute('viewBox', `0 0 ${this.pageW(pageIndex)} ${this.pageH(pageIndex)}`);
             lassoSvg.setAttribute('preserveAspectRatio', 'none');
-            lassoEl = document.createElementNS(NS, 'path');
+            lassoEl = activeDocument.createElementNS(NS, 'path');
             lassoSvg.appendChild(lassoEl);
             this.pageViews[pageIndex].container.appendChild(lassoSvg);
             return lassoEl;
         };
-        const hideLasso = () => { if (lassoEl) lassoEl.setAttribute('d', ''); if (lassoSvg) lassoSvg.style.display = 'none'; };
+        const hideLasso = () => { if (lassoEl) lassoEl.setAttribute('d', ''); if (lassoSvg) lassoSvg.classList.add('is-hidden'); };
         const drawLassoPreview = () => {
             lassoRaf = false;
             if (!lassoPath || lassoPath.length === 0) return;
             const el = ensureLassoSvg();
-            lassoSvg!.style.display = '';
+            lassoSvg!.classList.remove('is-hidden');
             el.classList.toggle('is-rect', lassoRect);
             // For a very long loop take every k-th point (the preview doesn't need to be exact).
             const step = Math.max(1, Math.floor(lassoPath.length / 400));
@@ -101,10 +101,10 @@ export const inputMixin = defineMixin({
         };
         const scheduleDrag = (f: () => void) => {
             dragPending = f;
-            if (!dragRaf) dragRaf = requestAnimationFrame(runDragFrame);
+            if (!dragRaf) dragRaf = window.requestAnimationFrame(runDragFrame);
         };
         const flushDrag = () => {
-            if (dragRaf) { cancelAnimationFrame(dragRaf); dragRaf = 0; }
+            if (dragRaf) { window.cancelAnimationFrame(dragRaf); dragRaf = 0; }
             runDragFrame();
         };
         let scaleDrag: { sb: Bounds; total: number } | null = null;
@@ -158,8 +158,8 @@ export const inputMixin = defineMixin({
         let hoverRaf = false;
         // The eraser circle is a DOM element (moved with a transform), not a drawing on the canvas: every change of a
         // large canvas costs as much as it has pixels, so moving the cursor over the canvas slowed erasing down.
-        const cursorEl = this.pageViews[pageIndex].container.createEl('div', { cls: 'hw-eraser-cursor' });
-        cursorEl.style.display = 'none';
+        const cursorEl = this.pageViews[pageIndex].container.createDiv({ cls: 'hw-eraser-cursor' });
+        cursorEl.hide();
         let curR = -1, curZ = -1;
         const drawEraserCursor = (pos: Point, _clear = true, radius?: number) => {
             const r = radius ?? getActiveWidth('eraser') / 2;
@@ -172,15 +172,15 @@ export const inputMixin = defineMixin({
                 cursorEl.style.boxShadow = `0 0 0 ${1.6 / z}px rgba(255, 255, 255, 0.9)`;
             }
             cursorEl.style.transform = `translate(${pos.x - r}px, ${pos.y - r}px)`;
-            cursorEl.style.display = 'block';
+            cursorEl.show();
             cursorShown = true;
         };
-        const hideEraserCursor = () => { cursorEl.style.display = 'none'; };
+        const hideEraserCursor = () => { cursorEl.hide(); };
 
         const scheduleEraseRedraw = () => {
             if (rafPending) return;
             rafPending = true;
-            requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => {
                 rafPending = false;
                 if (!eraseGesture) return;
                 // Redraw only the area the eraser changed (not the whole page).
@@ -209,7 +209,7 @@ export const inputMixin = defineMixin({
             if (effectiveTool === 'lasso') {
                 const lpos = getPointerPos(e);
                 const bounds = this.selection && this.selection.page === pageIndex ? this.getSelectionBounds() : null;
-                topCanvas.style.opacity = '1';
+                topCanvas.removeClass('hw-live-highlighter');
                 if (bounds) {
                     const h = this.getHandles(bounds);
                     if (Math.hypot(lpos.x - h.rotate.x, lpos.y - h.rotate.y) <= h.hitRadius) {
@@ -237,7 +237,7 @@ export const inputMixin = defineMixin({
 
             if (effectiveTool === 'eraser') {
                 const epos = getPointerPos(e);
-                topCanvas.style.opacity = '1';
+                topCanvas.removeClass('hw-live-highlighter');
                 eraseGesture = { before: [...this.noteData.pages[pageIndex].strokes], last: epos, lastT: e.timeStamp, mult: 1 };
                 eraseDirty = false;
                 eraseRegion = freshRegion();
@@ -248,9 +248,9 @@ export const inputMixin = defineMixin({
             }
 
             if (effectiveTool === 'highlighter') {
-                topCanvas.style.opacity = '0.4';
+                topCanvas.addClass('hw-live-highlighter');
             } else {
-                topCanvas.style.opacity = '1';
+                topCanvas.removeClass('hw-live-highlighter');
             }
 
             isDrawing = true;
@@ -292,11 +292,11 @@ export const inputMixin = defineMixin({
             if (!isDrawing && !eraseGesture && !lassoPath && !lassoDrag && !scaleDrag && !rotateDrag) {
                 const view = this.pageViews[pageIndex];
                 if (view && view.active && getEffectiveTool(e) === 'eraser') {
-                    topCanvas.style.cursor = 'none';
+                    topCanvas.addClass('hw-no-cursor');
                     hoverPos = getPointerPos(e);
                     if (!hoverRaf) {
                         hoverRaf = true;
-                        requestAnimationFrame(() => {
+                        window.requestAnimationFrame(() => {
                             hoverRaf = false;
                             if (hoverPos && !eraseGesture && !isDrawing) drawEraserCursor(hoverPos);
                         });
@@ -307,7 +307,7 @@ export const inputMixin = defineMixin({
                     hoverPos = null;
                     cursorShown = false;
                     hideEraserCursor();
-                    topCanvas.style.cursor = '';
+                    topCanvas.removeClass('hw-no-cursor');
                 }
             }
 
@@ -347,7 +347,7 @@ export const inputMixin = defineMixin({
                         if (Math.hypot(lpos.x - lp.x, lpos.y - lp.y) < 1.5 / Math.max(0.5, this.currentZoom)) return;
                         lassoPath.push(lpos);
                     }
-                    if (!lassoRaf) { lassoRaf = true; requestAnimationFrame(drawLassoPreview); }
+                    if (!lassoRaf) { lassoRaf = true; window.requestAnimationFrame(drawLassoPreview); }
                 } else if (lassoDrag && this.selection) {
                     const ld = lassoDrag;
                     scheduleDrag(() => {
@@ -443,7 +443,7 @@ export const inputMixin = defineMixin({
             if ((currentStroke.isHighlighter || currentStroke.alpha !== undefined) && !liveRaf) {
                 // Highlighter: one redraw per frame, clearing only its area.
                 liveRaf = true;
-                requestAnimationFrame(() => {
+                window.requestAnimationFrame(() => {
                     liveRaf = false;
                     const st = currentStroke;
                     if (!st || (!st.isHighlighter && st.alpha === undefined)) return;
@@ -557,7 +557,7 @@ export const inputMixin = defineMixin({
             this.pushHistory(pageIndex, currentStroke);
 
             topCtx.clearRect(rx0 - rpad, ry0 - rpad, rx1 - rx0 + 2 * rpad, ry1 - ry0 + 2 * rpad);
-            topCanvas.style.opacity = '1';
+            topCanvas.removeClass('hw-live-highlighter');
 
             const view = this.pageViews[pageIndex];
             if (currentStroke.isHighlighter && view && !view.highAllocated) {
@@ -587,7 +587,7 @@ export const inputMixin = defineMixin({
             if (cursorShown && !eraseGesture) {
                 cursorShown = false;
                 hideEraserCursor();
-                topCanvas.style.cursor = '';
+                topCanvas.removeClass('hw-no-cursor');
             }
         });
     },

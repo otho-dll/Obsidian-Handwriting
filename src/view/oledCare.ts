@@ -55,7 +55,7 @@ export const oledCareMixin = defineMixin({
             if (this.oledVeil?.hasClass('hw-on') && e.type !== 'pointerdown') this.oledVeil.removeClass('hw-on');
         };
         for (const ev of ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart'] as const) {
-            this.registerDomEvent(window, ev, activity, { capture: true, passive: true } as AddEventListenerOptions);
+            this.registerDomEvent(window, ev, activity, { capture: true, passive: true });
         }
 
         // Dimming the toolbar and page number while writing.
@@ -83,7 +83,7 @@ export const oledCareMixin = defineMixin({
 
     /** Whether a point is near the toolbar. */
     nearUi(x: number, y: number): boolean {
-        const tb = this.contentEl.querySelector('.hw-toolbar') as HTMLElement | null;
+        const tb = this.contentEl.querySelector<HTMLElement>('.hw-toolbar');
         const near = (el: HTMLElement | null) => {
             if (!el) return false;
             const r = el.getBoundingClientRect();

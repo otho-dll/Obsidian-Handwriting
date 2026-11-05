@@ -231,7 +231,7 @@ export function compile(src: string, opts: CompileOptions = {}): Compiled {
 
 /** Function value for numeric arguments (shared implementation for plots and the calculator). */
 export function numericCall(name: string, args: number[], degrees: boolean): number {
-    return buildNumeric({ k: 'call', n: name, args: args.map(v => ({ k: 'num', v }) as Node) }, { degrees })({});
+    return buildNumeric({ k: 'call', n: name, args: args.map(v => ({ k: 'num', v })) }, { degrees })({});
 }
 
 function gcd2(a: number, b: number): number {

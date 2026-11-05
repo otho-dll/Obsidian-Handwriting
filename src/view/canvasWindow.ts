@@ -1,12 +1,13 @@
 import { defineMixin } from './mixin';
 import { MAX_CANVAS_SCALE, CANVAS_PIXEL_BUDGET } from '../constants';
 import { Point, Stroke, ImageItem, Bounds, BBox, PageView } from '../types';
+import { shrinkCanvas } from '../utils';
 
 export const canvasWindowMixin = defineMixin({
     // --- RESOLUTION, WINDOWED CANVASES AND PAGE VIRTUALIZATION ---
     // Obsidian theme accent colour (selection, handles, frames).
     accentColor(): string {
-        const v = getComputedStyle(document.body).getPropertyValue('--interactive-accent').trim();
+        const v = getComputedStyle(activeDocument.body).getPropertyValue('--interactive-accent').trim();
         return v || '#2563eb';
     },
 
@@ -277,8 +278,7 @@ export const canvasWindowMixin = defineMixin({
         view.active = false;
         // Free memory: canvases and images outside the view.
         for (const c of [ctxs.bottomCtx.canvas, ctxs.topCtx.canvas, ctxs.highCtx.canvas]) {
-            c.width = 1; c.height = 1;
-            c.style.width = '1px'; c.style.height = '1px';
+            shrinkCanvas(c);
         }
         view.highAllocated = false;
         if (view.bgEl) view.bgEl.removeAttribute('src');
@@ -384,7 +384,7 @@ export const canvasWindowMixin = defineMixin({
         // Resolution as on the page, but at most ~10 Mpx (large selections at high zoom).
         let s = Math.max(0.5, view.scale);
         s = Math.min(s, Math.sqrt(10e6 / Math.max(1, w * h)), 8000 / Math.max(w, h));
-        const canvas = document.createElement('canvas');
+        const canvas = createEl('canvas');
         canvas.className = 'hw-drag-sprite';
         canvas.width = Math.max(1, Math.ceil(w * s));
         canvas.height = Math.max(1, Math.ceil(h * s));

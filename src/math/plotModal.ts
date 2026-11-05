@@ -52,7 +52,7 @@ export class PlotModal extends Modal {
     }
 
     onClose() {
-        cancelAnimationFrame(this.raf);
+        window.cancelAnimationFrame(this.raf);
         this.contentEl.empty();
     }
 
@@ -66,8 +66,8 @@ export class PlotModal extends Modal {
     }
 
     private schedulePreview() {
-        cancelAnimationFrame(this.raf);
-        this.raf = requestAnimationFrame(() => {
+        window.cancelAnimationFrame(this.raf);
+        this.raf = window.requestAnimationFrame(() => {
             const err = validatePlot(this.spec);
             this.errEl.setText(err ?? '');
             if (err) return;

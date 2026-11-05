@@ -20,9 +20,9 @@ export const selectionMixin = defineMixin({
         }
         if (this.deleteSelBtn) {
             this.deleteSelBtn.disabled = !this.selection;
-            this.deleteSelBtn.style.display = this.selection ? '' : 'none';
+            this.deleteSelBtn.toggle(!!this.selection);
         }
-        if (this.selMenuBtn) this.selMenuBtn.style.display = this.selection ? '' : 'none';
+        if (this.selMenuBtn) this.selMenuBtn.toggle(!!this.selection);
         // With strokes selected the toolbar shows their colour and thickness (changes apply to the selection).
         if (this.currentTool === 'lasso' && this.refreshToolbarUI) this.refreshToolbarUI();
     },

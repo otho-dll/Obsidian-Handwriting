@@ -14,7 +14,9 @@ export const assetsMixin = defineMixin({
     // Images go to the attachment folder configured in Obsidian, into a subfolder named after the note.
     // Attachment folder per Obsidian settings for a note at the given path (no side effects); null = cannot be determined.
     attachmentBaseDir(notePath: string): string | null {
-        const cfg = (this.app.vault as any).getConfig?.('attachmentFolderPath');
+        // Vault.getConfig is not in the public API typings (it exists in every Obsidian version).
+        const vault = this.app.vault as unknown as { getConfig?: (key: string) => unknown };
+        const cfg = vault.getConfig?.('attachmentFolderPath');
         if (typeof cfg !== 'string') return null;
         const noteDir = notePath.includes('/') ? notePath.slice(0, notePath.lastIndexOf('/')) : '';
         const join = (a: string, b: string) => a && b ? `${a}/${b}` : (a || b);
@@ -25,7 +27,7 @@ export const assetsMixin = defineMixin({
         return p.replace(/^\/+|\/+$/g, '');
     },
 
-    adapterA(): VaultAdapter { return this.app.vault.adapter as VaultAdapter; },
+    adapterA(): VaultAdapter { return this.app.vault.adapter; },
 
     // By default images go to the hidden data folder next to the note (.<name>.hnote-data/attachments)
     // and are stored in the note as a relative path "@/attachments/…". Optionally: Obsidian's attachment folder.
@@ -37,15 +39,15 @@ export const assetsMixin = defineMixin({
             // Fallback: Obsidian's official attachment path query
             attDir = '';
             try {
-                const fm: any = this.app.fileManager;
+                const fm = this.app.fileManager;
                 if (note && typeof fm.getAvailablePathForAttachment === 'function') {
-                    const probe: string = await fm.getAvailablePathForAttachment('handwriting-probe.png', note.path);
+                    const probe = await fm.getAvailablePathForAttachment('handwriting-probe.png', note.path);
                     const i = probe.lastIndexOf('/');
                     attDir = i >= 0 ? probe.slice(0, i) : '';
                 } else {
                     attDir = note?.parent?.path ?? '';
                 }
-            } catch (e) {
+            } catch {
                 attDir = note?.parent?.path ?? '';
             }
         }
@@ -132,10 +134,10 @@ export const assetsMixin = defineMixin({
             const f = this.app.vault.getAbstractFileByPath(p);
             if (!(f instanceof TFile)) continue;
             if (f.parent) parents.add(f.parent);
-            try { await this.app.vault.trash(f, true); trashed++; } catch (e) { /* stays */ }
+            try { await this.app.fileManager.trashFile(f); trashed++; } catch { /* stays */ }
         }
         for (const folder of parents) {
-            if (folder.children.length === 0 && folder.path !== '/') { try { await this.app.vault.trash(folder, true); } catch (e) { /* stays */ } }
+            if (folder.children.length === 0 && folder.path !== '/') { try { await this.app.fileManager.trashFile(folder); } catch { /* stays */ } }
         }
         notice.hide();
         new Notice(`Moved ${map.size} file${map.size === 1 ? '' : 's'} to the note's hidden folder${trashed < map.size ? ` (${map.size - trashed} original${map.size - trashed === 1 ? ' is' : 's are'} still used by other notes and stayed in place)` : ''}.`, 8000);
@@ -159,7 +161,7 @@ export const assetsMixin = defineMixin({
         if (await a.exists(own)) return;
         const parent = file.parent?.path && file.parent.path !== '/' ? file.parent.path : '';
         let listing: { folders: string[] };
-        try { listing = await a.list(parent || '/'); } catch (e) { return; }
+        try { listing = await a.list(parent || '/'); } catch { return; }
         for (const dir of listing.folders) {
             const name = dir.slice(dir.lastIndexOf('/') + 1);
             if (!name.startsWith('.') || !name.endsWith(DATA_SUFFIX)) continue;
@@ -167,7 +169,7 @@ export const assetsMixin = defineMixin({
             if (!meta?.id || meta.id !== this.noteData.id) continue;
             const srcNote = `${parent ? parent + '/' : ''}${name.slice(1, -DATA_SUFFIX.length)}.hnote`;
             if (srcNote === file.path) continue;
-            for (const ref of refs) { try { await copyLocalRef(a, srcNote, file.path, ref); } catch (e) { /* missing file */ } }
+            for (const ref of refs) { try { await copyLocalRef(a, srcNote, file.path, ref); } catch { /* missing file */ } }
             // The copy gets its own id (so the next copy doesn't confuse the source).
             this.noteData.id = newId();
             await writeDataMeta(a, file.path, this.noteData.id);
@@ -185,7 +187,7 @@ export const assetsMixin = defineMixin({
             if (!part) continue;
             cur = cur ? `${cur}/${part}` : part;
             if (!this.app.vault.getAbstractFileByPath(cur)) {
-                try { await this.app.vault.createFolder(cur); } catch (e) { /* may have been created in parallel */ }
+                try { await this.app.vault.createFolder(cur); } catch { /* may have been created in parallel */ }
             }
         }
     },
@@ -233,7 +235,7 @@ export const assetsMixin = defineMixin({
                     const url = URL.createObjectURL(new Blob([buf], { type: mimeFromPath(path) }));
                     this.assetUrls.set(ref, url);
                     return url;
-                } catch (e) {
+                } catch {
                     return null;
                 }
             })().then(url => { this.assetLoading.delete(ref); return url; });
@@ -265,7 +267,7 @@ export const assetsMixin = defineMixin({
             }
             const k = IMAGE_MAX_SIDE / maxSide;
             const cw = Math.max(1, Math.round(w * k)), ch = Math.max(1, Math.round(h * k));
-            const canvas = document.createElement('canvas');
+            const canvas = createEl('canvas');
             canvas.width = cw;
             canvas.height = ch;
             canvas.getContext('2d')!.drawImage(bmp, 0, 0, cw, ch);
@@ -276,7 +278,7 @@ export const assetsMixin = defineMixin({
             canvas.width = 0;
             if (!out) return null;
             return { data: await out.arrayBuffer(), ext: extFromMime(type), w: cw, h: ch, type };
-        } catch (e) {
+        } catch {
             return null;
         }
     },

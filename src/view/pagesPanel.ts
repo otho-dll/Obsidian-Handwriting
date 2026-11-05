@@ -116,13 +116,13 @@ export const pagesPanelMixin = defineMixin({
         }, { root: list, rootMargin: '200px 0px' });
 
         const onKey = (e: KeyboardEvent) => {
-            if (e.key !== 'Escape' || document.querySelector('.modal-container')) return;
+            if (e.key !== 'Escape' || activeDocument.querySelector('.modal-container')) return;
             if (this.ppStylePop) this.closePageStylePop();
             else if (this.ppSelecting) this.setPanelSelecting(false);
             else this.closePagesPanel();
         };
-        document.addEventListener('keydown', onKey);
-        this.ppCleanup = () => document.removeEventListener('keydown', onKey);
+        this.contentEl.ownerDocument.addEventListener('keydown', onKey);
+        this.ppCleanup = () => this.contentEl.ownerDocument.removeEventListener('keydown', onKey);
 
         this.renderPanelChrome();
         this.buildPanelList();
@@ -469,7 +469,7 @@ export const pagesPanelMixin = defineMixin({
             if (Math.hypot(e.clientX - d.x, e.clientY - d.y) < 4) return;
             d.started = true;
             const moving = this.ppSelecting && this.ppSelected.has(d.from) ? this.ppSelected.size : 1;
-            const ghost = document.body.createDiv({ cls: 'hw-pp-ghost' });
+            const ghost = activeDocument.body.createDiv({ cls: 'hw-pp-ghost' });
             const src = this.ppCanvases[d.from];
             if (src) {
                 const g = ghost.createEl('canvas');
@@ -483,7 +483,7 @@ export const pagesPanelMixin = defineMixin({
         }
         if (d.ghost) { d.ghost.style.left = `${e.clientX - 40}px`; d.ghost.style.top = `${e.clientY - 50}px`; }
         // Drop target: before or after the thumbnail under the pointer.
-        const under = document.elementsFromPoint(e.clientX, e.clientY).find(el => (el as HTMLElement).hasClass?.('hw-pp-cell')) as HTMLElement | undefined;
+        const under = activeDocument.elementsFromPoint(e.clientX, e.clientY).find(el => (el as HTMLElement).hasClass?.('hw-pp-cell')) as HTMLElement | undefined;
         const ind = this.ppIndicator;
         if (under && ind) {
             const r = under.getBoundingClientRect();
@@ -495,7 +495,7 @@ export const pagesPanelMixin = defineMixin({
             ind.style.left = `${x}px`;
             ind.style.top = `${r.top - lr.top + list.scrollTop}px`;
             ind.style.height = `${r.height - 18}px`;
-            ind.style.display = 'block';
+            ind.addClass('is-on');
         }
         // Scroll the list while the page is held near its top / bottom edge.
         const lr = list.getBoundingClientRect();
@@ -551,7 +551,7 @@ export const pagesPanelMixin = defineMixin({
             menu.addSeparator();
             menu.addItem(it => it.setTitle(many ? `Delete ${set.length} pages` : n > 1 ? 'Delete page' : 'Clear page').setIcon('trash-2').onClick(() => this.deletePages(set)));
         }
-        menu.showAtMouseEvent(e as MouseEvent);
+        menu.showAtMouseEvent(e);
     },
 
     // --- page operations (all with an "Undo" toast) ---
@@ -791,11 +791,11 @@ export const pagesPanelMixin = defineMixin({
 
         const outside = (e: PointerEvent) => {
             const t = e.target as Node;
-            if (pop.contains(t) || this.pagesPanelEl?.contains(t) || document.querySelector('.menu')?.contains(t)) return;
+            if (pop.contains(t) || this.pagesPanelEl?.contains(t) || activeDocument.querySelector('.menu')?.contains(t)) return;
             this.closePageStylePop();
         };
-        window.setTimeout(() => document.addEventListener('pointerdown', outside, true), 0);
-        this.ppStyleCleanup = () => document.removeEventListener('pointerdown', outside, true);
+        window.setTimeout(() => this.contentEl.ownerDocument.addEventListener('pointerdown', outside, true), 0);
+        this.ppStyleCleanup = () => this.contentEl.ownerDocument.removeEventListener('pointerdown', outside, true);
     },
 
     /** Note with a single endless page: more pages are not possible (tells the user). */

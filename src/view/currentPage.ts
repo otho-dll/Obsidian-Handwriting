@@ -56,8 +56,8 @@ export const currentPageMixin = defineMixin({
         const view = this.pageViews[i];
         const n = this.noteData.pages.length;
         if (!el || !area) return;
-        if (n < 2 || !view) { el.style.display = 'none'; return; }
-        el.style.display = '';
+        if (n < 2 || !view) { el.hide(); return; }
+        el.show();
         const text = `${i + 1} / ${n}`;
         if (el.textContent !== text) { el.setText(text); this.pageNumW = 0; }
         if (!this.pageNumW) this.pageNumW = el.offsetWidth || 56;
@@ -98,12 +98,12 @@ export const currentPageMixin = defineMixin({
             this.curPageEl = want;
         }
         this.pagesWrapper?.toggleClass('hw-dim-others', multi);
-        if (!multi) { if (fr) fr.style.display = 'none'; return; }
+        if (!multi) { if (fr) fr.hide(); return; }
         if (!fr || fr.parentElement !== area) { fr?.remove(); fr = area.createDiv({ cls: 'hw-current-frame' }); this.curFrame = fr; }
         const z = this.currentZoom;
         const x = this.pagePositionX + (view.outer.offsetLeft + view.container.offsetLeft) * z;
         const y = this.pagePositionY + (view.outer.offsetTop + view.container.offsetTop) * z;
-        fr.style.display = '';
+        fr.show();
         fr.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
         fr.style.width = `${Math.round(this.pageW(i) * z)}px`;
         fr.style.height = `${Math.round(this.pageH(i) * z)}px`;

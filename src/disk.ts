@@ -1,6 +1,6 @@
 import { Platform } from 'obsidian';
 
-import { nodeRequire } from './desktop';
+import { electronDialog, nodeRequire } from './desktop';
 
 /** Access to files on the computer (outside the vault) – desktop Obsidian only (Electron / Node), see desktop.ts. */
 
@@ -10,13 +10,11 @@ export function canUseDisk(): boolean {
 
 /** System folder picker dialog. Returns null when cancelled or when the dialog isn't available. */
 export async function pickDiskFolder(start?: string): Promise<string | null> {
-    let dialog: any = null;
-    try { dialog = nodeRequire('@electron/remote')?.dialog; } catch { /* not available */ }
-    if (!dialog) { try { dialog = nodeRequire('electron')?.remote?.dialog; } catch { /* not available */ } }
+    const dialog = electronDialog();
     if (!dialog) return null;
     const res = await dialog.showOpenDialog({ properties: ['openDirectory', 'createDirectory'], defaultPath: start || undefined });
     if (res.canceled || !res.filePaths?.length) return null;
-    return res.filePaths[0] as string;
+    return res.filePaths[0];
 }
 
 /** Writes bytes to a file in the given folder (creates missing folders). Returns the full path. */
@@ -29,7 +27,7 @@ export function writeToDisk(folder: string, fileName: string, bytes: Uint8Array)
     fs.mkdirSync(dir, { recursive: true });
     const full = path.join(dir, fileName);
     fs.writeFileSync(full, bytes);
-    return full as string;
+    return full;
 }
 
 export function revealInFolder(fullPath: string) {

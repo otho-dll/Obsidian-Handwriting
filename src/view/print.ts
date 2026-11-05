@@ -42,7 +42,7 @@ export const printMixin = defineMixin({
                     const hUnits = Math.min(sheetUnits, printH - top);
                     let part = canvas;
                     if (hUnits < PH - 0.5) {
-                        part = document.createElement('canvas');
+                        part = createEl('canvas');
                         part.width = canvas.width;
                         part.height = Math.round(hUnits * pxPerUnit);
                         const ctx = part.getContext('2d')!;
@@ -60,7 +60,7 @@ export const printMixin = defineMixin({
             if (sheets.length === 0) throw new Error('nothing to print');
 
             notice.setMessage('Opening the print dialog…');
-            const frame = document.body.createEl('iframe', { cls: 'hw-print-frame' });
+            const frame = activeDocument.body.createEl('iframe', { cls: 'hw-print-frame' });
             frame.setAttribute('aria-hidden', 'true');
             const doc = frame.contentDocument;
             const win = frame.contentWindow;

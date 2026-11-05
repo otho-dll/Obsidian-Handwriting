@@ -14,8 +14,8 @@ export const PAGE_TEMPLATES: { id: PageTemplate; label: string }[] = [
     { id: 'music', label: 'Music staff' },
 ];
 export const PAPER_COLORS = ['#ffffff', '#fffbea', '#fef3c7', '#f1f5f9', '#e0f2fe', '#dcfce7', '#fce7f3', '#1f2937'];
-export const isTemplate = (v: any): v is PageTemplate => PAGE_TEMPLATES.some(t => t.id === v);
-export const isHexColor = (v: any): v is string => typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v);
+export const isTemplate = (v: unknown): v is PageTemplate => PAGE_TEMPLATES.some(t => t.id === v);
+export const isHexColor = (v: unknown): v is string => typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v);
 
 export interface PageInk { line: string; dot: string; accent: string; fine: string; strong: string; }
 // Line / dot colours matched to the paper brightness (dark paper gets light lines).

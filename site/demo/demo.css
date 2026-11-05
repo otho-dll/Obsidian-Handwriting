@@ -1,8 +1,10 @@
 /* Demo page: a slim bar on top, the plugin view fills the rest of the screen. */
 html, body.demo-page { height: 100%; margin: 0; }
+/* the dynamic viewport height (phone toolbars) where supported */
+@supports (height: 100dvh) { body.demo-page { height: 100dvh; } }
 body.demo-page {
     display: flex; flex-direction: column;
-    height: 100vh; height: 100dvh;
+    height: 100vh;
     overflow: hidden; overscroll-behavior: none;
     font-family: var(--font-interface); color: var(--text-normal); background: var(--background-secondary);
     -webkit-text-size-adjust: 100%;

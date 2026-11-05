@@ -22,7 +22,7 @@ export class HandwritingSettingTab extends PluginSettingTab {
             logo.empty();
             setSvg(logo, '<svg viewBox="0 0 64 64" width="100%" height="100%" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect width="64" height="64" fill="#4f7552"/><path d="M12.4 14.8C14.4 11.2 18.2 10.3 20.7 12.2C22.7 13.8 24.6 13.7 26.1 12.4C26.5 22.5 26 33 24.4 43.5C23.8 48.2 21.7 52.6 18.8 53.2C16.2 53.7 15.4 50.7 17.6 47.9C19.9 45 23.6 43.4 27 41.4C33 35 39.5 25.5 45 15.8C47 12.2 47.2 8.6 44.6 8.6C42 8.6 40.9 11.6 41 15.4C41.3 27 41.7 38.5 42.3 46.8C42.6 51.6 45 54.2 47.7 53C50.2 51.9 51.6 49.2 52.2 46.6" stroke="#ffffff" stroke-width="3.9"/></svg>');
         };
-        const dir = m.dir ?? `.obsidian/plugins/${m.id}`;
+        const dir = m.dir ?? `${this.app.vault.configDir}/plugins/${m.id}`;
         const path = `${dir}/${LOGO_FILE}`;
         void (async () => {
             try {
@@ -58,7 +58,7 @@ export class HandwritingSettingTab extends PluginSettingTab {
         };
         {
             const c = section('Pen and touch', true);
-            c.createEl('h4', { text: 'Pen pressure', cls: 'hw-set-sub' });
+            new Setting(c).setName('Pen pressure').setHeading().settingEl.addClass('hw-set-sub');
             new Setting(c)
                 .setName('Pressure sensitivity')
                 .setDesc('Stroke width follows the pen pressure (pens only; the mouse draws with a constant width). Highlighter and shapes keep a constant width.')
@@ -66,10 +66,10 @@ export class HandwritingSettingTab extends PluginSettingTab {
             new Setting(c)
                 .setName('Sensitivity strength')
                 .setDesc('How strongly pressure changes the width (0% = no effect, 100% = from hairline to double width).')
-                .addSlider(sl => sl.setLimits(0, 100, 5).setValue(Math.round(st.pressureSensitivity * 100)).setDynamicTooltip()
+                .addSlider(sl => sl.setLimits(0, 100, 5).setValue(Math.round(st.pressureSensitivity * 100))
                     .onChange(async (v) => { st.pressureSensitivity = v / 100; await this.plugin.saveSettings(); this.plugin.refreshViews(); }));
 
-            c.createEl('h4', { text: 'Palm rejection', cls: 'hw-set-sub' });
+            new Setting(c).setName('Palm rejection').setHeading().settingEl.addClass('hw-set-sub');
             new Setting(c)
                 .setName('Mode')
                 .setDesc('Auto: touch is ignored while the pen is near the screen and for very large contact areas (a palm). Strict: touch never scrolls or zooms — use the mouse wheel / the fit button instead.')
@@ -82,12 +82,12 @@ export class HandwritingSettingTab extends PluginSettingTab {
             new Setting(c)
                 .setName('Ignore touch after pen activity (ms)')
                 .setDesc('Auto mode: how long touch stays ignored after the pen leaves the screen or lifts.')
-                .addSlider(sl => sl.setLimits(0, 2000, 50).setValue(st.palmPenTimeout).setDynamicTooltip()
+                .addSlider(sl => sl.setLimits(0, 2000, 50).setValue(st.palmPenTimeout)
                     .onChange(async (v) => { st.palmPenTimeout = v; await this.plugin.saveSettings(); }));
             new Setting(c)
                 .setName('Palm contact size (px)')
                 .setDesc('Auto mode: touches wider than this are treated as a palm. 0 disables the check (some devices report wrong sizes).')
-                .addSlider(sl => sl.setLimits(0, 120, 5).setValue(st.palmContactSize).setDynamicTooltip()
+                .addSlider(sl => sl.setLimits(0, 120, 5).setValue(st.palmContactSize)
                     .onChange(async (v) => { st.palmContactSize = v; await this.plugin.saveSettings(); }));
             new Setting(c)
                 .setName('Pinch to zoom')
@@ -102,10 +102,10 @@ export class HandwritingSettingTab extends PluginSettingTab {
             new Setting(c)
                 .setName('Long-press delay')
                 .setDesc('How long to hold a finger (in milliseconds) before the menu opens. Shorter = faster, but a resting hand may trigger it more easily.')
-                .addSlider(sl => sl.setLimits(200, 1000, 50).setValue(st.longPressMs).setDynamicTooltip()
+                .addSlider(sl => sl.setLimits(200, 1000, 50).setValue(st.longPressMs)
                     .onChange(async (v) => { st.longPressMs = v; await this.plugin.saveSettings(); }));
 
-            c.createEl('h4', { text: 'Pen button and eraser', cls: 'hw-set-sub' });
+            new Setting(c).setName('Pen button and eraser').setHeading().settingEl.addClass('hw-set-sub');
             new Setting(c)
                 .setName('Pen side button')
                 .setDesc('Action of the barrel button on the stylus. Snipping Tool works on Windows only.')
@@ -137,7 +137,7 @@ export class HandwritingSettingTab extends PluginSettingTab {
                     .setValue(st.shapeErase)
                     .onChange(async (v) => { st.shapeErase = v as HandwritingSettings['shapeErase']; await this.plugin.saveSettings(); }));
 
-            c.createEl('h4', { text: 'Selection', cls: 'hw-set-sub' });
+            new Setting(c).setName('Selection').setHeading().settingEl.addClass('hw-set-sub');
             new Setting(c)
                 .setName('Default selection mode')
                 .setDesc('You can also switch it in the toolbar: click the selection tool while it is active.')
@@ -172,7 +172,7 @@ export class HandwritingSettingTab extends PluginSettingTab {
         }
         {
             const c = section('Pages and view', false);
-            c.createEl('h4', { text: 'Page style', cls: 'hw-set-sub' });
+            new Setting(c).setName('Page style').setHeading().settingEl.addClass('hw-set-sub');
             new Setting(c)
                 .setName('Default page pattern')
                 .setDesc('Used by notes that have no pattern of their own. Change a single note or page from the toolbar menu (⋯ → Pages and style).')
@@ -185,7 +185,7 @@ export class HandwritingSettingTab extends PluginSettingTab {
                 .addColorPicker(c => c.setValue(st.defaultPaper).onChange(async (v) => { st.defaultPaper = v.toLowerCase(); await this.plugin.saveSettings(); this.plugin.refreshViews(); }))
                 .addExtraButton(b => b.setIcon('reset').setTooltip('White').onClick(async () => { st.defaultPaper = '#ffffff'; await this.plugin.saveSettings(); this.plugin.refreshViews(); this.display(); }));
 
-            c.createEl('h4', { text: 'Zoom', cls: 'hw-set-sub' });
+            new Setting(c).setName('Zoom').setHeading().settingEl.addClass('hw-set-sub');
             new Setting(c)
                 .setName('Favourite zoom levels')
                 .setDesc(st.zoomPresets.length
@@ -201,7 +201,7 @@ export class HandwritingSettingTab extends PluginSettingTab {
                     d.setValue(String(st.openZoom)).onChange(async (v) => { st.openZoom = Number(v); await this.plugin.saveSettings(); });
                 });
 
-            c.createEl('h4', { text: 'Page navigation', cls: 'hw-set-sub' });
+            new Setting(c).setName('Page navigation').setHeading().settingEl.addClass('hw-set-sub');
             new Setting(c)
                 .setName('Pages panel side')
                 .setDesc('Where the pages panel (thumbnails, adding / moving / deleting pages, page style) opens. On a phone it slides up from the bottom.')
@@ -226,7 +226,7 @@ export class HandwritingSettingTab extends PluginSettingTab {
             c.createEl('p', { cls: 'setting-item-description', text: 'Decide what sits on the toolbar. Anything you turn off here moves into the "More" (⋯) menu, so it is still one tap away. The pen and the colours always stay on the toolbar; tap a tool again for its thickness and options.' });
             const save = async () => { await this.plugin.saveSettings(); this.plugin.refreshViews(); };
             // Tools: chips that are on (on the toolbar) or off (in the ⋯ menu).
-            c.createEl('h4', { text: 'Tools', cls: 'hw-set-sub' });
+            new Setting(c).setName('Tools').setHeading().settingEl.addClass('hw-set-sub');
             c.createEl('p', { cls: 'setting-item-description', text: 'Tap a tool to show or hide it on the toolbar.' });
             const toolChips = c.createDiv({ cls: 'hw-chips' });
             const renderTools = () => {
@@ -247,7 +247,7 @@ export class HandwritingSettingTab extends PluginSettingTab {
             renderTools();
 
             // Shortcut buttons: the ones on the toolbar in their order (‹ › moves, × removes), the rest below to add.
-            c.createEl('h4', { text: 'Shortcut buttons', cls: 'hw-set-sub' });
+            new Setting(c).setName('Shortcut buttons').setHeading().settingEl.addClass('hw-set-sub');
             c.createEl('p', { cls: 'setting-item-description', text: 'On the toolbar (in this order) – use ‹ › to move a button, × to remove it. Below: buttons you can add.' });
             const onBox = c.createDiv({ cls: 'hw-chips hw-chips-on' });
             c.createDiv({ cls: 'hw-chips-label', text: 'Available' });
@@ -301,7 +301,7 @@ export class HandwritingSettingTab extends PluginSettingTab {
                     .addOption('vault', 'Obsidian attachment folder')
                     .setValue(st.attachmentLocation)
                     .onChange(async (v) => { st.attachmentLocation = v as HandwritingSettings['attachmentLocation']; await this.plugin.saveSettings(); }));
-            c.createEl('h4', { text: 'PDF without Obsidian (Python)', cls: 'hw-set-sub' });
+            new Setting(c).setName('PDF without Obsidian (Python)').setHeading().settingEl.addClass('hw-set-sub');
             c.createDiv({ cls: 'setting-item-description hw-set-note', text: 'hnote2pdf.py turns .hnote notes into PDF files on any computer with Python 3 – no Obsidian and no plugin needed. Use it to convert many notes at once, or to keep your notes readable if you ever stop using Obsidian. The PDF keeps sharp vector handwriting, images, page patterns and page titles as bookmarks.' });
             new Setting(c)
                 .setName('Save the converter to your vault')
@@ -309,10 +309,10 @@ export class HandwritingSettingTab extends PluginSettingTab {
                 .addButton(b => b.setButtonText(`Save ${CONVERTER_FILE}`).onClick(() => { void saveConverterScript(this.app); }))
                 .addButton(b => b.setButtonText('Copy command for the whole vault').onClick(() => { void copyConverterCommand(this.app, null); }));
 
-            c.createEl('h4', { text: 'New note naming', cls: 'hw-set-sub' });
+            new Setting(c).setName('New note naming').setHeading().settingEl.addClass('hw-set-sub');
 
             const dynamic: { setting: Setting; show: () => boolean }[] = [];
-            const updateVisibility = () => { for (const d of dynamic) d.setting.settingEl.style.display = d.show() ? '' : 'none'; };
+            const updateVisibility = () => { for (const d of dynamic) d.setting.settingEl.toggle(d.show()); };
             const changed = async () => { await this.plugin.saveSettings(); refresh(); updateVisibility(); };
             const withFolder = () => st.nameMode !== 'date';
             const withDate = () => st.nameMode !== 'folder';
@@ -388,7 +388,7 @@ export class HandwritingSettingTab extends PluginSettingTab {
 
             updateVisibility();
             refresh();
-            c.createEl('h4', { text: 'PDF export', cls: 'hw-set-sub' });
+            new Setting(c).setName('PDF export').setHeading().settingEl.addClass('hw-set-sub');
             const disk = canUseDisk();
             new Setting(c)
                 .setName('Where to save')
@@ -516,15 +516,15 @@ export class HandwritingSettingTab extends PluginSettingTab {
             new Setting(c)
                 .setName('Dim when idle')
                 .setDesc('When you leave the note open and step away, the view darkens almost to black. Any movement brings it back (the first tap only wakes it, it does not draw).')
-                .addToggle(t => t.setValue(st.oledIdleDim).onChange(async (v) => { st.oledIdleDim = v; idleTime.settingEl.style.display = v ? '' : 'none'; await save(); }));
+                .addToggle(t => t.setValue(st.oledIdleDim).onChange(async (v) => { st.oledIdleDim = v; idleTime.settingEl.toggle(v); await save(); }));
             c.appendChild(idleTime.settingEl);
-            idleTime.settingEl.style.display = st.oledIdleDim ? '' : 'none';
+            idleTime.settingEl.toggle(st.oledIdleDim);
         }
         {
             const c = section('Advanced', false);
             new Setting(c)
                 .setName('Debug logging')
-                .setDesc('Writes diagnostic messages (position memory, page thumbnails) to the developer console (Ctrl+Shift+I). Only needed when reporting a problem.')
+                .setDesc('Writes diagnostic messages (position memory, page thumbnails) to the developer console (Ctrl+Shift+I, log level "Verbose"). Only needed when reporting a problem.')
                 .addToggle(t => t.setValue(st.debugLog).onChange(async (v) => { st.debugLog = v; await this.plugin.saveSettings(); }));
             new Setting(c)
                 .setName('Performance overlay')

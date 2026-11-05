@@ -28,7 +28,7 @@ export function blobToDataUrl(blob: Blob): Promise<string> {
     return new Promise((resolve, reject) => {
         const fr = new FileReader();
         fr.onload = () => resolve(fr.result as string);
-        fr.onerror = () => reject(fr.error);
+        fr.onerror = () => reject(fr.error ?? new Error('The file could not be read.'));
         fr.readAsDataURL(blob);
     });
 }
@@ -50,4 +50,11 @@ export function rotatePointAbout(p: { x: number; y: number }, cx: number, cy: nu
     const cos = Math.cos(a), sin = Math.sin(a);
     const dx = p.x - cx, dy = p.y - cy;
     return { x: cx + dx * cos - dy * sin, y: cy + dx * sin + dy * cos };
+}
+
+/** Shrinks a canvas to 1 × 1 px (frees its memory): the bitmap and its displayed size. */
+export function shrinkCanvas(c: HTMLCanvasElement) {
+    c.width = 1; c.height = 1;
+    c.style.width = `${c.width}px`;
+    c.style.height = `${c.height}px`;
 }

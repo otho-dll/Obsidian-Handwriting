@@ -42,9 +42,9 @@ export default {
     /** Section 1 – the first screen. */
     hero: {
         /** What the plugin is, under the name. */
-        about: 'An Obsidian plugin for writing by hand on real pages: pressure ink, highlighter, shapes, PDFs and a calculator, all saved as open JSON in your vault.',
+        about: 'An Obsidian plugin for writing by hand on real pages highlighter, shapes, PDFs and a calculator, all saved as open JSON in your vault.',
         /** The big button in the accent colour. */
-        demo: { label: 'Try the live demo', href: '{{links.demo}}', icon: 'pen' },
+        demo: { label: 'Try the live demo', href: '{{links.demo}}'},
         /** Smaller links in one row under it. */
         links: [
             { label: 'Features', href: '#features', icon: 'grid' },
@@ -60,8 +60,8 @@ export default {
         lead: 'Everything a paper notebook can do, and more.',
         items: [
             { icon: 'pen', title: 'Pen, highlighter & eraser', text: 'Pressure ink with opacity, a flat highlighter, and an eraser that cuts strokes.' },
-            { icon: 'shapes', title: 'Shapes', text: 'Lines, arrows, rectangles and ellipses with dashes, fills and separate outline and fill colours.' },
-            { icon: 'lasso', title: 'Lasso selection', text: 'Move, scale, rotate, recolour, group and lock, even onto another page.' },
+            { icon: 'shapes', title: 'Shapes', text: 'Lines, arrows, rectangles and ellipses with dashes, fills and separate outline and fill colors.' },
+            { icon: 'lasso', title: 'Lasso selection', text: 'Move, scale, rotate, recolor, group and lock, even onto another page.' },
             { icon: 'pages', title: 'Pages panel', text: 'Thumbnails and sections: jump to, reorder, duplicate or restyle pages.' },
             { icon: 'pagestyle', title: 'Page styles', text: 'Portrait, landscape or endless; dots, lines, grid, Cornell, music staff and more.' },
             { icon: 'image', title: 'Images & PDFs', text: 'Paste, crop and rotate images; import a PDF and write on it.' },
@@ -85,7 +85,7 @@ export default {
     aiNotice: {
         title: 'Made with AI',
         lead: 'This project is entirely vibe-coded using Claude Code.',
-        text: 'It started as a personal tool, made just for me and my own notes. Over time it grew into something complete and useful enough that I decided to share it. Expect a few rough edges - feedback and bug reports are welcome.',
+        text: 'This plugin started with frustraion with the current tools. I wanted handwritten notes along side regular ones hence the obsidian extension (I love markdown <3). I have been vibecoding it bc of lack of time, studies and stuff but after thinking about it for a long while I decided to plublish it for others to use. Bc of its vibecoded nature there are gonna be bugs and rough edges so any and all feedback is deeply appreciated.',
     },
 
     install: {
@@ -113,7 +113,7 @@ export default {
         project: 'Handwritten A4 Notebook <span class="version">v{{version}}</span> · MIT License',
         /** The lines below are the same as on tycho.anulab.tech / anulab.tech. */
         lines: [
-            'Made with <span class="heart">💚</span> by Simon',
+            'Made with <span class="heart">💚</span> by Simon with Claude ;)',
             'Copyright &copy; {{year}} Szymon Glinka',
             'This site does NOT use cookies for tracking or collect your personal information.',
             'This site has been made with the help of AI',
@@ -122,7 +122,7 @@ export default {
 
     /** The live demo page (/demo/). */
     demo: {
-        title: 'Demo · Handwritten A4 Notebook',
+        title: 'Handwriting Demo',
         description: 'Try the Handwritten A4 Notebook plugin for Obsidian in your browser: write with a pen or a mouse on real A4 pages.',
         badge: 'Live demo',
         /** Shown once on the first visit. */

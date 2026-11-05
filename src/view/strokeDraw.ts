@@ -47,7 +47,7 @@ function outlinePath(X0: number[], Y0: number[], W0: number[]): Path2D {
         const dx = X[j + 1] - X[j], dy = Y[j + 1] - Y[j], l = Math.hypot(dx, dy);
         ux.push(dx / l); uy.push(dy / l); d.push(l);
     }
-    const NX: number[] = new Array(m + 1), NY: number[] = new Array(m + 1);
+    const NX = new Array<number>(m + 1), NY = new Array<number>(m + 1);
     for (let j = 0; j <= m; j++) {
         let ax: number, ay: number;
         if (j === 0) { ax = ux[0]; ay = uy[0]; }

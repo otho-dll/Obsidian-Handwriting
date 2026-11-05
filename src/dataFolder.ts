@@ -52,7 +52,8 @@ export const isLocalRef = (p: string | undefined): p is string => !!p && p.start
  */
 export function isSafeRef(p: unknown): p is string {
     if (typeof p !== 'string' || p.length === 0 || p.length > 1024) return false;
-    if (/[\\:\u0000-\u001f]/.test(p)) return false;
+    if (/[\\:]/.test(p)) return false;
+    for (let i = 0; i < p.length; i++) if (p.charCodeAt(i) < 0x20) return false;   // control characters
     const rel = p.startsWith(LOCAL_PREFIX) ? p.slice(LOCAL_PREFIX.length) : p;
     if (rel.startsWith('/')) return false;
     return rel.split('/').every(seg => seg !== '' && seg !== '.' && seg !== '..');
@@ -75,7 +76,7 @@ export function historyAttachPath(notePath: string, ref: string): string | null 
 
 /** Vault path for a path stored in the note ("@/…" = relative to the note's data folder). */
 export function resolveRef(notePath: string, ref: string): string {
-    if (!isSafeRef(ref)) throw new Error('Unsafe path in note: ' + ref);
+    if (!isSafeRef(ref)) throw new Error(`Unsafe path in note: ${String(ref)}`);
     return isLocalRef(ref) ? `${dataDirFor(notePath)}/${ref.slice(LOCAL_PREFIX.length)}` : ref;
 }
 
@@ -105,7 +106,7 @@ export async function readDataMeta(a: VaultAdapter, dir: string): Promise<{ id?:
     try {
         const p = `${dir}/meta.json`;
         if (!(await a.exists(p))) return null;
-        return JSON.parse(await a.read(p));
+        return JSON.parse(await a.read(p)) as { id?: string; note?: string };
     } catch {
         return null;
     }
@@ -117,7 +118,7 @@ export async function readDataMeta(a: VaultAdapter, dir: string): Promise<{ id?:
  */
 export async function copyLocalRef(a: VaultAdapter, fromNote: string, toNote: string, ref: string, newName?: () => string): Promise<string> {
     if (!isLocalRef(ref)) return ref;
-    if (!isSafeRef(ref)) throw new Error('Unsafe path in note: ' + ref);
+    if (!isSafeRef(ref)) throw new Error(`Unsafe path in note: ${String(ref)}`);
     const src = resolveRef(fromNote, ref);
     let rel = ref.slice(LOCAL_PREFIX.length);
     let dst = `${dataDirFor(toNote)}/${rel}`;

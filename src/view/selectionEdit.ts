@@ -389,8 +389,8 @@ export const selectionEditMixin = defineMixin({
 
     /** Small panel with alignment buttons (stays open until you click elsewhere). */
     openAlignPanel(clientX: number, clientY: number) {
-        document.querySelectorAll('.hw-align-pop').forEach(el => el.remove());
-        const pop = document.body.createDiv({ cls: 'hw-menu hw-align-pop' });
+        activeDocument.querySelectorAll('.hw-align-pop').forEach(el => el.remove());
+        const pop = activeDocument.body.createDiv({ cls: 'hw-menu hw-align-pop' });
         const row = (title: string, items: [AlignMode, string, string][]) => {
             const g = pop.createDiv({ cls: 'hw-menu-group' });
             g.createDiv({ cls: 'hw-menu-title', text: title });
@@ -415,16 +415,15 @@ export const selectionEditMixin = defineMixin({
             ['distH', 'align-horizontal-distribute-center', 'Distribute horizontally'],
             ['distV', 'align-vertical-distribute-center', 'Distribute vertically'],
         ]);
-        pop.style.display = 'flex';
         const w = pop.offsetWidth, h = pop.offsetHeight;
         pop.style.left = `${Math.max(8, Math.min(window.innerWidth - w - 8, clientX))}px`;
         pop.style.top = `${Math.max(8, Math.min(window.innerHeight - h - 8, clientY))}px`;
         const close = (e: PointerEvent) => {
             if (pop.contains(e.target as Node)) return;
             pop.remove();
-            document.removeEventListener('pointerdown', close, true);
+            this.contentEl.ownerDocument.removeEventListener('pointerdown', close, true);
         };
-        window.setTimeout(() => document.addEventListener('pointerdown', close, true), 0);
+        window.setTimeout(() => this.contentEl.ownerDocument.addEventListener('pointerdown', close, true), 0);
         this.register(() => pop.remove());
     },
 

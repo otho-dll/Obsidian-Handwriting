@@ -55,6 +55,6 @@ rejection.
 | Zoom to favourite zoom (repeat to cycle) / Save current zoom as favourite | |
 | Move images of the current note into its hidden folder | for notes created before the hidden folder existed |
 | Remove unused images from the current note's hidden folder | |
-| Save the PDF converter script / Copy command to convert this note to PDF with Python | |
+| Save the PDF converter script / Copy terminal line to convert this note to PDF with Python | |
 
 </details>

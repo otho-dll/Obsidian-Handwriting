@@ -44,7 +44,7 @@ export const pageToolsMixin = defineMixin({
     createAddPageButton() {
         // An endless page grows by itself – no more pages in such a note.
         if (this.noteData.pages.some(p => p.endless)) return;
-        const row = this.pagesWrapper.createEl('div', { cls: 'hw-add-page-row' });
+        const row = this.pagesWrapper.createDiv({ cls: 'hw-add-page-row' });
         const btn = row.createEl('button', { cls: 'hw-add-page-btn', text: '+ Add new page' });
         row.addEventListener('pointerdown', (e) => e.stopPropagation());
         btn.onclick = () => this.addPageAt(this.noteData.pages.length);

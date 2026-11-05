@@ -40,7 +40,7 @@ export const imagesMixin = defineMixin({
     cancelCrop() {
         if (this.cropOverlay) { this.cropOverlay.remove(); this.cropOverlay = null; }
         if (this.cropBar) { this.cropBar.remove(); this.cropBar = null; }
-        if (this.cropKeyHandler) { document.removeEventListener('keydown', this.cropKeyHandler, true); this.cropKeyHandler = null; }
+        if (this.cropKeyHandler) { this.contentEl.ownerDocument.removeEventListener('keydown', this.cropKeyHandler, true); this.cropKeyHandler = null; }
     },
 
     // Crop mode: a frame with handles on the image; "Apply" saves the cropped part as a new file (undoable).
@@ -52,16 +52,16 @@ export const imagesMixin = defineMixin({
         this.updateSelectionUI();
         this.redrawPage(pageIndex);
         const rot = img.rot ?? 0;
-        const ov = view.container.createEl('div', { cls: 'hw-crop-overlay' });
+        const ov = view.container.createDiv({ cls: 'hw-crop-overlay' });
         this.cropOverlay = ov;
         ov.style.left = `${img.x}px`;
         ov.style.top = `${img.y}px`;
         ov.style.width = `${img.w}px`;
         ov.style.height = `${img.h}px`;
         ov.style.transform = rot ? `rotate(${rot}rad)` : '';
-        const box = ov.createEl('div', { cls: 'hw-crop-box' });
+        const box = ov.createDiv({ cls: 'hw-crop-box' });
         for (const h of ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w']) {
-            const el = box.createEl('div', { cls: `hw-crop-handle hw-crop-h-${h}` });
+            const el = box.createDiv({ cls: `hw-crop-handle hw-crop-h-${h}` });
             el.dataset.h = h;
         }
         let l = 0, t = 0, r = 1, b = 1;
@@ -113,10 +113,10 @@ export const imagesMixin = defineMixin({
         ov.addEventListener('pointerup', endDrag);
         ov.addEventListener('pointercancel', endDrag);
 
-        const bar = this.scrollArea.createEl('div', { cls: 'hw-crop-bar' });
+        const bar = this.scrollArea.createDiv({ cls: 'hw-crop-bar' });
         this.cropBar = bar;
         bar.addEventListener('pointerdown', (e) => e.stopPropagation());
-        bar.createEl('span', { text: 'Crop image', cls: 'hw-crop-title' });
+        bar.createSpan({ text: 'Crop image', cls: 'hw-crop-title' });
         const bReset = bar.createEl('button', { text: 'Reset' });
         const bCancel = bar.createEl('button', { text: 'Cancel' });
         const bApply = bar.createEl('button', { text: 'Apply', cls: 'mod-cta' });
@@ -135,7 +135,7 @@ export const imagesMixin = defineMixin({
                 const nw = el.naturalWidth, nh = el.naturalHeight;
                 const sx = Math.round(l * nw), sy = Math.round(t * nh);
                 const sw = Math.max(1, Math.round((r - l) * nw)), sh = Math.max(1, Math.round((b - t) * nh));
-                const canvas = document.createElement('canvas');
+                const canvas = createEl('canvas');
                 canvas.width = sw;
                 canvas.height = sh;
                 canvas.getContext('2d')!.drawImage(el, sx, sy, sw, sh, 0, 0, sw, sh);
@@ -170,7 +170,7 @@ export const imagesMixin = defineMixin({
             if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); this.cancelCrop(); }
             else if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); void apply(); }
         };
-        document.addEventListener('keydown', this.cropKeyHandler, true);
+        this.contentEl.ownerDocument.addEventListener('keydown', this.cropKeyHandler, true);
     },
 });
 export type ImagesMethods = typeof imagesMixin;

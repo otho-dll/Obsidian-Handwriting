@@ -32,7 +32,7 @@ export const positionMixin = defineMixin({
     },
 
     posLog(...args: unknown[]) {
-        if (this.plugin.settings.debugLog) console.log('[Handwriting]', ...args);
+        if (this.plugin.settings.debugLog) console.debug('[Handwriting]', ...args);
     },
 
     /** Called after every view change (applyManualZoom): remembers the position (saved with a delay). */

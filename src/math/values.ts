@@ -44,7 +44,7 @@ function mat(rows: number, cols: number, d: number[]): Mat { return { rows, cols
 function mGet(m: Mat, r: number, c: number) { return m.d[r * m.cols + c]; }
 function mMul(a: Mat, b: Mat): Mat {
     if (a.cols !== b.rows) throw new Error(`Cannot multiply ${a.rows}×${a.cols} by ${b.rows}×${b.cols}`);
-    const out = new Array(a.rows * b.cols).fill(0);
+    const out = new Array<number>(a.rows * b.cols).fill(0);
     for (let i = 0; i < a.rows; i++) for (let j = 0; j < b.cols; j++) {
         let s = 0;
         for (let k = 0; k < a.cols; k++) s += mGet(a, i, k) * mGet(b, k, j);
@@ -57,7 +57,7 @@ function mZip(a: Mat, b: Mat, f: (x: number, y: number) => number, op: string): 
     if (a.rows !== b.rows || a.cols !== b.cols) throw new Error(`Cannot ${op} ${a.rows}×${a.cols} and ${b.rows}×${b.cols} matrices`);
     return mat(a.rows, a.cols, a.d.map((x, i) => f(x, b.d[i])));
 }
-function mIdentity(n: number): Mat { const d = new Array(n * n).fill(0); for (let i = 0; i < n; i++) d[i * n + i] = 1; return mat(n, n, d); }
+function mIdentity(n: number): Mat { const d = new Array<number>(n * n).fill(0); for (let i = 0; i < n; i++) d[i * n + i] = 1; return mat(n, n, d); }
 function mTrans(a: Mat): Mat {
     const out: number[] = [];
     for (let j = 0; j < a.cols; j++) for (let i = 0; i < a.rows; i++) out.push(mGet(a, i, j));
@@ -155,7 +155,7 @@ function pow(a: Value, b: Value): Value {
         if (!Number.isNaN(r) || Number.isNaN(a) || Number.isNaN(b)) return r;
         // Negative base and fractional exponent: complex result (e.g. (-4)^0.5 = 2i).
     }
-    return simplify(cPow(toCx(a as number | Cx), toCx(b)));
+    return simplify(cPow(toCx(a), toCx(b)));
 }
 function mod(a: Value, b: Value): Value {
     const x = needReal(a, '%'), d = needReal(b, '%');

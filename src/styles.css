@@ -186,6 +186,7 @@ button.hw-swatch-add.hw-swatch-add.hw-swatch-add {
 .hw-menu {
     position: fixed;
     z-index: 1000;
+    display: flex;
     flex-direction: column;
     gap: 12px;
     padding: 10px 12px;
@@ -400,7 +401,7 @@ button.hw-swatch-add.hw-swatch-add.hw-swatch-add {
     transition: opacity 0.15s ease;
 }
 .hw-edge.hw-edge-on { opacity: 1; }
-.hw-edge-top, .hw-edge-bottom { left: 0; right: 0; height: 26px; }
+.hw-edge-top, .hw-edge-bottom { left: 0; width: 100%; height: 26px; }
 .hw-edge-left, .hw-edge-right { top: 0; bottom: 0; width: 26px; }
 .hw-edge-top { top: 0; background: linear-gradient(to bottom, rgba(0, 0, 0, 0.32), rgba(0, 0, 0, 0)); }
 .hw-edge-bottom { bottom: 0; background: linear-gradient(to top, rgba(0, 0, 0, 0.32), rgba(0, 0, 0, 0)); }
@@ -606,7 +607,9 @@ button.hw-swatch-add.hw-swatch-add.hw-swatch-add {
 .hw-set-section > summary::before { content: '▸'; display: inline-block; width: 1.2em; color: var(--text-muted); }
 .hw-set-section[open] > summary::before { content: '▾'; }
 .hw-set-body { padding: 0 14px 10px; }
-.hw-set-sub { margin: 14px 0 2px; font-size: 0.8em; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+/* sub-headings inside a settings section (Setting.setHeading) */
+.setting-item.hw-set-sub { margin-top: 14px; padding-bottom: 2px; border-top: none; }
+.hw-set-sub .setting-item-name { font-size: 0.8em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
 
 .hw-pdf-tabs { display: flex; gap: 6px; margin: 4px 0 10px; }
 .hw-pdf-tabs button { flex: 1; }
@@ -667,6 +670,10 @@ button.hw-swatch-add.hw-swatch-add.hw-swatch-add {
 .hw-lasso-svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; z-index: 4; overflow: visible; }
 .hw-lasso-svg path { fill: var(--interactive-accent); fill-opacity: 0.1; stroke: var(--interactive-accent); stroke-width: 1.5; stroke-dasharray: 6 4; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
 .hw-lasso-svg path.is-rect { stroke-linejoin: miter; }
+.hw-lasso-svg.is-hidden { display: none; }
+/* the live highlighter preview is drawn at 40 % (the highlighter layer's opacity); no cursor over the eraser circle */
+.hw-page-a4 canvas.hw-live-highlighter { opacity: 0.4; }
+.hw-page-a4 canvas.hw-no-cursor { cursor: none; }
 
 /* --- Pen opacity --- */
 .hw-alpha-section { margin-left: 2px; }
@@ -915,6 +922,7 @@ button.hw-pp-textbtn { height: 32px; padding: 0 6px; background: transparent; bo
 .hw-pp-selecting .hw-pp-check { display: block; }
 .hw-pp-cell.is-selected .hw-pp-check { border-color: var(--interactive-accent); background: var(--interactive-accent) radial-gradient(circle, #fff 0 3px, transparent 3.5px); }
 .hw-pp-cell.is-selected .hw-pp-thumb { box-shadow: 0 0 0 3px var(--interactive-accent); }
+.hw-pp-drop.is-on { display: block; }
 .hw-pp-drop { display: none; position: absolute; width: 4px; border-radius: 2px; background: var(--interactive-accent); pointer-events: none; z-index: 2; }
 .hw-pp-ghost { position: fixed; z-index: 1000; pointer-events: none; opacity: 0.9; transform: rotate(-3deg); box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45); border-radius: 3px; background: #fff; }
 .hw-pp-ghost canvas { display: block; width: 80px; border-radius: 3px; height: auto; }

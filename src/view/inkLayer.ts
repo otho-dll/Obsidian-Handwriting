@@ -13,7 +13,7 @@ export const inkLayerMixin = defineMixin({
         this.inkCtx = null;
         this.inkSaved = false;
         if (!this.scrollArea || !this.plugin.settings.lowLatencyInk) return;
-        const c = document.createElement('canvas');
+        const c = createEl('canvas');
         c.className = 'hw-ink-layer';
         // right above the page column (below the page number and panels)
         if (this.pagesWrapper && this.pagesWrapper.parentElement === this.scrollArea) this.pagesWrapper.after(c);

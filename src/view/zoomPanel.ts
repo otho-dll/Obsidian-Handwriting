@@ -55,11 +55,10 @@ export const zoomPanelMixin = defineMixin({
 
     toggleZoomPanel(anchor: HTMLElement) {
         if (this.zoomPanel) { this.closeZoomPanel(); return; }
-        const panel = document.body.createDiv({ cls: 'hw-menu hw-zoom-panel' });
+        const panel = activeDocument.body.createDiv({ cls: 'hw-menu hw-zoom-panel' });
         this.zoomPanel = panel;
         this.refreshZoomPanel();
         const r = anchor.getBoundingClientRect();
-        panel.style.display = 'flex';
         const w = panel.offsetWidth;
         panel.style.left = `${Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8))}px`;
         panel.style.top = `${r.bottom + 8}px`;
@@ -68,8 +67,8 @@ export const zoomPanelMixin = defineMixin({
             if (panel.contains(t) || anchor.contains(t)) return;
             this.closeZoomPanel();
         };
-        document.addEventListener('pointerdown', outside, true);
-        this.zoomPanelCleanup = () => document.removeEventListener('pointerdown', outside, true);
+        this.contentEl.ownerDocument.addEventListener('pointerdown', outside, true);
+        this.zoomPanelCleanup = () => this.contentEl.ownerDocument.removeEventListener('pointerdown', outside, true);
     },
 
     closeZoomPanel() {
@@ -143,7 +142,7 @@ export const zoomPanelMixin = defineMixin({
             for (const z of st.zoomPresets) sel.createEl('option', { value: String(z), text: pct(z) });
             sel.value = String(st.openZoom > 0 ? st.openZoom : st.zoomPresets[0]);
             openRow.prepend(cb);
-            openRow.insertBefore(document.createTextNode(' Open notes at '), sel);
+            openRow.insertBefore(activeDocument.createTextNode(' Open notes at '), sel);
             const apply = () => { st.openZoom = cb.checked ? Number(sel.value) : 0; void this.plugin.saveSettings(); };
             cb.onchange = apply;
             sel.onchange = () => { cb.checked = true; apply(); };
