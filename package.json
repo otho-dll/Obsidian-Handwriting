@@ -1,6 +1,6 @@
 {
   "name": "handwritten-notebook",
-  "version": "3.15.7",
+  "version": "3.16",
   "private": true,
   "description": "Obsidian plugin for handwritten notes on A4 pages.",
   "license": "MIT",
