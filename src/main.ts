@@ -43,6 +43,8 @@ import { contentsMixin, ContentsMethods } from './view/contents';
 import { oledCareMixin, OledCareMethods } from './view/oledCare';
 import { zoomPanelMixin, ZoomPanelMethods } from './view/zoomPanel';
 import { touchMixin, TouchMethods } from './view/touch';
+import { inkLayerMixin, InkLayerMethods } from './view/inkLayer';
+import { perfOverlayMixin, PerfOverlayMethods } from './view/perfOverlay';
 
 /** Built stroke path plus the data used to tell that the stroke has not changed. */
 export interface PathCacheEntry {
@@ -262,7 +264,9 @@ export default class HandwritingPlugin extends Plugin {
         if (typeof st.pdfLastFolder !== 'string') st.pdfLastFolder = '';
         if (!['none', 'snip', 'menu', 'undo', 'redo'].includes(st.penButtonAction)) st.penButtonAction = DEFAULT_SETTINGS.penButtonAction;
         if (!['off', 'whole', 'partial'].includes(st.highlighterErase)) st.highlighterErase = 'whole';
-        if (typeof st.shapeEraseOn !== 'boolean') st.shapeEraseOn = true;
+        // v3.x: "erase shapes" switch + whole/partial merged into one off/whole/partial setting.
+        if (st.shapeEraseOn === false) st.shapeErase = 'off';
+        delete st.shapeEraseOn;
         if (typeof st.longPressMenu !== 'boolean') st.longPressMenu = true;
         if (!['folderDate', 'folder', 'date'].includes(st.nameMode)) st.nameMode = st.dateFormat === 'none' ? 'folder' : 'folderDate';
         if (!['-', '.', '_', ' '].includes(st.dateSeparator)) st.dateSeparator = '-';
@@ -299,7 +303,9 @@ export default class HandwritingPlugin extends Plugin {
         if (![1, 2, 3, 5, 10, 15, 30].includes(st.oledIdleMinutes)) st.oledIdleMinutes = 3;
         if (typeof st.longPressMs !== 'number' || !(st.longPressMs >= 150 && st.longPressMs <= 1500)) st.longPressMs = 350;
         if (!['high', 'balanced', 'fast'].includes(st.canvasQuality)) st.canvasQuality = 'balanced';
-        if (!['whole', 'partial'].includes(st.shapeErase)) st.shapeErase = 'partial';
+        if (typeof st.lowLatencyInk !== 'boolean') st.lowLatencyInk = true;
+        if (typeof st.perfOverlay !== 'boolean') st.perfOverlay = false;
+        if (!['off', 'whole', 'partial'].includes(st.shapeErase)) st.shapeErase = 'partial';
         if (st.attachmentLocation !== 'hidden' && st.attachmentLocation !== 'vault') st.attachmentLocation = 'hidden';
         if (typeof st.historyEnabled !== 'boolean') st.historyEnabled = true;
         if (![5, 10, 15, 30, 60].includes(st.historyInterval)) st.historyInterval = 10;
@@ -520,6 +526,25 @@ export class HandwritingView extends TextFileView {
     activePageIndex = 0;
     redrawTimer: number | null = null;
     virtRaf: number | null = null;
+    /** Pending once-per-frame view update (applyManualZoom -> afterViewChange). */
+    viewRaf: number | null = null;
+    /**
+     * "Wet ink" layer: one screen-sized canvas above the pages (outside the zoomed page column) on which the pen stroke
+     * being written is drawn. Its size does not depend on the zoom, and it uses the browser's low-latency canvas mode.
+     * After the pen is lifted the stroke goes to the page canvas and this layer is cleared.
+     */
+    inkCanvas: HTMLCanvasElement | null = null;
+    inkCtx: CanvasRenderingContext2D | null = null;
+    /** Redraws the stroke currently being written on the ink layer (set by the page that is being written on). */
+    inkRedrawActive: (() => void) | null = null;
+    inkClearRaf = 0;
+    perf: { el: HTMLElement; raf: number; timer: number; observer: PerformanceObserver | null } | null = null;
+    /** The ink context has a saved state (transform + clip of the stroke being written). */
+    inkSaved = false;
+    inkBegin: { pageIndex: number; rect: DOMRect } | null = null;
+    /** The page column has the "moving" hint (will-change) while the view is being moved. */
+    movingClassOn = false;
+    movingTimer: number | null = null;
     inertiaRaf: number | null = null;
     lastMenuAt = 0;
 
@@ -550,6 +575,10 @@ export class HandwritingView extends TextFileView {
     lastActivityAt = 0;
     lastPenButtonAt = 0;
     cancelTouchGestures: (() => void) | null = null;
+    /** Cancels a finger scrub on the page rail (palm / pen detected); set by buildPageRail. */
+    cancelRailTouch: (() => void) | null = null;
+    /** All touch contacts currently on the screen (also those on the rail and toolbar). */
+    touchIds = new Set<number>();
 
     // Moving the selection between pages
     ghostPage: number | null = null;
@@ -566,6 +595,8 @@ export class HandwritingView extends TextFileView {
     railTicks: number[] = [];
     /** Accent frame around the current page (screen pixels, see placeCurrentFrame). */
     curFrame: HTMLElement | null = null;
+    /** Page element currently marked as the current page (the others are dimmed). */
+    curPageEl: HTMLElement | null = null;
     railDragging = false;
     railCurrent = -1;
     railPreviewPage = -1;
@@ -644,9 +675,39 @@ export class HandwritingView extends TextFileView {
     // Cache: does the stroke have varying pressure
     pressureCache: WeakMap<Stroke, boolean> = new WeakMap();
 
+    /** Save postponed while the user writes (see the constructor). */
+    saveDeferTimer: number | null = null;
+    saveDeferSince = 0;
+
     constructor(leaf: WorkspaceLeaf, plugin: HandwritingPlugin) {
         super(leaf);
         this.plugin = plugin;
+        // Saving serializes and hashes the whole note – on a large note that is a visible hitch in the middle of writing.
+        // While the pen / mouse is active the save waits until ~1.5 s without input (but at most 10 s).
+        const obsidianRequestSave = this.requestSave;
+        this.requestSave = () => {
+            if (!this.saveDeferSince) this.saveDeferSince = performance.now();
+            if (this.saveDeferTimer !== null) return;
+            const attempt = () => {
+                this.saveDeferTimer = null;
+                const now = performance.now();
+                if (now - this.lastActivityAt < 1500 && now - this.saveDeferSince < 10000) {
+                    this.saveDeferTimer = window.setTimeout(attempt, 500);
+                    return;
+                }
+                this.saveDeferSince = 0;
+                obsidianRequestSave();
+            };
+            attempt();
+        };
+        // Closing the app / window: a postponed save is written at once.
+        this.registerDomEvent(window, 'beforeunload', () => {
+            if (this.saveDeferTimer === null) return;
+            window.clearTimeout(this.saveDeferTimer);
+            this.saveDeferTimer = null;
+            this.saveDeferSince = 0;
+            void this.save();
+        });
         const mem = plugin.settings.memory;
         this.penColor = mem.penColor || plugin.settings.penPalette[0] || '#000000';
         this.penAlpha = mem.penAlpha ?? 1;
@@ -687,6 +748,8 @@ export class HandwritingView extends TextFileView {
     }
 
     async onUnloadFile(file: TFile): Promise<void> {
+        // A postponed save is not needed any more: Obsidian saves the file itself when it is unloaded.
+        if (this.saveDeferTimer !== null) { window.clearTimeout(this.saveDeferTimer); this.saveDeferTimer = null; this.saveDeferSince = 0; }
         // Save the view position before the view is cleared.
         this.posEnd();
         // Content before closing (the view is cleared afterwards) – for the "on close" snapshot.
@@ -859,6 +922,7 @@ export class HandwritingView extends TextFileView {
 
         this.setupTouchPanZoom(this.scrollArea);
         this.setupWheel(this.scrollArea);
+        this.setupInkLayer();
 
         // Edge shadows: show that the page continues beyond the screen (when zoomed in).
         for (const side of ['top', 'right', 'bottom', 'left'] as const) {
@@ -964,7 +1028,24 @@ export class HandwritingView extends TextFileView {
                 return;
             }
             if (e.type === 'pointerdown' && this.plugin.settings.palmRejection !== 'off' && this.cancelTouchGestures) this.cancelTouchGestures();
+            if (e.type === 'pointerdown') this.cancelRailTouch?.();
         };
+        // Every touch on the screen is counted (window, capture – before the rail sees it): a second contact while a
+        // finger scrubs the page rail means a resting hand, so the scrub is cancelled.
+        const trackTouch = (e: PointerEvent) => {
+            if (e.pointerType !== 'touch') return;
+            if (e.type === 'pointerdown') {
+                // the primary touch = no other finger on the screen (clears ids whose pointerup got lost)
+                if (e.isPrimary) this.touchIds.clear();
+                this.touchIds.add(e.pointerId);
+                if (this.touchIds.size > 1) this.cancelRailTouch?.();
+            } else {
+                this.touchIds.delete(e.pointerId);
+            }
+        };
+        this.registerDomEvent(window, 'pointerdown', trackTouch, { capture: true });
+        this.registerDomEvent(window, 'pointerup', trackTouch, { capture: true });
+        this.registerDomEvent(window, 'pointercancel', trackTouch, { capture: true });
         this.registerDomEvent(this.scrollArea, 'pointerdown', markPen, { capture: true });
         this.registerDomEvent(this.scrollArea, 'pointermove', markPen, { capture: true });
         this.registerDomEvent(this.scrollArea, 'pointerup', markPen, { capture: true });
@@ -980,8 +1061,10 @@ export class HandwritingView extends TextFileView {
 
         this.buildPageRail();
         this.setupOledCare();
+        this.applyPerfOverlay();
 
         this.resizeObserver = new ResizeObserver(() => {
+            this.sizeInkLayer();
             this.applyManualZoom();
             if (this.layoutToolbar) this.layoutToolbar();
         });
@@ -995,6 +1078,10 @@ export class HandwritingView extends TextFileView {
         }
         if (this.redrawTimer !== null) window.clearTimeout(this.redrawTimer);
         if (this.virtRaf !== null) window.cancelAnimationFrame(this.virtRaf);
+        if (this.viewRaf !== null) { window.cancelAnimationFrame(this.viewRaf); this.viewRaf = null; }
+        if (this.inkClearRaf) { window.cancelAnimationFrame(this.inkClearRaf); this.inkClearRaf = 0; }
+        this.stopPerfOverlay();
+        if (this.movingTimer !== null) { window.clearTimeout(this.movingTimer); this.movingTimer = null; }
         this.stopInertia();
         this.stopSnipWatch();
         this.closePagesPanel();
@@ -1023,6 +1110,8 @@ export class HandwritingView extends TextFileView {
         if (this.refreshToolbarUI) this.refreshToolbarUI();
         if (this.applyToolbarItems) this.applyToolbarItems();
         this.applyOledCare();
+        if (!!this.inkCanvas !== this.plugin.settings.lowLatencyInk) this.setupInkLayer();
+        this.applyPerfOverlay();
         this.resizeAndRedrawAll(true);
         this.pageViews.forEach((v, i) => { if (v.active) this.redrawPage(i); });
     }
@@ -1056,6 +1145,8 @@ export class HandwritingView extends TextFileView {
             const highCanvas = pageContainer.createEl("canvas", { cls: "hw-layer-highlighter" });
             const bottomCanvas = pageContainer.createEl("canvas", { cls: "hw-layer-bottom" });
             const topCanvas = pageContainer.createEl("canvas", { cls: "hw-layer-top" });
+            // Veil that dims pages other than the current one (see placeCurrentFrame).
+            pageContainer.createDiv({ cls: "hw-page-dim" });
             for (const c of [highCanvas, bottomCanvas, topCanvas]) {
                 c.width = 1; c.height = 1;
                 c.style.width = '1px'; c.style.height = '1px';
@@ -1100,5 +1191,5 @@ export class HandwritingView extends TextFileView {
 
 }
 
-export interface HandwritingView extends HistoryMethods, GeometryMethods, ImagesMethods, CanvasWindowMethods, ImageInsertMethods, PageToolsMethods, ThumbsMethods, PageRailMethods, PagesPanelMethods, ToolbarMethods, PdfIOMethods, StrokeDrawMethods, CalcPanelMethods, ClipboardMethods, MenusMethods, SelectionEditMethods, VersionsMethods, PositionMethods, AssetsMethods, SelectionMethods, ContextMenuMethods, NavigationMethods, InputMethods, PageSizeMethods, ContentsMethods, OledCareMethods, ZoomPanelMethods, TouchMethods, PrintMethods {}
-Object.assign(HandwritingView.prototype, historyMixin, geometryMixin, imagesMixin, canvasWindowMixin, imageInsertMixin, pageToolsMixin, thumbsMixin, pageRailMixin, pagesPanelMixin, toolbarMixin, pdfIOMixin, strokeDrawMixin, calcPanelMixin, clipboardMixin, menusMixin, selectionEditMixin, versionsMixin, positionMixin, assetsMixin, selectionMixin, contextMenuMixin, navigationMixin, inputMixin, pageSizeMixin, contentsMixin, oledCareMixin, zoomPanelMixin, touchMixin, printMixin);
+export interface HandwritingView extends HistoryMethods, GeometryMethods, ImagesMethods, CanvasWindowMethods, ImageInsertMethods, PageToolsMethods, ThumbsMethods, PageRailMethods, PagesPanelMethods, ToolbarMethods, PdfIOMethods, StrokeDrawMethods, CalcPanelMethods, ClipboardMethods, MenusMethods, SelectionEditMethods, VersionsMethods, PositionMethods, AssetsMethods, SelectionMethods, ContextMenuMethods, NavigationMethods, InputMethods, PageSizeMethods, ContentsMethods, OledCareMethods, ZoomPanelMethods, TouchMethods, PrintMethods, InkLayerMethods, PerfOverlayMethods {}
+Object.assign(HandwritingView.prototype, historyMixin, geometryMixin, imagesMixin, canvasWindowMixin, imageInsertMixin, pageToolsMixin, thumbsMixin, pageRailMixin, pagesPanelMixin, toolbarMixin, pdfIOMixin, strokeDrawMixin, calcPanelMixin, clipboardMixin, menusMixin, selectionEditMixin, versionsMixin, positionMixin, assetsMixin, selectionMixin, contextMenuMixin, navigationMixin, inputMixin, pageSizeMixin, contentsMixin, oledCareMixin, zoomPanelMixin, touchMixin, printMixin, inkLayerMixin, perfOverlayMixin);

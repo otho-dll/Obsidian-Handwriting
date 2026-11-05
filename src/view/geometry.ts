@@ -140,14 +140,17 @@ export const geometryMixin = defineMixin({
         for (const s0 of strokes) {
             let s = s0;
             if (s.isEraser || s.lock) { out.push(s); continue; }   // the eraser doesn't touch locked items
-            if (skip && ((skip.shapes && s.shape) || (skip.highlighter && s.isHighlighter))) { out.push(s); continue; }
+            // A piece of a partly erased shape (poly) still counts as a shape.
+            const shapeLike = !!s.shape || !!s.poly;
+            if (skip && ((skip.shapes && shapeLike) || (skip.highlighter && s.isHighlighter))) { out.push(s); continue; }
 
             // Quick rejection by bounding box (from the cache).
             const bb = this.getStrokeBBox(s);
             if (bb.x0 > maxAx || bb.x1 < minAx || bb.y0 > maxAy || bb.y1 < minAy) { out.push(s); continue; }
 
+            const wholeShapes = this.plugin.settings.shapeErase === 'whole';
             if (s.shape) {
-                const canCut = this.plugin.settings.shapeErase === 'partial' && !(s.fill && s.shape !== 'line') && !s.arrow;
+                const canCut = !wholeShapes && !(s.fill && s.shape !== 'line') && !s.arrow;
                 if (!canCut) {
                     if (this.shapeHit(s, a, b, r)) { changed = true; mark(s0); continue; }
                     out.push(s);
@@ -183,8 +186,9 @@ export const geometryMixin = defineMixin({
             if (!hit) { out.push(s0); continue; }
 
             changed = true;
-            // The highlighter disappears whole when the eraser touches it (plugin setting).
+            // The highlighter disappears whole when the eraser touches it (plugin setting); same for shape pieces.
             if (s.isHighlighter && wholeHighlighter) { mark(s0); continue; }
+            if (s0.poly && !s0.shape && wholeShapes) { mark(s0); continue; }
             if (dirty) {
                 // Area to redraw: only around the removed segments (not the whole stroke).
                 let lo = n, hi = -1;
@@ -217,7 +221,7 @@ export const geometryMixin = defineMixin({
         const page = this.noteData.pages[pageIndex];
         if (!page) return false;
         const st = this.plugin.settings;
-        const res = this.eraseFromList(page.strokes, a, b, r, st.highlighterErase === 'whole', dirty, { shapes: !st.shapeEraseOn, highlighter: st.highlighterErase === 'off' });
+        const res = this.eraseFromList(page.strokes, a, b, r, st.highlighterErase === 'whole', dirty, { shapes: st.shapeErase === 'off', highlighter: st.highlighterErase === 'off' });
         if (res.changed) page.strokes = res.list;
         return res.changed;
     },

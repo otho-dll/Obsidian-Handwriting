@@ -122,17 +122,24 @@ export const navigationMixin = defineMixin({
         this.inertiaRaf = window.requestAnimationFrame(step);
     },
 
+    /**
+     * Applies the current zoom / position. Only the clamping and the CSS transform happen at once (cheap); everything
+     * else (rail, current-page frame, edge shadows, canvas windows, position memory) runs once per frame – touch and
+     * pen report 120–240 events per second, and each of those steps reads the layout.
+     */
     applyManualZoom() {
         if (!this.pagesWrapper || !this.scrollArea) return;
 
         const viewportWidth = this.scrollArea.clientWidth;
         const viewportHeight = this.scrollArea.clientHeight;
+        // (DOM writes happen once per frame in afterViewChange, so this read rarely has to recompute the layout)
+        const wrapperH = this.pagesWrapper.clientHeight;
         // Hidden view (background tab, switching notes): it has size 0 and pages have height 0. Recomputing the position
         // in this state "clamped" it to the start of the note – so we don't touch anything then.
-        if (viewportWidth === 0 || viewportHeight === 0 || this.pagesWrapper.clientHeight === 0) return;
+        if (viewportWidth === 0 || viewportHeight === 0 || wrapperH === 0) return;
 
         const scaledWidth = this.wrapperW() * this.currentZoom;
-        const scaledHeight = this.pagesWrapper.clientHeight * this.currentZoom;
+        const scaledHeight = wrapperH * this.currentZoom;
 
         const marginX = 20;
         const marginY = 20;
@@ -154,7 +161,32 @@ export const navigationMixin = defineMixin({
         }
 
         this.pagesWrapper.style.transform = `translate(${this.pagePositionX}px, ${this.pagePositionY}px) scale(${this.currentZoom})`;
-        this.scrollArea.style.setProperty('--hw-zoom', String(this.currentZoom));
+        this.layoutVersion++;   // pointer -> page coordinates must use the new position right away
+        // While the view moves the page column is its own compositor layer (moving = no repaint). The hint is removed
+        // shortly after the movement stops, so the pages are drawn sharp again at the final zoom.
+        if (!this.movingClassOn) { this.pagesWrapper.addClass('hw-moving'); this.movingClassOn = true; }
+        if (this.movingTimer !== null) window.clearTimeout(this.movingTimer);
+        this.movingTimer = window.setTimeout(() => {
+            this.movingTimer = null;
+            this.movingClassOn = false;
+            this.pagesWrapper?.removeClass('hw-moving');
+        }, 250);
+        if (this.viewRaf === null) this.viewRaf = window.requestAnimationFrame(() => { this.viewRaf = null; this.afterViewChange(); });
+    },
+
+    /** The part of applyManualZoom that runs once per frame (see there). */
+    afterViewChange() {
+        if (!this.pagesWrapper || !this.scrollArea) return;
+        const viewportWidth = this.scrollArea.clientWidth;
+        const viewportHeight = this.scrollArea.clientHeight;
+        const wrapperH = this.pagesWrapper.clientHeight;
+        if (viewportWidth === 0 || viewportHeight === 0 || wrapperH === 0) return;
+        const z = this.currentZoom;
+        const scaledWidth = this.wrapperW() * z;
+        const scaledHeight = wrapperH * z;
+        // Canvas windows first (layout reads), then the DOM writes below.
+        this.updateVirtualization();
+        this.scrollArea.style.setProperty('--hw-zoom', String(z));
         // "Continues" hints: a shadow on the side where there is more content.
         const eps = 2;
         const more = {
@@ -165,7 +197,6 @@ export const navigationMixin = defineMixin({
         };
         for (const k of ['top', 'right', 'bottom', 'left'] as const) this.edgeEls[k]?.toggleClass('hw-edge-on', more[k]);
         // The hints cover only the page (not the app background next to it).
-        const z = this.currentZoom;
         const fit = (el: HTMLElement | undefined, i: number) => {
             if (!el || !this.pageViews[i]) return;
             const x0 = Math.max(0, this.pagePositionX + this.pageOffsetX(i) * z);
@@ -182,10 +213,8 @@ export const navigationMixin = defineMixin({
             el.style.top = `${Math.max(0, this.pagePositionY)}px`;
             el.style.bottom = `${Math.max(0, viewportHeight - (this.pagePositionY + scaledHeight))}px`;
         }
-        this.layoutVersion++;
         this.refreshZoomButton();
         this.updatePageRail();
-        this.scheduleVirtualization();
         this.posTrack();
     },
 

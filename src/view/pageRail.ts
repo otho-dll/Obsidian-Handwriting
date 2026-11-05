@@ -14,6 +14,9 @@ const FINE_FACTOR = 0.25;
 const SNAP_PX = 8;          // rail px around a section tick that snap to it
 const PREVIEW_W = 168;
 const PREVIEW_CACHE = 48;   // rendered preview canvases kept (most recently used)
+// Palm protection for touches on the rail (mouse and pen are not affected):
+const RAIL_PALM_PX = 40;    // contact larger than this (CSS px) = a palm / the side of the hand
+const RAIL_PEN_MS = 700;    // the pen was used this recently = the hand is resting while writing
 
 export const pageRailMixin = defineMixin({
     buildPageRail() {
@@ -52,11 +55,12 @@ export const pageRailMixin = defineMixin({
         const meta = preview.createDiv({ cls: 'hw-rail-preview-meta' });
         meta.createSpan({ cls: 'hw-rail-preview-num' });
         meta.createSpan({ cls: 'hw-rail-preview-sec' });
+        meta.createSpan({ cls: 'hw-rail-preview-whole-tag', text: 'whole page' });
         preview.createDiv({ cls: 'hw-rail-preview-title' });
         this.railPreview = preview;
 
         // --- scrubbing ---
-        let drag: { id: number; docY: number; lastY: number; moved: boolean; startY: number } | null = null;
+        let drag: { id: number; docY: number; lastY: number; moved: boolean; startY: number; touch: boolean } | null = null;
         const railRect = () => track.getBoundingClientRect();
         const absDocY = (clientY: number) => {
             const r = railRect();
@@ -72,15 +76,36 @@ export const pageRailMixin = defineMixin({
             }
             return docY;
         };
+        const bigContact = (e: PointerEvent) => Math.max(e.width || 0, e.height || 0) > RAIL_PALM_PX;
+        /** Ends the scrubbing; `jump` = go to the chosen place (false: cancelled, the view stays where it was). */
+        const finish = (pointerId: number, jump: boolean) => {
+            if (!drag) return;
+            const docY = snapDocY(drag.docY);
+            drag = null;
+            this.railDragging = false;
+            try { if (el.hasPointerCapture(pointerId)) el.releasePointerCapture(pointerId); } catch { /* ignore */ }
+            el.removeClass('hw-rail-active');
+            el.removeClass('hw-rail-fine');
+            this.hideRailPreview();
+            if (jump) this.jumpToDocY(docY);
+            this.updatePageRail();
+        };
+        // A palm touching down elsewhere / the pen touching the screen cancels a finger scrub (no jump).
+        this.cancelRailTouch = () => { if (drag?.touch) finish(drag.id, false); };
         el.addEventListener('pointerdown', (e: PointerEvent) => {
             e.stopPropagation();
             e.preventDefault();
-            if (e.pointerType === 'touch' && this.shouldRejectTouch(e)) return;
+            if (e.pointerType === 'touch') {
+                // Fingers only: not a large contact, not a second touch on the screen, not right after writing.
+                if (this.shouldRejectTouch(e) || bigContact(e) || this.touchIds.size > 1
+                    || performance.now() - this.lastPenAt < RAIL_PEN_MS) return;
+            }
             if (e.pointerType === 'mouse' && e.button !== 0) return;
+            if (drag) return;
             this.stopInertia();
             try { el.setPointerCapture(e.pointerId); } catch { /* pointer already gone */ }
             const docY = absDocY(e.clientY);
-            drag = { id: e.pointerId, docY, lastY: e.clientY, moved: false, startY: e.clientY };
+            drag = { id: e.pointerId, docY, lastY: e.clientY, moved: false, startY: e.clientY, touch: e.pointerType === 'touch' };
             this.railDragging = true;
             el.addClass('hw-rail-active');
             this.showRailPreview(snapDocY(docY), e.clientY);
@@ -88,6 +113,8 @@ export const pageRailMixin = defineMixin({
         el.addEventListener('pointermove', (e: PointerEvent) => {
             if (!drag || e.pointerId !== drag.id) return;
             e.stopPropagation();
+            // the contact grew (the hand settled down on the rail): a palm, not a finger
+            if (drag.touch && bigContact(e)) { finish(e.pointerId, false); return; }
             const dy = e.clientY - drag.lastY;
             drag.lastY = e.clientY;
             if (Math.abs(e.clientY - drag.startY) > 3) drag.moved = true;
@@ -101,15 +128,7 @@ export const pageRailMixin = defineMixin({
         });
         const end = (e: PointerEvent, cancel: boolean) => {
             if (!drag || e.pointerId !== drag.id) return;
-            const docY = snapDocY(drag.docY);
-            drag = null;
-            this.railDragging = false;
-            try { if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
-            el.removeClass('hw-rail-active');
-            el.removeClass('hw-rail-fine');
-            this.hideRailPreview();
-            if (!cancel) this.jumpToDocY(docY);
-            this.updatePageRail();
+            finish(e.pointerId, !cancel);
         };
         el.addEventListener('pointerup', (e) => end(e, false));
         el.addEventListener('pointercancel', (e) => end(e, true));
@@ -167,7 +186,8 @@ export const pageRailMixin = defineMixin({
 
     /**
      * Frame on the rail preview: the part of page i that will be visible after the jump (in thumbnail pixels).
-     * Hidden when the whole page fits in the view anyway.
+     * Always shown – when the whole page fits in the view, the frame outlines the whole thumbnail ("whole page"),
+     * and when the view reaches past the page, its bottom edge is dashed (the next page is visible too).
      */
     placeRailPreviewFrame(i: number, posY: number) {
         const frame = this.railPreview?.querySelector('.hw-rail-preview-view') as HTMLElement | null;
@@ -179,13 +199,16 @@ export const pageRailMixin = defineMixin({
         const pageTop = view.outer.offsetTop + view.container.offsetTop;
         const pageLeft = view.outer.offsetLeft + view.container.offsetLeft;
         // visible part of the page after the jump (page coordinates; the horizontal position does not change)
+        const viewBottom = (this.scrollArea.clientHeight - posY) / z - pageTop;
         const top = Math.max(0, -posY / z - pageTop);
-        const bottom = Math.min(PH, (this.scrollArea.clientHeight - posY) / z - pageTop);
+        const bottom = Math.min(PH, viewBottom);
         const left = Math.max(0, -this.pagePositionX / z - pageLeft);
         const right = Math.min(PW, (this.scrollArea.clientWidth - this.pagePositionX) / z - pageLeft);
         const whole = top <= 1 && bottom >= PH - 1 && left <= 1 && right >= PW - 1;
-        frame.toggleClass('is-on', !whole && bottom > top && right > left);
-        if (whole) return;
+        frame.toggleClass('is-on', bottom > top && right > left);
+        frame.toggleClass('is-whole', whole);
+        frame.toggleClass('is-more', viewBottom > PH + 20 && i < this.noteData.pages.length - 1);
+        this.railPreview?.toggleClass('hw-rail-preview-whole', whole);
         // thumbnail scale: the page fills the width; an endless page shows its beginning (A4 proportions)
         const k = PREVIEW_W / PW;
         const shownH = page.endless ? PREVIEW_W * 1.414 : PH * k;
@@ -313,7 +336,7 @@ export const pageRailMixin = defineMixin({
     },
 
     /**
-     * Current page: a thin accent frame drawn in screen pixels over the page edge (not inside the zoomed pages),
+     * Current page: an accent frame drawn in screen pixels over the page edge (not inside the zoomed pages),
      * so it is equally visible at every zoom level. Only when the note has more than one page.
      */
     placeCurrentFrame(i: number) {
@@ -321,7 +344,16 @@ export const pageRailMixin = defineMixin({
         if (!area) return;
         let fr = this.curFrame;
         const view = this.pageViews[i];
-        if (this.noteData.pages.length < 2 || !view) { if (fr) fr.style.display = 'none'; return; }
+        const multi = this.noteData.pages.length >= 2 && !!view;
+        // Other pages are dimmed (a veil inside each page), so the current one stands out.
+        const want = multi ? view.outer : null;
+        if (this.curPageEl !== want) {
+            this.curPageEl?.removeClass('hw-page-current');
+            want?.addClass('hw-page-current');
+            this.curPageEl = want;
+        }
+        this.pagesWrapper?.toggleClass('hw-dim-others', multi);
+        if (!multi) { if (fr) fr.style.display = 'none'; return; }
         if (!fr || fr.parentElement !== area) { fr?.remove(); fr = area.createDiv({ cls: 'hw-current-frame' }); this.curFrame = fr; }
         const z = this.currentZoom;
         const x = this.pagePositionX + (view.outer.offsetLeft + view.container.offsetLeft) * z;

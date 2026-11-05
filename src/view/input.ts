@@ -14,6 +14,36 @@ export const inputMixin = defineMixin({
 
         let currentStroke: Stroke | null = null;
         let isDrawing = false;
+        // The pen stroke is drawn on the view's wet-ink layer (inkLayer.ts) instead of topCanvas, when available.
+        let inkOn = false;
+        let inkVersion = -1;
+        /** One live segment of the pen stroke (page coordinates; the context has the page transform). */
+        const drawSeg = (ctx: CanvasRenderingContext2D, st: Stroke, p1: Point, p2: Point) => {
+            const usePressure = p2.pressure !== 0.5 || p1.pressure !== 0.5;
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.strokeStyle = st.color;
+            ctx.lineWidth = usePressure ? st.width * this.pressureFactor((p1.pressure + p2.pressure) / 2) : st.width;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+        };
+        /** Draws the whole stroke written so far on the ink layer (after the layer was cleared or moved). */
+        const redrawInk = () => {
+            const st = currentStroke, ctx = this.inkCtx;
+            if (!inkOn || !st || !ctx) return;
+            const pts = st.points;
+            if (pts.length === 1) drawSeg(ctx, st, pts[0], pts[0]);
+            for (let i = 1; i < pts.length; i++) drawSeg(ctx, st, pts[i - 1], pts[i]);
+        };
+        const stopInk = () => {
+            if (!inkOn) return;
+            inkOn = false;
+            if (this.inkRedrawActive === redrawInk) this.inkRedrawActive = null;
+            this.endInk();
+        };
         // Area covered by the shape / highlighter preview (cleared instead of the whole canvas).
         let liveBox: BBox | null = null;
         let liveRaf = false;
@@ -234,6 +264,13 @@ export const inputMixin = defineMixin({
             };
 
             if (effectiveTool === 'pen' && this.penAlpha < 1) currentStroke.alpha = this.penAlpha;
+            // Plain pen (not semi-transparent): live stroke on the low-latency ink layer.
+            if (effectiveTool === 'pen' && currentStroke.alpha === undefined && this.inkCtx && this.beginInk(pageIndex, getRect())) {
+                inkOn = true;
+                inkVersion = this.layoutVersion;
+                this.inkRedrawActive = redrawInk;
+                drawSeg(this.inkCtx, currentStroke, pos, pos);   // the dot under the pen tip right away
+            }
             if (effectiveTool === 'shape') {
                 currentStroke.shape = this.shapeType;
                 currentStroke.dash = this.shapeDash;
@@ -378,6 +415,14 @@ export const inputMixin = defineMixin({
                 return;
             }
 
+            // The view moved during the stroke (e.g. a finger gesture): the ink layer follows the page.
+            if (inkOn && inkVersion !== this.layoutVersion) {
+                inkVersion = this.layoutVersion;
+                this.clearInkNow();
+                if (this.beginInk(pageIndex, getRect())) redrawInk(); else stopInk();
+            }
+            const liveCtx = inkOn && this.inkCtx ? this.inkCtx : topCtx;
+
             // All events collected between frames (the pen reports them more often than frames).
             const events = typeof e.getCoalescedEvents === 'function' ? e.getCoalescedEvents() : [];
             const list: PointerEvent[] = events.length > 0 ? events : [e];
@@ -392,15 +437,7 @@ export const inputMixin = defineMixin({
 
                 // Highlighter and semi-transparent pen are drawn whole once per frame (segments would overlap and darken).
                 if (currentStroke.isHighlighter || currentStroke.alpha !== undefined) continue;
-                topCtx.globalCompositeOperation = 'source-over';
-                topCtx.strokeStyle = currentStroke.color;
-                topCtx.lineWidth = usePressure ? currentStroke.width * this.pressureFactor((p1.pressure + pos.pressure) / 2) : currentStroke.width;
-                topCtx.lineCap = 'round';
-                topCtx.lineJoin = 'round';
-                topCtx.beginPath();
-                topCtx.moveTo(p1.x, p1.y);
-                topCtx.lineTo(pos.x, pos.y);
-                topCtx.stroke();
+                drawSeg(liveCtx, currentStroke, p1, pos);
             }
             if ((currentStroke.isHighlighter || currentStroke.alpha !== undefined) && !liveRaf) {
                 // Highlighter: one redraw per frame, clearing only its area.
@@ -494,7 +531,7 @@ export const inputMixin = defineMixin({
                 return;
             }
 
-            if (!isDrawing || !currentStroke) return;
+            if (!isDrawing || !currentStroke) { stopInk(); return; }
             isDrawing = false;
 
             if (currentStroke.shape) this.posLog('shape end', e.type, 'points', currentStroke.points.length);
@@ -533,6 +570,7 @@ export const inputMixin = defineMixin({
             }
 
             currentStroke = null;
+            stopInk();   // the stroke is on the page canvas now – the ink layer is cleared shortly
             this.markThumbDirty(pageIndex);
             this.requestSave();
 

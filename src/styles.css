@@ -242,6 +242,8 @@ button.hw-swatch-add.hw-swatch-add.hw-swatch-add {
     top: 0;
     left: 0;
 }
+/* while panning / zooming: the page column is one compositor layer, so moving it does not repaint the pages */
+.hw-pages-wrapper.hw-moving { will-change: transform; }
 
 .hw-single-page-container {
     position: relative;
@@ -899,12 +901,17 @@ button.hw-selmode-opt.active .hw-selmode-check { border-color: var(--interactive
 .hw-rail-preview-sheet { position: relative; overflow: hidden; border-radius: 3px; }
 .hw-rail-preview-view {
     position: absolute; display: none; box-sizing: border-box; pointer-events: none;
-    border: 2px solid var(--interactive-accent); border-radius: 2px;
-    box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.2);
+    border: 3px solid var(--interactive-accent); border-radius: 2px;
+    /* white inner line for contrast on dark ink, darkened area outside the frame */
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.9), 0 0 0 999px rgba(0, 0, 0, 0.35);
     transition: top 0.08s linear, height 0.08s linear;
 }
 .hw-rail-preview-view.is-on { display: block; }
+.hw-rail-preview-view.is-whole { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.9); }
 .hw-rail-preview-view.is-below { border-style: dashed; }
+.hw-rail-preview-view.is-more { border-bottom-style: dashed; }
+.hw-rail-preview-whole-tag { display: none; font-size: 11px; font-weight: 600; color: var(--interactive-accent); margin-left: auto; }
+.hw-rail-preview-whole .hw-rail-preview-whole-tag { display: inline; }
 .hw-rail-preview-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .hw-rail-preview-num { font-weight: 700; font-size: 15px; color: var(--text-normal); }
 .hw-rail-preview-sec { font-size: 12px; font-weight: 600; color: var(--interactive-accent); }
@@ -1074,9 +1081,27 @@ button.hw-chip-x:hover:not(:disabled) { color: var(--text-error); }
 /* --- 3.15.1: current page frame in screen pixels (same at every zoom) --- */
 .hw-current-frame {
     position: absolute; left: 0; top: 0; z-index: 4; pointer-events: none; box-sizing: border-box;
-    border-radius: 3px; box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 55%, transparent);
+    border-radius: 3px;
+    box-shadow: 0 0 0 3px var(--interactive-accent), 0 0 16px 3px color-mix(in srgb, var(--interactive-accent) 40%, transparent);
     transition: opacity 0.2s ease;
 }
+/* pages other than the current one are slightly dimmed (a veil instead of opacity: no extra compositing of the canvases) */
+.hw-page-dim {
+    position: absolute; inset: 0; z-index: 5; pointer-events: none;
+    background: rgba(0, 0, 0, 0.14); opacity: 0; transition: opacity 0.2s ease;
+}
+.hw-dim-others .hw-single-page-container:not(.hw-page-current) .hw-page-dim { opacity: 1; }
+.hw-oled-dark .hw-page-dim { background: rgba(0, 0, 0, 0.4); }
 button.hw-pp-cols { width: auto; padding: 0 6px; gap: 3px; }
 .hw-pp-cols svg { width: 16px; height: 16px; }
 .hw-pp-cols-n { font-size: 12px; font-weight: 600; }
+
+/* --- wet ink layer (the stroke being written, screen-sized, above the pages) --- */
+.hw-ink-layer { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; }
+.hw-oled-dark .hw-ink-layer.hw-ink-inv { filter: invert(1) hue-rotate(180deg) brightness(0.88); }
+/* --- performance overlay (Settings → Advanced) --- */
+.hw-perf {
+    position: absolute; left: 8px; bottom: 8px; z-index: 30; pointer-events: none; white-space: pre;
+    font: 11px/1.35 var(--font-monospace); padding: 4px 8px; border-radius: 6px;
+    color: #fff; background: rgba(0, 0, 0, 0.72);
+}

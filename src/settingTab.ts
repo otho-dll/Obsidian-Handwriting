@@ -127,15 +127,12 @@ export class HandwritingSettingTab extends PluginSettingTab {
                     .onChange(async (v) => { st.highlighterErase = v as HandwritingSettings['highlighterErase']; await this.plugin.saveSettings(); }));
 
             new Setting(c)
-                .setName('Eraser erases shapes')
-                .setDesc('Off: lines, rectangles and ellipses are never erased – handy for diagrams. Also in the eraser menu on the toolbar.')
-                .addToggle(t => t.setValue(st.shapeEraseOn).onChange(async (v) => { st.shapeEraseOn = v; await this.plugin.saveSettings(); }));
-            new Setting(c)
                 .setName('Eraser on shapes')
-                .setDesc('Partial: the eraser cuts out only the part it passes over (a filled shape or an arrow is still removed whole). Whole shape: touching a shape removes all of it.')
+                .setDesc('Off: lines, rectangles and ellipses (and pieces left after partly erasing them) are never erased – handy for diagrams. Whole shape: touching a shape removes all of it. Partial: the eraser cuts out only the part it passes over (a filled shape or an arrow is still removed whole). Also in the eraser menu on the toolbar.')
                 .addDropdown(d => d
-                    .addOption('partial', 'Partial')
+                    .addOption('off', 'Off (not erased)')
                     .addOption('whole', 'Whole shape')
+                    .addOption('partial', 'Partial')
                     .setValue(st.shapeErase)
                     .onChange(async (v) => { st.shapeErase = v as HandwritingSettings['shapeErase']; await this.plugin.saveSettings(); }));
 
@@ -510,6 +507,10 @@ export class HandwritingSettingTab extends PluginSettingTab {
                     .addOption('fast', 'Fast (smoothest)')
                     .setValue(st.canvasQuality)
                     .onChange(async (v) => { st.canvasQuality = v as HandwritingSettings['canvasQuality']; await this.plugin.saveSettings(); this.plugin.refreshViews(); }));
+            new Setting(c)
+                .setName('Low-latency ink')
+                .setDesc('The stroke you are writing is drawn on a separate screen layer, so writing stays smooth at any zoom and on full pages. Turn off if the line flickers or looks doubled while writing on your device.')
+                .addToggle(t => t.setValue(st.lowLatencyInk).onChange(async (v) => { st.lowLatencyInk = v; await this.plugin.saveSettings(); this.plugin.refreshViews(); }));
 
         }
         {
@@ -548,6 +549,10 @@ export class HandwritingSettingTab extends PluginSettingTab {
                 .setName('Debug logging')
                 .setDesc('Writes diagnostic messages (position memory, page thumbnails) to the developer console (Ctrl+Shift+I). Only needed when reporting a problem.')
                 .addToggle(t => t.setValue(st.debugLog).onChange(async (v) => { st.debugLog = v; await this.plugin.saveSettings(); }));
+            new Setting(c)
+                .setName('Performance overlay')
+                .setDesc('Shows frame rate, slow frames, long tasks, zoom and canvas size in the corner of the note. Useful for finding out what makes writing or scrolling lag.')
+                .addToggle(t => t.setValue(st.perfOverlay).onChange(async (v) => { st.perfOverlay = v; await this.plugin.saveSettings(); this.plugin.refreshViews(); }));
         }
     }
 }

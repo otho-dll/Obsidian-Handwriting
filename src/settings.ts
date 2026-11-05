@@ -90,10 +90,12 @@ export interface HandwritingSettings {
     debugLog: boolean;
     /** Canvas resolution: fewer pixels = smoother writing at high zoom, but less sharp strokes. */
     canvasQuality: 'high' | 'balanced' | 'fast';
-    /** Eraser vs shapes: 'partial' = cuts a piece out, 'whole' = removes the whole shape. */
-    shapeErase: 'whole' | 'partial';
-    /** Whether the eraser erases shapes (lines, rectangles, ellipses) at all. */
-    shapeEraseOn: boolean;
+    /** The pen stroke being written is drawn on a separate low-latency screen layer (cost independent of zoom). */
+    lowLatencyInk: boolean;
+    /** Small overlay with frame times and long tasks (diagnostics). */
+    perfOverlay: boolean;
+    /** Eraser vs shapes (and pieces of partly erased shapes): 'off' = never erased, 'whole' = removes the whole shape, 'partial' = cuts a piece out. */
+    shapeErase: 'off' | 'whole' | 'partial';
 
     /** Where pasted images and PDF pages are stored: the plugin's hidden folder or Obsidian's attachment folder. */
     attachmentLocation: 'hidden' | 'vault';
@@ -187,8 +189,9 @@ export const DEFAULT_SETTINGS: HandwritingSettings = {
     oledIdleDim: false,
     oledIdleMinutes: 3,
     canvasQuality: 'balanced',
+    lowLatencyInk: true,
+    perfOverlay: false,
     shapeErase: 'partial',
-    shapeEraseOn: true,
     attachmentLocation: 'hidden',
     historyEnabled: true,
     historyInterval: 10,

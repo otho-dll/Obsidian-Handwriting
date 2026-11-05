@@ -189,38 +189,34 @@ export const toolbarMixin = defineMixin({
         };
         const closeSizePop = () => { sizePop.style.display = 'none'; };
 
-        // What the eraser erases (only shown for the eraser): shapes on/off, highlighter off / whole / partial.
+        // What the eraser erases (only shown for the eraser): shapes and highlighter – off / whole / partial each.
         const eraseGroup = sizePop.createDiv({ cls: "hw-menu-group hw-erase-opts" });
         eraseGroup.createDiv({ cls: "hw-menu-title", text: "Eraser erases" });
-        const shapeRowEl = eraseGroup.createDiv({ cls: 'hw-erase-row' });
-        shapeRowEl.createSpan({ cls: 'hw-erase-name', text: 'Shapes' });
-        // A button styled as a switch (Obsidian themes draw checkboxes with a tick, which looked broken here).
-        const shapeSwitch = shapeRowEl.createEl('button', { cls: 'hw-switch' });
-        shapeSwitch.createSpan({ cls: 'hw-switch-knob' });
-        shapeSwitch.setAttribute('role', 'switch');
-        shapeSwitch.setAttribute('aria-label', 'Eraser erases shapes');
-        shapeSwitch.onclick = () => { this.plugin.settings.shapeEraseOn = !this.plugin.settings.shapeEraseOn; void this.plugin.saveSettings(); refreshEraseGroup(); };
-        const hlRowEl = eraseGroup.createDiv({ cls: 'hw-erase-row' });
-        hlRowEl.createSpan({ cls: 'hw-erase-name', text: 'Highlighter' });
-        const hlSeg = hlRowEl.createDiv({ cls: 'hw-erase-seg' });
-        const hlOpts: [HandwritingSettings['highlighterErase'], string, string][] = [
-            ['off', 'Off', 'The eraser leaves the highlighter alone'],
-            ['whole', 'Whole', 'Touching a highlighter stroke removes all of it'],
-            ['partial', 'Part', 'The eraser cuts out only the part it passes over'],
-        ];
-        const hlBtns = hlOpts.map(([v, text, tip]) => {
-            const b = hlSeg.createEl('button', { text });
-            b.setAttribute('title', tip);
-            b.setAttribute('aria-label', `Highlighter: ${tip}`);
-            b.onclick = () => { this.plugin.settings.highlighterErase = v; void this.plugin.saveSettings(); refreshEraseGroup(); };
-            return [v, b] as const;
-        });
+        type EraseMode = 'off' | 'whole' | 'partial';
+        const eraseRow = (name: string, what: string, get: () => EraseMode, set: (v: EraseMode) => void) => {
+            const row = eraseGroup.createDiv({ cls: 'hw-erase-row' });
+            row.createSpan({ cls: 'hw-erase-name', text: name });
+            const seg = row.createDiv({ cls: 'hw-erase-seg' });
+            const opts: [EraseMode, string, string][] = [
+                ['off', 'Off', `The eraser leaves ${what} alone`],
+                ['whole', 'Whole', `Touching ${what} removes all of it`],
+                ['partial', 'Part', 'The eraser cuts out only the part it passes over'],
+            ];
+            const btns = opts.map(([v, text, tip]) => {
+                const b = seg.createEl('button', { text });
+                b.setAttribute('title', tip);
+                b.setAttribute('aria-label', `${name}: ${tip}`);
+                b.onclick = () => { set(v); void this.plugin.saveSettings(); refreshEraseGroup(); };
+                return [v, b] as const;
+            });
+            return () => btns.forEach(([v, b]) => b.toggleClass('active', get() === v));
+        };
+        const refreshShapes = eraseRow('Shapes', 'shapes', () => this.plugin.settings.shapeErase, (v) => { this.plugin.settings.shapeErase = v; });
+        const refreshHl = eraseRow('Highlighter', 'the highlighter', () => this.plugin.settings.highlighterErase, (v) => { this.plugin.settings.highlighterErase = v; });
         const refreshEraseGroup = () => {
-            const st = this.plugin.settings;
             eraseGroup.style.display = this.currentTool === 'eraser' ? '' : 'none';
-            shapeSwitch.toggleClass('is-on', st.shapeEraseOn);
-            shapeSwitch.setAttribute('aria-checked', String(st.shapeEraseOn));
-            hlBtns.forEach(([v, b]) => b.toggleClass('active', st.highlighterErase === v));
+            refreshShapes();
+            refreshHl();
         };
 
         const styleBtn = toolbar.createEl("button", { cls: "hw-tool-btn hw-style-btn" });
