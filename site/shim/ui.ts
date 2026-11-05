@@ -99,8 +99,9 @@ export class Menu extends Component {
         this.load();
         const host = document.fullscreenElement && !(document.fullscreenElement === document.documentElement) ? document.fullscreenElement : document.body;
         host.appendChild(this.dom);
-        this.dom.style.left = '0px';
-        this.dom.style.top = '0px';
+        // measured at the top-left corner (.menu in obsidian.css), then moved next to the pointer / button
+        this.dom.style.removeProperty('left');
+        this.dom.style.removeProperty('top');
         const r = this.dom.getBoundingClientRect();
         const vw = window.innerWidth, vh = window.innerHeight, pad = 6;
         let x = pos.left ? pos.x - r.width : pos.x;

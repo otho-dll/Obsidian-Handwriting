@@ -88,8 +88,11 @@ export function installDomHelpers() {
     E.setAttrs = function (o: Record<string, string | number | boolean | null>) { for (const [k, v] of Object.entries(o)) this.setAttr(k, v); };
     E.getAttr = function (k: string) { return this.getAttribute(k); };
 
-    H.show = function () { this.style.display = ''; };
-    H.hide = function () { this.style.display = 'none'; };
+    // show / hide as in Obsidian: an inline display (none = hidden), removed again by show(). The plugin reads
+    // style.display, so this has to be an inline style, not a class.
+    const setDisplay = (el: HTMLElement, value: string | null) => { if (value === null) el.style.removeProperty('display'); else el.style.setProperty('display', value); };
+    H.show = function () { setDisplay(this, null); };
+    H.hide = function () { setDisplay(this, 'none'); };
     H.toggle = function (show: boolean) { if (show) this.show(); else this.hide(); };
     H.toggleVisibility = function (show: boolean) { this.toggle(show); };
     H.isShown = function () { return this.style.display !== 'none' && !!this.offsetParent; };
