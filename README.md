@@ -17,7 +17,6 @@ printing - in notes that stay readable even without Obsidian.
 <p align="center">
   <img src="docs/Screenshots/blankPage.png" height="auto" width="400">
   <img src="docs/Screenshots/Pages.png" height="auto" width="400">
-  <img src="docs/Screenshots/PageNavigation.png" height="auto" width="400">
   <img src="docs/Screenshots/PagesAndPageStyle.png" height="auto" width="400"> 
   <img src="docs/Screenshots/BuiltInCalculator.png" height="auto" width="400">
   <img src="docs/Screenshots/SciencetificCalculator.png" height="auto" width="400">

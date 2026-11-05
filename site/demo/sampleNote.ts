@@ -6,7 +6,7 @@ type Pt = { x: number; y: number; pressure: number };
 interface Stroke {
     points: Pt[]; color: string; width: number; isHighlighter: boolean;
     shape?: 'line' | 'rect' | 'ellipse'; dash?: 'solid' | 'dashed' | 'dotted' | 'dashdot';
-    fill?: boolean; fillAlpha?: number; noLine?: boolean; arrow?: boolean; alpha?: number; g?: string;
+    fill?: boolean; fillColor?: string; fillAlpha?: number; noLine?: boolean; arrow?: boolean; alpha?: number; g?: string;
 }
 interface Page { strokes: Stroke[]; tpl?: string; paper?: string; w?: number; h?: number; title?: string; }
 
@@ -214,7 +214,7 @@ export function buildSampleNote(): string {
         s.push(highlight(116, 300, 392, '#fde047'));
         add(s, write('Highlighter', 120, 400, { size: 26, color: '#1f2328' }));
         add(s, write('Shapes', 120, 470, { size: 26, color: '#dc2626' }));
-        s.push(shape('rect', 300, 436, 420, 486, { color: '#0f49be', fill: true, fillAlpha: 0.25 }));
+        s.push(shape('rect', 300, 436, 420, 486, { color: '#0f49be', fill: true, fillColor: '#facc15', fillAlpha: 0.35 }));
         s.push(shape('ellipse', 450, 432, 560, 490, { color: '#2563eb', dash: 'dashed' }));
         s.push(shape('line', 590, 486, 690, 436, { color: '#16a34a', arrow: true }));
         add(s, write('Try writing here', 230, 640, { size: 34, width: 2, color: '#0f49be' }));
