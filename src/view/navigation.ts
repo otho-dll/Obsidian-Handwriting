@@ -147,8 +147,12 @@ export const navigationMixin = defineMixin({
         if (scaledWidth + marginX * 2 <= viewportWidth) {
             this.pagePositionX = (viewportWidth - scaledWidth) / 2;
         } else {
-            const minX = viewportWidth - scaledWidth - marginX;
-            const maxX = marginX;
+            // Zoomed in (the page is wider than the view): the page can be pushed further sideways, so its edge can be
+            // brought towards the middle of the screen – writing at the edge of the page without an awkward hand position.
+            // The extra room grows with the zoom (none at "fit width") up to 40 % of the view width.
+            const extraX = Math.min(viewportWidth * 0.4, Math.max(0, scaledWidth - viewportWidth));
+            const minX = viewportWidth - scaledWidth - marginX - extraX;
+            const maxX = marginX + extraX;
             this.pagePositionX = Math.max(minX, Math.min(maxX, this.pagePositionX));
         }
 
