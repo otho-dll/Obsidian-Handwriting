@@ -51,7 +51,7 @@ export function getIconIds(): string[] { return [...Object.keys(LUCIDE), ...Obje
 
 export function getIcon(id: string): SVGSVGElement | null {
     const key = ALIASES[id] ?? id;
-    const svg = document.createElementNS(SVG_NS, 'svg');
+    const svg = activeDocument.createElementNS(SVG_NS, 'svg');
     svg.setAttribute('xmlns', SVG_NS);
     svg.setAttribute('width', '24');
     svg.setAttribute('height', '24');
@@ -62,7 +62,7 @@ export function getIcon(id: string): SVGSVGElement | null {
         // The icon content is parsed as SVG (XML), not assigned as HTML.
         const doc = new DOMParser().parseFromString(`<svg xmlns="${SVG_NS}">${c}</svg>`, 'image/svg+xml');
         if (!doc.getElementsByTagName('parsererror').length) {
-            for (const n of Array.from(doc.documentElement.childNodes)) svg.appendChild(document.importNode(n, true));
+            for (const n of Array.from(doc.documentElement.childNodes)) svg.appendChild(activeDocument.importNode(n, true));
         }
         return svg;
     }
@@ -75,7 +75,7 @@ export function getIcon(id: string): SVGSVGElement | null {
     svg.setAttribute('stroke-linecap', 'round');
     svg.setAttribute('stroke-linejoin', 'round');
     for (const [tag, attrs] of node) {
-        const child = document.createElementNS(SVG_NS, tag);
+        const child = activeDocument.createElementNS(SVG_NS, tag);
         for (const [k, v] of Object.entries(attrs)) if (v !== undefined) child.setAttribute(k, String(v));
         svg.appendChild(child);
     }

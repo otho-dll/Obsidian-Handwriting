@@ -7,13 +7,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+/** Output of this command-line script. */
+const say = (...parts) => process.stdout.write(parts.join(' ') + '\n');
+const complain = (...parts) => process.stderr.write(parts.join(' ') + '\n');
+
 const FILES = ['main.js', 'manifest.json', 'styles.css'];
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const buildDir = path.join(root, 'build');
 const cfg = path.join(root, '.vault-plugin-dir');
 
 if (!fs.existsSync(cfg)) {
-    console.error('Missing .vault-plugin-dir – create it with the path to <vault>/.obsidian/plugins/<plugin id>');
+    complain('Missing .vault-plugin-dir – create it with the path to the plugin folder: <vault>/<config folder>/plugins/<plugin id>');
     process.exit(1);
 }
 const target = fs.readFileSync(cfg, 'utf8').trim();
@@ -23,9 +27,9 @@ fs.writeFileSync(path.join(target, '.hotreload'), '');
 
 function copy(file) {
     const src = path.join(buildDir, file);
-    if (!fs.existsSync(src)) { console.warn('skipped (not built yet):', file); return; }
+    if (!fs.existsSync(src)) { complain('skipped (not built yet):', file); return; }
     fs.copyFileSync(src, path.join(target, file));
-    console.log(new Date().toLocaleTimeString(), 'copied', file, '→', target);
+    say(new Date().toLocaleTimeString(), 'copied', file, '→', target);
 }
 
 FILES.forEach(copy);
@@ -38,5 +42,5 @@ if (process.argv.includes('--watch')) {
             timers[file] = setTimeout(() => copy(file), 200);
         });
     }
-    console.log('Watching for changes… (Ctrl+C to stop)');
+    say('Watching for changes… (Ctrl+C to stop)');
 }

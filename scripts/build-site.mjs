@@ -11,6 +11,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+/** Output of this command-line script. */
+const say = (...parts) => process.stdout.write(parts.join(' ') + '\n');
+const complain = (...parts) => process.stderr.write(parts.join(' ') + '\n');
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const site = path.join(root, 'site');
 const out = path.join(root, 'build', 'site');
@@ -76,9 +80,9 @@ const staticPlugin = {
             if (result.errors.length) return;
             try {
                 await buildStatic();
-                console.log(new Date().toLocaleTimeString(), 'site built → build/site/');
+                say(new Date().toLocaleTimeString(), 'site built → build/site/');
             } catch (e) {
-                console.error('site build failed:', e.message);
+                complain('site build failed:', e.message);
                 if (!serve) process.exitCode = 1;
             }
         });
@@ -115,7 +119,7 @@ if (serve) {
     ].map(f => path.join(site, f)).concat([path.join(root, 'src', 'styles.css'), path.join(root, 'manifest.json')]);
     for (const f of watched) fs.watchFile(f, { interval: 400 }, () => { void ctx.rebuild(); });
     const { host } = await ctx.serve({ servedir: out, port });
-    console.log(`Website: http://${host === '0.0.0.0' ? 'localhost' : host}:${port}/   ·   demo: http://localhost:${port}/demo/`);
+    say(`Website: http://${host === '0.0.0.0' ? 'localhost' : host}:${port}/   ·   demo: http://localhost:${port}/demo/`);
 } else {
     await ctx.rebuild();
     await ctx.dispose();

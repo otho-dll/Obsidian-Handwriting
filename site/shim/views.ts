@@ -47,7 +47,7 @@ export abstract class ItemView extends View {
         this.titleEl = this.headerEl.createDiv({ cls: 'view-header-title' });
         this.contentEl = this.containerEl.createDiv({ cls: 'view-content' });
     }
-    addAction(icon: string, title: string, cb: (e: MouseEvent) => any): HTMLElement {
+    addAction(icon: string, title: string, cb: (e: MouseEvent) => unknown): HTMLElement {
         const el = this.headerEl.createEl('button', { cls: 'clickable-icon view-action', attr: { 'aria-label': title } });
         el.dataset.icon = icon;
         el.addEventListener('click', cb);

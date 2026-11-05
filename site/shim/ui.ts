@@ -14,7 +14,7 @@ export class MenuItem {
     checkEl: HTMLElement | null = null;
     disabled = false;
     section = '';
-    callback: ((evt: MouseEvent | KeyboardEvent) => any) | null = null;
+    callback: ((evt: MouseEvent | KeyboardEvent) => unknown) | null = null;
 
     constructor(private menu: Menu) {
         this.dom = createDiv({ cls: 'menu-item', attr: { role: 'menuitem', tabindex: '-1' } });
@@ -42,17 +42,18 @@ export class MenuItem {
     setWarning(v: boolean) { this.dom.toggleClass('is-warning', v); return this; }
     setIsLabel(v: boolean) { this.dom.toggleClass('is-label', v); return this; }
     setSection(s: string) { this.section = s; return this; }
-    onClick(cb: (evt: MouseEvent | KeyboardEvent) => any) { this.callback = cb; return this; }
+    onClick(cb: (evt: MouseEvent | KeyboardEvent) => unknown) { this.callback = cb; return this; }
 }
 
-let openMenu: Menu | null = null;
 
 export class Menu extends Component {
+    /** The menu that is open right now (only one at a time). */
+    static open: Menu | null = null;
     dom: HTMLElement;
     private scrollEl: HTMLElement;
     private items: MenuItem[] = [];
     private selected = -1;
-    private hideCbs: (() => any)[] = [];
+    private hideCbs: (() => unknown)[] = [];
     private shown = false;
     private cleanup: (() => void)[] = [];
 
@@ -62,7 +63,7 @@ export class Menu extends Component {
         this.scrollEl = this.dom.createDiv({ cls: 'menu-scroll' });
         this.dom.addEventListener('contextmenu', e => e.preventDefault());
     }
-    addItem(cb: (item: MenuItem) => any) {
+    addItem(cb: (item: MenuItem) => unknown) {
         const it = new MenuItem(this);
         cb(it);
         this.items.push(it);
@@ -77,7 +78,7 @@ export class Menu extends Component {
     }
     setNoIcon() { this.dom.addClass('mod-no-icon'); return this; }
     setUseNativeMenu(_v: boolean) { return this; }
-    onHide(cb: () => any) { this.hideCbs.push(cb); }
+    onHide(cb: () => unknown) { this.hideCbs.push(cb); }
 
     select(item: MenuItem | number) {
         const idx = typeof item === 'number' ? item : this.items.indexOf(item);
@@ -89,15 +90,15 @@ export class Menu extends Component {
     showAtMouseEvent(evt: MouseEvent) { return this.showAtPosition({ x: evt.clientX, y: evt.clientY }); }
 
     showAtPosition(pos: { x: number; y: number; width?: number; overlap?: boolean; left?: boolean }) {
-        if (openMenu && openMenu !== this) openMenu.hide();
+        if (Menu.open && Menu.open !== this) Menu.open.hide();
         // Trailing separator is not shown.
         const last = this.scrollEl.lastElementChild;
         if (last?.hasClass('menu-separator')) last.remove();
         if (this.items.length === 0) return this;
-        openMenu = this;
+        Menu.open = this;
         this.shown = true;
         this.load();
-        const host = document.fullscreenElement && !(document.fullscreenElement === document.documentElement) ? document.fullscreenElement : document.body;
+        const host = activeDocument.fullscreenElement && !(activeDocument.fullscreenElement === activeDocument.documentElement) ? activeDocument.fullscreenElement : activeDocument.body;
         host.appendChild(this.dom);
         // measured at the top-left corner (.menu in obsidian.css), then moved next to the pointer / button
         this.dom.style.removeProperty('left');
@@ -147,7 +148,7 @@ export class Menu extends Component {
     hide() {
         if (!this.shown) return this;
         this.shown = false;
-        if (openMenu === this) openMenu = null;
+        if (Menu.open === this) Menu.open = null;
         this.cleanup.splice(0).forEach(fn => fn());
         this.dom.remove();
         this.unload();
@@ -161,8 +162,8 @@ export class Menu extends Component {
 const modalStack: Modal[] = [];
 
 export class Scope {
-    private keys: { mods: string[]; key: string | null; fn: (e: KeyboardEvent) => any }[] = [];
-    register(mods: string[] | null, key: string | null, fn: (e: KeyboardEvent) => any) { const k = { mods: mods ?? [], key, fn }; this.keys.push(k); return k; }
+    private keys: { mods: string[]; key: string | null; fn: (e: KeyboardEvent) => unknown }[] = [];
+    register(mods: string[] | null, key: string | null, fn: (e: KeyboardEvent) => unknown) { const k = { mods: mods ?? [], key, fn }; this.keys.push(k); return k; }
     unregister(k: unknown) { this.keys = this.keys.filter(x => x !== k); }
     /** Returns true when a handler consumed the key. */
     handle(e: KeyboardEvent): boolean {
@@ -207,10 +208,10 @@ export class Modal {
     open() {
         if (this.isOpen) return;
         this.isOpen = true;
-        const host = document.fullscreenElement && document.fullscreenElement !== document.documentElement ? document.fullscreenElement : document.body;
+        const host = activeDocument.fullscreenElement && activeDocument.fullscreenElement !== activeDocument.documentElement ? activeDocument.fullscreenElement : activeDocument.body;
         host.appendChild(this.containerEl);
         modalStack.push(this);
-        document.body.addClass('demo-modal-open');
+        activeDocument.body.addClass('demo-modal-open');
         this.keyHandler = (e: KeyboardEvent) => {
             if (modalStack[modalStack.length - 1] !== this) return;
             if (this.scope.handle(e)) return;
@@ -219,7 +220,7 @@ export class Modal {
         window.addEventListener('keydown', this.keyHandler, true);
         try { void this.onOpen(); } catch (e) { console.error(e); }
         // Focus the dialog for keyboard users (inputs focus themselves in onOpen).
-        window.setTimeout(() => { if (!this.modalEl.contains(document.activeElement)) this.modalEl.focus({ preventScroll: true }); }, 0);
+        window.setTimeout(() => { if (!this.modalEl.contains(activeDocument.activeElement)) this.modalEl.focus({ preventScroll: true }); }, 0);
         this.modalEl.tabIndex = -1;
     }
     close() {
@@ -228,7 +229,7 @@ export class Modal {
         if (this.keyHandler) window.removeEventListener('keydown', this.keyHandler, true);
         const i = modalStack.indexOf(this);
         if (i >= 0) modalStack.splice(i, 1);
-        if (modalStack.length === 0) document.body.removeClass('demo-modal-open');
+        if (modalStack.length === 0) activeDocument.body.removeClass('demo-modal-open');
         this.containerEl.remove();
         try { void this.onClose(); } catch (e) { console.error(e); }
     }
@@ -255,7 +256,7 @@ export abstract class SuggestModal<T> extends Modal {
         this.modalEl.querySelector('.modal-close-button')?.remove();
         this.contentEl.remove();
         const inputWrap = this.modalEl.createDiv({ cls: 'prompt-input-container' });
-        this.inputEl = inputWrap.createEl('input', { cls: 'prompt-input', type: 'text' }) as HTMLInputElement;
+        this.inputEl = inputWrap.createEl('input', { cls: 'prompt-input', type: 'text' });
         this.inputEl.setAttribute('enterkeyhint', 'done');
         this.resultContainerEl = this.modalEl.createDiv({ cls: 'prompt-results' });
         this.instructionsEl = this.modalEl.createDiv({ cls: 'prompt-instructions' });
@@ -351,8 +352,8 @@ export abstract class FuzzySuggestModal<T> extends SuggestModal<FuzzyMatch<T>> {
 
 // ---------------------------------------------------------------- Notice
 function noticeHost(): HTMLElement {
-    const host = document.fullscreenElement && document.fullscreenElement !== document.documentElement ? document.fullscreenElement : document.body;
-    let c = host.querySelector(':scope > .notice-container') as HTMLElement | null;
+    const host = activeDocument.fullscreenElement && activeDocument.fullscreenElement !== activeDocument.documentElement ? activeDocument.fullscreenElement : activeDocument.body;
+    let c = host.querySelector<HTMLElement>(':scope > .notice-container');
     if (!c) c = host.createDiv({ cls: 'notice-container', attr: { 'aria-live': 'polite' } });
     return c;
 }
@@ -382,7 +383,7 @@ export class Notice {
 // ---------------------------------------------------------------- Setting + components
 abstract class BaseComponent {
     disabled = false;
-    then(cb: (c: this) => any) { cb(this); return this; }
+    then(cb: (c: this) => unknown) { cb(this); return this; }
     setDisabled(v: boolean) { this.disabled = v; return this; }
 }
 
@@ -393,13 +394,13 @@ abstract class ValueComponent<T> extends BaseComponent {
         this.onChange(v => listeners[key](v));
         return this;
     }
-    abstract onChange(cb: (v: T) => any): this;
+    abstract onChange(cb: (v: T) => unknown): this;
 }
 
 export class ToggleComponent extends ValueComponent<boolean> {
     toggleEl: HTMLElement;
     private value = false;
-    private cbs: ((v: boolean) => any)[] = [];
+    private cbs: ((v: boolean) => unknown)[] = [];
     constructor(containerEl: HTMLElement) {
         super();
         this.toggleEl = containerEl.createDiv({ cls: 'checkbox-container', attr: { role: 'switch', tabindex: '0', 'aria-checked': 'false' } });
@@ -418,7 +419,7 @@ export class ToggleComponent extends ValueComponent<boolean> {
     }
     setDisabled(v: boolean) { super.setDisabled(v); this.toggleEl.toggleClass('is-disabled', v); return this; }
     setTooltip(t: string) { setTip(this.toggleEl, t); return this; }
-    onChange(cb: (v: boolean) => any) { this.cbs.push(cb); return this; }
+    onChange(cb: (v: boolean) => unknown) { this.cbs.push(cb); return this; }
     onClick() { this.toggleEl.click(); }
 }
 
@@ -426,14 +427,14 @@ export class DropdownComponent extends ValueComponent<string> {
     selectEl: HTMLSelectElement;
     constructor(containerEl: HTMLElement) {
         super();
-        this.selectEl = containerEl.createEl('select', { cls: 'dropdown' }) as HTMLSelectElement;
+        this.selectEl = containerEl.createEl('select', { cls: 'dropdown' });
     }
     addOption(value: string, display: string) { this.selectEl.createEl('option', { value, text: display }); return this; }
     addOptions(o: Record<string, string>) { for (const [k, v] of Object.entries(o)) this.addOption(k, v); return this; }
     getValue() { return this.selectEl.value; }
     setValue(v: string) { this.selectEl.value = v; return this; }
     setDisabled(v: boolean) { super.setDisabled(v); this.selectEl.disabled = v; return this; }
-    onChange(cb: (v: string) => any) { this.selectEl.addEventListener('change', () => cb(this.selectEl.value)); return this; }
+    onChange(cb: (v: string) => unknown) { this.selectEl.addEventListener('change', () => cb(this.selectEl.value)); return this; }
 }
 
 export class SliderComponent extends ValueComponent<number> {
@@ -442,7 +443,7 @@ export class SliderComponent extends ValueComponent<number> {
     private instant = false;
     constructor(containerEl: HTMLElement) {
         super();
-        this.sliderEl = containerEl.createEl('input', { cls: 'slider', type: 'range' }) as HTMLInputElement;
+        this.sliderEl = containerEl.createEl('input', { cls: 'slider', type: 'range' });
         this.sliderEl.addEventListener('input', () => this.updateTip());
     }
     setLimits(min: number | null, max: number | null, step: number | 'any') {
@@ -466,7 +467,7 @@ export class SliderComponent extends ValueComponent<number> {
     showTooltip() { /* the value is always shown next to the slider */ }
     private updateTip() { if (this.tipEl) this.tipEl.textContent = this.sliderEl.value; this.sliderEl.title = this.sliderEl.value; }
     setDisabled(v: boolean) { super.setDisabled(v); this.sliderEl.disabled = v; return this; }
-    onChange(cb: (v: number) => any) {
+    onChange(cb: (v: number) => unknown) {
         this.sliderEl.addEventListener('input', () => { if (this.instant) cb(this.getValue()); });
         this.sliderEl.addEventListener('change', () => { if (!this.instant) cb(this.getValue()); });
         return this;
@@ -477,7 +478,7 @@ export class TextComponent extends ValueComponent<string> {
     inputEl: HTMLInputElement;
     constructor(containerEl: HTMLElement) {
         super();
-        this.inputEl = containerEl.createEl('input', { type: 'text' }) as HTMLInputElement;
+        this.inputEl = containerEl.createEl('input', { type: 'text' });
         this.inputEl.spellcheck = false;
     }
     getValue() { return this.inputEl.value; }
@@ -485,38 +486,38 @@ export class TextComponent extends ValueComponent<string> {
     setPlaceholder(p: string) { this.inputEl.placeholder = p; return this; }
     setDisabled(v: boolean) { super.setDisabled(v); this.inputEl.disabled = v; return this; }
     onChanged() { this.inputEl.dispatchEvent(new Event('input')); }
-    onChange(cb: (v: string) => any) { this.inputEl.addEventListener('input', () => cb(this.inputEl.value)); return this; }
+    onChange(cb: (v: string) => unknown) { this.inputEl.addEventListener('input', () => cb(this.inputEl.value)); return this; }
 }
 
 export class TextAreaComponent extends ValueComponent<string> {
     inputEl: HTMLTextAreaElement;
     constructor(containerEl: HTMLElement) {
         super();
-        this.inputEl = containerEl.createEl('textarea') as HTMLTextAreaElement;
+        this.inputEl = containerEl.createEl('textarea');
     }
     getValue() { return this.inputEl.value; }
     setValue(v: string) { this.inputEl.value = v; return this; }
     setPlaceholder(p: string) { this.inputEl.placeholder = p; return this; }
-    onChange(cb: (v: string) => any) { this.inputEl.addEventListener('input', () => cb(this.inputEl.value)); return this; }
+    onChange(cb: (v: string) => unknown) { this.inputEl.addEventListener('input', () => cb(this.inputEl.value)); return this; }
 }
 
 export class ColorComponent extends ValueComponent<string> {
     colorPickerEl: HTMLInputElement;
     constructor(containerEl: HTMLElement) {
         super();
-        this.colorPickerEl = containerEl.createEl('input', { type: 'color' }) as HTMLInputElement;
+        this.colorPickerEl = containerEl.createEl('input', { type: 'color' });
     }
     getValue() { return this.colorPickerEl.value; }
     setValue(v: string) { this.colorPickerEl.value = v; return this; }
     setDisabled(v: boolean) { super.setDisabled(v); this.colorPickerEl.disabled = v; return this; }
-    onChange(cb: (v: string) => any) { this.colorPickerEl.addEventListener('change', () => cb(this.colorPickerEl.value)); return this; }
+    onChange(cb: (v: string) => unknown) { this.colorPickerEl.addEventListener('change', () => cb(this.colorPickerEl.value)); return this; }
 }
 
 export class ButtonComponent extends BaseComponent {
     buttonEl: HTMLButtonElement;
     constructor(containerEl: HTMLElement) {
         super();
-        this.buttonEl = containerEl.createEl('button') as HTMLButtonElement;
+        this.buttonEl = containerEl.createEl('button');
     }
     setButtonText(t: string) { this.buttonEl.setText(t); return this; }
     setIcon(id: string) { setIcon(this.buttonEl, id); return this; }
@@ -526,7 +527,7 @@ export class ButtonComponent extends BaseComponent {
     setTooltip(t: string) { setTip(this.buttonEl, t); return this; }
     setClass(c: string) { this.buttonEl.addClass(c); return this; }
     setDisabled(v: boolean) { super.setDisabled(v); this.buttonEl.disabled = v; return this; }
-    onClick(cb: (evt: MouseEvent) => any) { this.buttonEl.addEventListener('click', cb); return this; }
+    onClick(cb: (evt: MouseEvent) => unknown) { this.buttonEl.addEventListener('click', cb); return this; }
 }
 
 export class ExtraButtonComponent extends BaseComponent {
@@ -539,7 +540,7 @@ export class ExtraButtonComponent extends BaseComponent {
     setIcon(id: string) { setIcon(this.extraSettingsEl, id); return this; }
     setTooltip(t: string) { setTip(this.extraSettingsEl, t); return this; }
     setDisabled(v: boolean) { super.setDisabled(v); this.extraSettingsEl.toggleClass('is-disabled', v); return this; }
-    onClick(cb: () => any) { this.extraSettingsEl.addEventListener('click', () => { if (!this.disabled) cb(); }); return this; }
+    onClick(cb: () => unknown) { this.extraSettingsEl.addEventListener('click', () => { if (!this.disabled) cb(); }); return this; }
 }
 
 export class Setting {
@@ -562,16 +563,16 @@ export class Setting {
     setClass(c: string) { this.settingEl.addClass(c); return this; }
     setTooltip(t: string) { setTip(this.nameEl, t); return this; }
     setHeading() { this.settingEl.addClass('setting-item-heading'); return this; }
-    setDisabled(v: boolean) { this.settingEl.toggleClass('is-disabled', v); this.components.forEach(c => c.setDisabled(v)); return this; }
-    private add<C extends BaseComponent>(c: C, cb: (c: C) => any) { this.components.push(c); cb(c); return this; }
-    addToggle(cb: (c: ToggleComponent) => any) { return this.add(new ToggleComponent(this.controlEl), cb); }
-    addDropdown(cb: (c: DropdownComponent) => any) { return this.add(new DropdownComponent(this.controlEl), cb); }
-    addSlider(cb: (c: SliderComponent) => any) { return this.add(new SliderComponent(this.controlEl), cb); }
-    addText(cb: (c: TextComponent) => any) { return this.add(new TextComponent(this.controlEl), cb); }
-    addTextArea(cb: (c: TextAreaComponent) => any) { return this.add(new TextAreaComponent(this.controlEl), cb); }
-    addSearch(cb: (c: TextComponent) => any) { return this.add(new TextComponent(this.controlEl), cb); }
-    addColorPicker(cb: (c: ColorComponent) => any) { return this.add(new ColorComponent(this.controlEl), cb); }
-    addButton(cb: (c: ButtonComponent) => any) { return this.add(new ButtonComponent(this.controlEl), cb); }
-    addExtraButton(cb: (c: ExtraButtonComponent) => any) { return this.add(new ExtraButtonComponent(this.controlEl), cb); }
-    then(cb: (s: this) => any) { cb(this); return this; }
+    setDisabled(v: boolean) { this.settingEl.toggleClass('is-disabled', v); this.components.forEach(c => { c.setDisabled(v); }); return this; }
+    private add<C extends BaseComponent>(c: C, cb: (c: C) => unknown) { this.components.push(c); cb(c); return this; }
+    addToggle(cb: (c: ToggleComponent) => unknown) { return this.add(new ToggleComponent(this.controlEl), cb); }
+    addDropdown(cb: (c: DropdownComponent) => unknown) { return this.add(new DropdownComponent(this.controlEl), cb); }
+    addSlider(cb: (c: SliderComponent) => unknown) { return this.add(new SliderComponent(this.controlEl), cb); }
+    addText(cb: (c: TextComponent) => unknown) { return this.add(new TextComponent(this.controlEl), cb); }
+    addTextArea(cb: (c: TextAreaComponent) => unknown) { return this.add(new TextAreaComponent(this.controlEl), cb); }
+    addSearch(cb: (c: TextComponent) => unknown) { return this.add(new TextComponent(this.controlEl), cb); }
+    addColorPicker(cb: (c: ColorComponent) => unknown) { return this.add(new ColorComponent(this.controlEl), cb); }
+    addButton(cb: (c: ButtonComponent) => unknown) { return this.add(new ButtonComponent(this.controlEl), cb); }
+    addExtraButton(cb: (c: ExtraButtonComponent) => unknown) { return this.add(new ExtraButtonComponent(this.controlEl), cb); }
+    then(cb: (s: this) => unknown) { cb(this); return this; }
 }

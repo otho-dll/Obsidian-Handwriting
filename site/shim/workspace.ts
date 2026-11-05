@@ -9,11 +9,11 @@ import { FileView } from './views';
 
 export function downloadBlob(data: BlobPart, name: string, type: string) {
     const url = URL.createObjectURL(new Blob([data], { type }));
-    const a = document.createElement('a');
+    const a = createEl('a');
     a.href = url;
     a.download = name;
     a.rel = 'noopener';
-    document.body.appendChild(a);
+    activeDocument.body.appendChild(a);
     a.click();
     a.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 30000);
@@ -62,13 +62,13 @@ export class WorkspaceLeaf extends Events {
 export class Workspace extends Events {
     activeLeaf: WorkspaceLeaf | null = null;
     leaves: WorkspaceLeaf[] = [];
-    containerEl: HTMLElement = document.body;
+    containerEl: HTMLElement = activeDocument.body;
     layoutReady = true;
     constructor(private app: App) { super(); }
 
-    getActiveViewOfType<T>(type: abstract new (...args: any[]) => T): T | null {
+    getActiveViewOfType<T>(type: abstract new (...args: never[]) => T): T | null {
         const v = this.activeLeaf?.view;
-        return v instanceof (type as any) ? (v as unknown as T) : null;
+        return v instanceof type ? v : null;
     }
     getActiveFile(): TFile | null {
         const v = this.activeLeaf?.view;
@@ -80,19 +80,20 @@ export class Workspace extends Events {
     }
     getMostRecentLeaf() { return this.activeLeaf; }
     getLeavesOfType(type: string): WorkspaceLeaf[] { return this.leaves.filter(l => l.view?.getViewType() === type); }
-    iterateAllLeaves(cb: (l: WorkspaceLeaf) => any) { this.leaves.forEach(cb); }
+    iterateAllLeaves(cb: (l: WorkspaceLeaf) => unknown) { this.leaves.forEach(cb); }
     async openLinkText(linktext: string, _source: string, _newLeaf?: boolean | string) {
         const f = this.app.vault.getAbstractFileByPath(linktext) ?? this.app.vault.getAbstractFileByPath(`${linktext}.md`);
         if (f instanceof TFile) await this.getLeaf().openFile(f);
     }
-    onLayoutReady(cb: () => any) { cb(); }
+    onLayoutReady(cb: () => unknown) { cb(); }
     requestSaveLayout() { /* nothing */ }
 }
 
 export class FileManager {
     constructor(private app: App) { }
     async renameFile(file: TAbstractFile, newPath: string) { await this.app.vault.rename(file, newPath); }
-    async trashFile(file: TAbstractFile) { await this.app.vault.trash(file, true); }
+    // the demo has no trash: the file is removed from the in-memory vault
+    async trashFile(file: TAbstractFile) { this.app.vault._delete(file.path); }
     async getAvailablePathForAttachment(name: string, sourcePath?: string) {
         const i = sourcePath ? sourcePath.lastIndexOf('/') : -1;
         const dir = i >= 0 ? sourcePath!.slice(0, i) : '';

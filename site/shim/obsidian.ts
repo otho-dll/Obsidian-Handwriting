@@ -23,13 +23,15 @@ export { App, Workspace, WorkspaceLeaf, FileManager } from './workspace';
  * the worker, fonts, character maps and image decoders are served from demo/pdfjs/ (see scripts/build-site.mjs) –
  * nothing is downloaded from elsewhere.
  */
-let pdfjsPromise: Promise<any> | null = null;
-export function loadPdfJs(): Promise<any> {
+type PdfJs = typeof import('pdfjs-dist');
+type PdfSource = Exclude<Parameters<PdfJs['getDocument']>[0], string | URL | ArrayBuffer | ArrayLike<number> | undefined>;
+let pdfjsPromise: Promise<PdfJs> | null = null;
+export function loadPdfJs(): Promise<PdfJs> {
     pdfjsPromise ??= (async () => {
-        const pdfjs: any = await import('pdfjs-dist');
+        const pdfjs = await import('pdfjs-dist');
         const base = new URL('./pdfjs/', import.meta.url).href;
         pdfjs.GlobalWorkerOptions.workerSrc = `${base}pdf.worker.min.mjs`;
-        const getDocument = (src: any) => pdfjs.getDocument({
+        const getDocument = (src: PdfSource = {}) => pdfjs.getDocument({
             cMapUrl: `${base}cmaps/`,
             cMapPacked: true,
             standardFontDataUrl: `${base}standard_fonts/`,

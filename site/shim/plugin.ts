@@ -12,7 +12,7 @@ export interface PluginManifest {
 
 export interface Command {
     id: string; name: string; icon?: string;
-    callback?: () => any; checkCallback?: (checking: boolean) => boolean | void;
+    callback?: () => unknown; checkCallback?: (checking: boolean) => boolean | void;
 }
 
 export abstract class SettingTab {
@@ -36,7 +36,7 @@ export abstract class Plugin extends Component {
         this.manifest = manifest;
     }
     private get dataKey() { return `plugin-data:${this.manifest.id}`; }
-    async loadData(): Promise<any> {
+    async loadData(): Promise<unknown> {
         const stored = await kvGet<string>(this.dataKey);
         if (stored) { try { return JSON.parse(stored); } catch { /* fall through */ } }
         return this.app.defaultPluginData ? JSON.parse(JSON.stringify(this.app.defaultPluginData)) : null;
@@ -57,7 +57,7 @@ export abstract class Plugin extends Component {
         this.register(() => { delete this.app.viewRegistry.views[type]; });
     }
     registerExtensions(exts: string[], type: string) { for (const e of exts) this.app.viewRegistry.extensions[e] = type; }
-    addRibbonIcon(_icon: string, title: string, _cb: (e: MouseEvent) => any) { return createDiv({ attr: { 'aria-label': title } }); }
+    addRibbonIcon(_icon: string, title: string, _cb: (e: MouseEvent) => unknown) { return createDiv({ attr: { 'aria-label': title } }); }
     addStatusBarItem() { return createDiv(); }
     registerHoverLinkSource() { /* nothing */ }
     registerMarkdownPostProcessor() { /* nothing */ }

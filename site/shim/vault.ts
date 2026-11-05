@@ -14,7 +14,7 @@ const isHidden = (p: string) => p.split('/').some(s => s.startsWith('.'));
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 const toText = (d: Data) => typeof d === 'string' ? d : dec.decode(d);
-const toBuf = (d: Data): ArrayBuffer => typeof d === 'string' ? enc.encode(d).buffer as ArrayBuffer : d.slice(0);
+const toBuf = (d: Data): ArrayBuffer => typeof d === 'string' ? enc.encode(d).buffer : d.slice(0);
 
 export abstract class TAbstractFile {
     vault!: Vault;
@@ -95,7 +95,7 @@ export class Vault extends Events {
     private files = new Map<string, TAbstractFile>();
     private root: TFolder;
     adapter: DataAdapter;
-    configDir = '.obsidian';
+    configDir = '.demo-config';
     private dirty = new Set<string>();
     private deleted = new Set<string>();
     private flushTimer: number | null = null;
@@ -148,7 +148,8 @@ export class Vault extends Events {
         if (!e) return;
         const parentPath = parentOf(p);
         if (parentPath && !this.files.has(parentPath)) this.indexPath(parentPath);
-        const parent = (this.files.get(parentPath) as TFolder | undefined) ?? this.root;
+        const pf = this.files.get(parentPath);
+        const parent = pf instanceof TFolder ? pf : this.root;
         const f: TAbstractFile = e.folder ? new TFolder() : new TFile();
         f.vault = this;
         setPath(f, p);
@@ -234,7 +235,8 @@ export class Vault extends Events {
             setPath(f, to);
             const parentPath = parentOf(to);
             if (parentPath && !this.files.has(parentPath)) this.indexPath(parentPath);
-            const parent = (this.files.get(parentPath) as TFolder | undefined) ?? this.root;
+            const pf = this.files.get(parentPath);
+            const parent = pf instanceof TFolder ? pf : this.root;
             f.parent = parent;
             parent.children.push(f);
             this.files.set(to, f);
@@ -299,18 +301,25 @@ export class Vault extends Events {
     async create(path: string, data: string): Promise<TFile> {
         const p = norm(path);
         if (this._entries.has(p)) throw new Error('File already exists.');
-        return this._write(p, data) as TFile;
+        return this.fileAt(this._write(p, data));
     }
     async createBinary(path: string, data: ArrayBuffer): Promise<TFile> {
         const p = norm(path);
         if (this._entries.has(p)) throw new Error('File already exists.');
-        return this._write(p, data.slice(0)) as TFile;
+        return this.fileAt(this._write(p, data.slice(0)));
     }
     async createFolder(path: string): Promise<TFolder> {
         const p = norm(path);
         if (this._entries.has(p)) throw new Error('Folder already exists.');
         this._mkdirs(p);
-        return this.files.get(p) as TFolder;
+        const f = this.files.get(p);
+        if (!(f instanceof TFolder)) throw new Error('Folder could not be created.');
+        return f;
+    }
+    /** The file just written (an error if the path is not a file). */
+    private fileAt(f: unknown): TFile {
+        if (!(f instanceof TFile)) throw new Error('File could not be created.');
+        return f;
     }
     async read(file: TFile) { return toText(this._get(file.path)); }
     async cachedRead(file: TFile) { return this.read(file); }

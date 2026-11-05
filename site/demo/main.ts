@@ -52,9 +52,11 @@ async function boot(host: HTMLElement): Promise<boolean> {
 
     const app = new App(vault);
     app.defaultPluginData = DEMO_SETTINGS;
-    const manifest = { ...manifestJson, dir: `.obsidian/plugins/${manifestJson.id}` };
-    const plugin = new HandwritingPlugin(app as any, manifest as any);
-    await (plugin as any).loadAsync();
+    const manifest = { ...manifestJson, dir: `${vault.configDir}/plugins/${manifestJson.id}` };
+    // The plugin is typed against the real Obsidian API; the shim's App / Plugin implement the parts it uses.
+    type PluginArgs = ConstructorParameters<typeof HandwritingPlugin>;
+    const plugin = new HandwritingPlugin(app as unknown as PluginArgs[0], manifest);
+    await (plugin as unknown as { loadAsync(): Promise<void> }).loadAsync();
 
     host.empty();
     const leaf = new WorkspaceLeaf(app, host);
@@ -62,16 +64,17 @@ async function boot(host: HTMLElement): Promise<boolean> {
     app.workspace.activeLeaf = leaf;
     state = { app, vault, plugin, leaf };
 
-    const file = vault.getAbstractFileByPath(NOTE_PATH) as TFile;
-    await leaf.openFile(file);
+    const file = vault.getAbstractFileByPath(NOTE_PATH);
+    if (file instanceof TFile) await leaf.openFile(file);
     const v = currentView();
     if (v) {
         // First visit on a narrow screen (phone): the page would be wider than the view at 100 % – fit it.
         if (!plugin.settings.lastPositions[NOTE_PATH]) {
-            requestAnimationFrame(() => { if (v.scrollArea && v.pageW(0) * v.currentZoom > v.scrollArea.clientWidth - 8) v.fitToWidth(); });
+            window.requestAnimationFrame(() => { if (v.scrollArea && v.pageW(0) * v.currentZoom > v.scrollArea.clientWidth - 8) v.fitToWidth(); });
         }
     }
-    (window as any).hwDemo = { app, vault, plugin, get view() { return currentView(); } };
+    // for debugging in the browser console
+    (window as unknown as { hwDemo?: unknown }).hwDemo = { app, vault, plugin, get view() { return currentView(); } };
     return fresh;
 }
 
@@ -84,7 +87,7 @@ async function resetDemo(host: HTMLElement) {
         try { await old.leaf.detach(); } catch (e) { console.error(e); }
         try { old.plugin.unload(); } catch (e) { console.error(e); }
     }
-    document.querySelectorAll('body > .menu, body > .modal-container').forEach(el => el.remove());
+    activeDocument.querySelectorAll('body > .menu, body > .modal-container').forEach(el => el.remove());
     await clearAll();
     await boot(host);
     new Notice('Demo reset.');
@@ -99,38 +102,36 @@ async function downloadNote() {
 
 /** Fullscreen hides the browser UI. Where it is not supported (e.g. iPhone) the button is hidden. */
 function setupFullscreen(btn: HTMLButtonElement) {
-    const root = document.documentElement;
-    if (!root.requestFullscreen || !document.fullscreenEnabled) { btn.hidden = true; return; }
+    const root = activeDocument.documentElement;
+    if (!root.requestFullscreen || !activeDocument.fullscreenEnabled) { btn.hidden = true; return; }
     const label = btn.querySelector('.demo-btn-label');
     const sync = () => {
-        const on = !!document.fullscreenElement;
+        const on = !!activeDocument.fullscreenElement;
         btn.setAttribute('aria-pressed', String(on));
         btn.title = on ? 'Exit fullscreen' : 'Fullscreen';
         if (label) label.textContent = on ? 'Exit' : 'Fullscreen';
     };
-    btn.addEventListener('click', async () => {
-        try {
-            if (document.fullscreenElement) await document.exitFullscreen();
-            else await root.requestFullscreen();
-        } catch { /* refused by the browser */ }
+    btn.addEventListener('click', () => {
+        const done = activeDocument.fullscreenElement ? activeDocument.exitFullscreen() : root.requestFullscreen();
+        done.catch(() => { /* refused by the browser */ });
     });
-    document.addEventListener('fullscreenchange', sync);
+    activeDocument.addEventListener('fullscreenchange', sync);
 }
 
 function init() {
-    const host = document.getElementById('demo-view');
+    const host = activeDocument.getElementById('demo-view');
     if (!host) return;
-    const on = (id: string, fn: () => unknown) => document.getElementById(id)?.addEventListener('click', () => { void fn(); });
+    const on = (id: string, fn: () => unknown) => activeDocument.getElementById(id)?.addEventListener('click', () => { void fn(); });
     on('demo-reset', () => resetDemo(host));
     on('demo-download', () => downloadNote());
     on('demo-export', () => currentView()?.exportToPDF());
     on('demo-settings', () => state?.app.setting.openTabById(manifestJson.id));
-    const fs = document.getElementById('demo-fullscreen') as HTMLButtonElement | null;
+    const fs = activeDocument.getElementById('demo-fullscreen') as HTMLButtonElement | null;
     if (fs) setupFullscreen(fs);
 
     // Unsaved changes are written before the page is left.
     const flush = () => { const v = currentView(); if (v) void v.save(); void state?.vault.flush(); };
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });
+    activeDocument.addEventListener('visibilitychange', () => { if (activeDocument.visibilityState === 'hidden') flush(); });
     window.addEventListener('pagehide', flush);
 
     boot(host).then(async () => {
@@ -144,4 +145,4 @@ function init() {
     });
 }
 
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+if (activeDocument.readyState === 'loading') activeDocument.addEventListener('DOMContentLoaded', init); else init();

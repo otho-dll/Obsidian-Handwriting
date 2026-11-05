@@ -6,6 +6,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+/** Output of this command-line script. */
+const say = (...parts) => process.stdout.write(parts.join(' ') + '\n');
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const out = path.join(root, 'build');
 const watch = process.argv.includes('--watch');
@@ -19,7 +22,7 @@ const copyStatic = {
             fs.mkdirSync(out, { recursive: true });
             fs.copyFileSync(path.join(root, 'src', 'styles.css'), path.join(out, 'styles.css'));
             fs.copyFileSync(path.join(root, 'manifest.json'), path.join(out, 'manifest.json'));
-            console.log(new Date().toLocaleTimeString(), 'built → build/');
+            say(new Date().toLocaleTimeString(), 'built → build/');
         });
     },
 };

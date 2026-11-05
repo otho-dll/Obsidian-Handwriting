@@ -102,7 +102,7 @@ export default {
             },
             {
                 title: 'Manually',
-                text: 'Download <code>main.js</code>, <code>manifest.json</code> and <code>styles.css</code> from the <a href="{{links.releases}}" rel="noopener">latest release</a> into <code>&lt;your vault&gt;/.obsidian/plugins/{{pluginId}}/</code>, then enable the plugin in Settings → Community plugins.',
+                text: 'Download <code>main.js</code>, <code>manifest.json</code> and <code>styles.css</code> from the <a href="{{links.releases}}" rel="noopener">latest release</a> into the <code>plugins/{{pluginId}}/</code> folder inside the configuration folder of your vault, then enable the plugin in Settings → Community plugins.',
             },
         ],
         gettingStarted: '<strong>Getting started:</strong> right-click a folder in the file explorer → <em>New handwritten note</em>, or run the command <em>Create new handwritten note</em>. Fingers scroll and zoom, the pen draws, and everything saves automatically.',
