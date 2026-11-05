@@ -1,0 +1,94 @@
+/* Demo page: a slim bar on top, the plugin view fills the rest of the screen. */
+html, body.demo-page { height: 100%; margin: 0; }
+body.demo-page {
+    display: flex; flex-direction: column;
+    height: 100vh; height: 100dvh;
+    overflow: hidden; overscroll-behavior: none;
+    font-family: var(--font-interface); color: var(--text-normal); background: var(--background-secondary);
+    -webkit-text-size-adjust: 100%;
+}
+body.demo-page *, body.demo-page *::before, body.demo-page *::after { box-sizing: border-box; }
+
+.demo-top {
+    flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 8px 16px;
+    padding: 6px 10px; padding-top: max(6px, env(safe-area-inset-top));
+    padding-left: max(10px, env(safe-area-inset-left)); padding-right: max(10px, env(safe-area-inset-right));
+    background: var(--background-primary); border-bottom: 1px solid var(--background-modifier-border);
+}
+.demo-brand { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--text-normal); text-decoration: none; font-weight: 650; font-size: 15px; }
+.demo-brand .logo { flex: 0 0 auto; display: block; filter: drop-shadow(0 0 6px rgba(15, 73, 190, 0.4)); }
+.demo-brand-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.demo-brand:hover .demo-brand-name { text-decoration: underline; text-underline-offset: 2px; }
+.demo-badge { flex: 0 0 auto; padding: 2px 8px; border-radius: 5px; font-size: 12px; font-weight: 600; color: var(--text-accent); background: var(--background-modifier-active-hover); }
+
+.demo-bar { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.demo-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; padding: 5px 10px;
+    font: inherit; font-size: 13px; font-weight: 600; line-height: 1; white-space: nowrap; text-decoration: none; cursor: pointer;
+    color: var(--text-normal); background: var(--interactive-normal);
+    border: 1px solid var(--background-modifier-border); border-radius: 8px; box-shadow: var(--shadow-s);
+    touch-action: manipulation;
+}
+.demo-btn:hover { background: var(--interactive-hover); border-color: var(--background-modifier-border-hover); }
+.demo-btn:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: 1px; }
+.demo-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; }
+.demo-btn[aria-pressed="true"] { background: var(--background-modifier-active-hover); border-color: var(--interactive-accent); }
+.demo-btn-primary { background: var(--interactive-accent); border-color: transparent; color: var(--text-on-accent); }
+.demo-btn-primary:hover { background: var(--interactive-accent-hover); border-color: transparent; }
+
+/* Narrow screens: icons only, the brand shrinks to its logo + badge. */
+@media (max-width: 900px) { .demo-brand-name { display: none; } }
+@media (max-width: 600px) {
+    .demo-btn-label { display: none; }
+    .demo-btn { width: 36px; min-height: 36px; padding: 0; }
+    .demo-bar { gap: 4px; }
+}
+
+.demo-app {
+    position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden;
+    background: var(--background-secondary); font-size: 14px; isolation: isolate;
+    padding-bottom: env(safe-area-inset-bottom);
+}
+/* The marble background (site/background.jpg, site/background-light.jpg) behind the pages, under a veil – the build sets --demo-bg-image. */
+:root { --demo-veil: linear-gradient(180deg, rgba(241, 243, 247, 0.55), rgba(241, 243, 247, 0.7)); }
+:root[data-theme="dark"] { --demo-veil: linear-gradient(180deg, rgba(17, 17, 17, 0.3), rgba(17, 17, 17, 0.5)); }
+.demo-app { background: var(--demo-veil), var(--demo-bg-image, none) center / cover no-repeat, var(--background-secondary); }
+.demo-app .handwriting-container { background: transparent; }
+.demo-app > .workspace-leaf-content { display: flex; flex-direction: column; height: 100%; }
+.demo-app .view-header { display: none; }
+.demo-app .view-content { position: relative; flex: 1 1 auto; min-height: 0; }
+.demo-app .handwriting-container { height: 100%; outline: none; }
+/* Unselected tool buttons get their own fill, so they stand out from the toolbar (the plugin leaves them
+   transparent and relies on the Obsidian theme). The selected one keeps the plugin's accent colour. */
+:root { --demo-tool-bg: #e9edf4; --demo-tool-bg-hover: #dde3ee; --demo-tool-border: #cfd6e3; }
+/* Dark mode: set by site/theme.js (follows the system unless the toggle was used). */
+:root[data-theme="dark"] { --demo-tool-bg: #2b2b2b; --demo-tool-bg-hover: #363636; --demo-tool-border: rgba(255, 255, 255, 0.16); }
+.hw-tool-btn:not(.active) {
+    background: var(--demo-tool-bg);
+    border-color: var(--demo-tool-border);
+    box-shadow: none;
+}
+.hw-tool-btn:not(.active):not(:disabled):hover { background: var(--demo-tool-bg-hover); }
+
+.demo-loading { display: flex; align-items: center; justify-content: center; height: 100%; margin: 0; color: var(--text-muted); font-size: 15px; }
+
+/* light / dark switch: just the icon */
+.demo-theme-toggle {
+    display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0;
+    border: 0; border-radius: 8px; background: transparent; color: var(--text-muted); cursor: pointer;
+}
+.demo-theme-toggle:hover { color: var(--text-accent); }
+.demo-theme-toggle:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: 1px; }
+.demo-theme-toggle svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.theme-toggle .icon-sun { display: none; }
+:root[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
+:root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+@media (max-width: 600px) {
+    .demo-btn { width: 38px; min-height: 36px; padding: 0; }
+    .demo-theme-toggle { width: 30px; }
+}
+@media (max-width: 480px) { .demo-badge { display: none; } }
+@media (max-width: 380px) {
+    .demo-btn { width: 34px; }
+    .demo-bar { gap: 2px; }
+}

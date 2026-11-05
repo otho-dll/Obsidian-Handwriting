@@ -1,0 +1,52 @@
+# Builds the website (landing page + live demo, see scripts/build-site.mjs) and publishes it on GitHub Pages.
+# Runs when a version tag is pushed (together with the release) and manually from the Actions tab.
+# One-time setup: repository Settings → Pages → Source: "GitHub Actions"; custom domain as in site/content.mjs.
+name: Website
+
+on:
+  push:
+    tags:
+      - "*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; a newer run does not cancel one that is already deploying.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Build the website
+        run: |
+          npm ci
+          npm run site:build
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: build/site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

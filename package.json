@@ -8,6 +8,9 @@
     "dev": "node scripts/esbuild.config.mjs --watch",
     "build": "node scripts/esbuild.config.mjs",
     "typecheck": "tsc -p src",
+    "site:dev": "node scripts/build-site.mjs --serve",
+    "site:build": "node scripts/build-site.mjs",
+    "site:typecheck": "tsc -p site",
     "embed": "python src/tools/embed_script.py",
     "deploy": "node scripts/deploy.mjs",
     "deploy:watch": "node scripts/deploy.mjs --watch",
@@ -15,7 +18,9 @@
   },
   "devDependencies": {
     "esbuild": "^0.17.0",
+    "lucide": "^1.68.0",
     "obsidian": "latest",
+    "pdfjs-dist": "^6.5.438",
     "typescript": "^5.6.0"
   }
 }

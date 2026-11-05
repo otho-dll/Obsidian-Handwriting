@@ -37,7 +37,7 @@ export class HandwritingSettingTab extends PluginSettingTab {
         const title = info.createDiv({ cls: 'hw-about-title' });
         title.createSpan({ text: m.name, cls: 'hw-about-name' });
         title.createSpan({ text: ` v${m.version}`, cls: 'hw-about-version' });
-        info.createDiv({ cls: 'hw-about-text', text: 'Handwritten notes with a pen, finger or mouse: infinite-feeling pages, shapes, images, PDF import and export, a calculator and function plots.' });
+        info.createDiv({ cls: 'hw-about-text', text: 'Handwritten notes with a pen or a mouse: infinite-feeling pages, shapes, images, PDF import and export, a calculator and function plots.' });
         info.createDiv({ cls: 'hw-about-text hw-about-ai', text: 'This plugin was written with the help of Claude, an AI assistant made by Anthropic.' });
         if (m.author) info.createDiv({ cls: 'hw-about-text', text: `Author: ${m.author}` });
     }
@@ -60,7 +60,7 @@ export class HandwritingSettingTab extends PluginSettingTab {
             c.createEl('h4', { text: 'Pen pressure', cls: 'hw-set-sub' });
             new Setting(c)
                 .setName('Pressure sensitivity')
-                .setDesc('Stroke width follows the pen pressure (pens only; mouse and finger are unaffected). Highlighter and shapes keep a constant width.')
+                .setDesc('Stroke width follows the pen pressure (pens only; the mouse draws with a constant width). Highlighter and shapes keep a constant width.')
                 .addToggle(t => t.setValue(st.pressureEnabled).onChange(async (v) => { st.pressureEnabled = v; await this.plugin.saveSettings(); this.plugin.refreshViews(); }));
             new Setting(c)
                 .setName('Sensitivity strength')

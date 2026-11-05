@@ -895,6 +895,16 @@ button.hw-selmode-opt.active .hw-selmode-check { border-color: var(--interactive
 .hw-rail-preview-left { left: 40px; }
 .hw-rail-preview.hw-rail-preview-on { display: flex; }
 .hw-rail-preview canvas { display: block; width: 168px; border-radius: 3px; box-shadow: 0 0 0 1px rgba(128, 128, 128, 0.35); background: #fff; }
+/* the part of the page the jump will show: an accent frame, the rest of the page slightly dimmed */
+.hw-rail-preview-sheet { position: relative; overflow: hidden; border-radius: 3px; }
+.hw-rail-preview-view {
+    position: absolute; display: none; box-sizing: border-box; pointer-events: none;
+    border: 2px solid var(--interactive-accent); border-radius: 2px;
+    box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.2);
+    transition: top 0.08s linear, height 0.08s linear;
+}
+.hw-rail-preview-view.is-on { display: block; }
+.hw-rail-preview-view.is-below { border-style: dashed; }
 .hw-rail-preview-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .hw-rail-preview-num { font-weight: 700; font-size: 15px; color: var(--text-normal); }
 .hw-rail-preview-sec { font-size: 12px; font-weight: 600; color: var(--interactive-accent); }

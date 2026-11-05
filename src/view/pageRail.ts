@@ -44,7 +44,10 @@ export const pageRailMixin = defineMixin({
         this.railBadge = this.scrollArea.createDiv({ cls: `hw-rail-badge hw-rail-badge-${side}` });
 
         const preview = this.scrollArea.createDiv({ cls: `hw-rail-preview hw-rail-preview-${side}` });
-        const pc = preview.createEl('canvas');
+        // The page thumbnail with a frame showing which part of the page the jump will show.
+        const sheet = preview.createDiv({ cls: 'hw-rail-preview-sheet' });
+        const pc = sheet.createEl('canvas');
+        sheet.createDiv({ cls: 'hw-rail-preview-view' });
         pc.width = PREVIEW_W * 2; pc.height = Math.round(PREVIEW_W * 2 * 1.414);
         const meta = preview.createDiv({ cls: 'hw-rail-preview-meta' });
         meta.createSpan({ cls: 'hw-rail-preview-num' });
@@ -133,18 +136,68 @@ export const pageRailMixin = defineMixin({
         return Math.max(1, tops[n - 1] + this.pageH(n - 1));
     },
 
-    /** Jumps so that the place docY is in view: a page starts at the top, a long endless page is centred on docY. */
-    jumpToDocY(docY: number) {
+    /**
+     * Where a jump to docY lands: the page and the new vertical view position. A page starts at the top; a page much
+     * taller than the view (zoomed in, endless page) is centred on docY. Used by the jump and by the preview frame,
+     * so the preview always shows exactly the part of the page the jump will show.
+     */
+    railJumpTarget(docY: number): { i: number; posY: number; centred: boolean } {
         const { i, within } = this.pageAtWrapperY(docY);
-        const viewH = this.scrollArea.clientHeight / this.currentZoom;
+        const z = this.currentZoom;
+        const viewH = this.scrollArea.clientHeight / z;
         if (this.pageH(i) > viewH * 1.5 && within > viewH * 0.5) {
+            return { i, posY: this.scrollArea.clientHeight / 2 - docY * z, centred: true };
+        }
+        const top = this.pageViews[i]?.outer.offsetTop ?? this.pageTops()[i] ?? 0;
+        return { i, posY: -(top - 10) * z, centred: false };   // the same position as scrollToPage
+    },
+
+    /** Jumps so that the place docY is in view (see railJumpTarget). */
+    jumpToDocY(docY: number) {
+        const t = this.railJumpTarget(docY);
+        if (t.centred) {
             this.stopInertia();
-            this.pagePositionY = this.scrollArea.clientHeight / 2 - docY * this.currentZoom;
+            this.pagePositionY = t.posY;
             this.applyManualZoom();
             this.scheduleRedrawAfterZoom();
         } else {
-            this.scrollToPage(i);
+            this.scrollToPage(t.i);
         }
+    },
+
+    /**
+     * Frame on the rail preview: the part of page i that will be visible after the jump (in thumbnail pixels).
+     * Hidden when the whole page fits in the view anyway.
+     */
+    placeRailPreviewFrame(i: number, posY: number) {
+        const frame = this.railPreview?.querySelector('.hw-rail-preview-view') as HTMLElement | null;
+        const view = this.pageViews[i];
+        if (!frame || !view || !this.scrollArea) return;
+        const page = this.noteData.pages[i];
+        const z = this.currentZoom;
+        const PW = this.pageW(i), PH = this.pageH(i);
+        const pageTop = view.outer.offsetTop + view.container.offsetTop;
+        const pageLeft = view.outer.offsetLeft + view.container.offsetLeft;
+        // visible part of the page after the jump (page coordinates; the horizontal position does not change)
+        const top = Math.max(0, -posY / z - pageTop);
+        const bottom = Math.min(PH, (this.scrollArea.clientHeight - posY) / z - pageTop);
+        const left = Math.max(0, -this.pagePositionX / z - pageLeft);
+        const right = Math.min(PW, (this.scrollArea.clientWidth - this.pagePositionX) / z - pageLeft);
+        const whole = top <= 1 && bottom >= PH - 1 && left <= 1 && right >= PW - 1;
+        frame.toggleClass('is-on', !whole && bottom > top && right > left);
+        if (whole) return;
+        // thumbnail scale: the page fills the width; an endless page shows its beginning (A4 proportions)
+        const k = PREVIEW_W / PW;
+        const shownH = page.endless ? PREVIEW_W * 1.414 : PH * k;
+        let t = top * k, h = (bottom - top) * k;
+        // beyond the shown part of an endless page: the frame stays at the bottom edge, marked as "further down"
+        const below = t > shownH - 6;
+        if (below) { t = shownH - 6; h = 6; }
+        frame.toggleClass('is-below', below);
+        frame.style.top = `${t}px`;
+        frame.style.height = `${Math.max(4, Math.min(h, shownH - t))}px`;
+        frame.style.left = `${left * k}px`;
+        frame.style.width = `${Math.max(4, (right - left) * k)}px`;
     },
 
     /** Preview card next to the rail: page under the finger, its number and section. */
@@ -165,6 +218,9 @@ export const pageRailMixin = defineMixin({
         const h = card.offsetHeight || 300;
         const y = Math.max(8, Math.min(area.height - h - 8, clientY - area.top - h / 2));
         card.style.top = `${y}px`;
+        // The frame moves with every step (also while the page under the finger stays the same).
+        const target = this.railJumpTarget(docY);
+        this.placeRailPreviewFrame(i, target.i === i ? target.posY : -((this.pageViews[i]?.outer.offsetTop ?? 0) - 10) * this.currentZoom);
         if (this.railPreviewPage === i) return;
         this.railPreviewPage = i;
         const page = this.noteData.pages[i];

@@ -2,6 +2,8 @@
 
 # Handwritten A4 Notebook
 
+**[✏️ Try the live demo](https://handwriting.anulab.tech/demo/)** – the real plugin running in your browser, no installation needed. · [Website](https://handwriting.anulab.tech/)
+
 > **AI Notice!** This project is entirely vibe-coded using Claude Code.
 >
 > It started as a personal tool, made just for me and my own notes. Over time it grew into something
@@ -84,7 +86,8 @@ selected strokes). Colours sit on the toolbar; in a narrow window they are in on
 - The **current page** has a thin accent frame (the same at every zoom level).
 - **Page rail** - a thin strip along the edge of the note, like a scrollbar: top = first page, bottom = last page,
   ticks = pages with a title. **Drag along it** to see a preview of the page under your finger (*74 / 120* and the
-  section title); let go to jump there. A tap jumps at once.
+  section title); let go to jump there. A tap jumps at once. A frame on the preview shows which part of the page
+  you will land on (the top of the page, or - when you are zoomed in on a long page - the place you point at).
   - *Fine* precision (default): move your finger away from the edge and the rail slows down 4× - handy with hundreds
     of pages - and the preview snaps to section starts. *Simple* follows your finger 1:1.
   - Settings → Pages and view → Page navigation: always visible / while scrolling / off, side, precision.
@@ -257,7 +260,7 @@ Settings → **OLED care** - each option on its own:
 `<your vault>/.obsidian/plugins/handwritten-notebook/`, then enable the plugin in Settings → Community plugins.
 
 ## Privacy, network and desktop-only features
-- The plugin makes **no network requests** and collects **no telemetry**. PDF import uses the PDF engine bundled with Obsidian.
+- The plugin doesn't make network requests or collect telemetry. PDF import uses the PDF engine bundled with Obsidian.
 - **Files outside the vault:** only when you choose a folder on your computer as the PDF export location (desktop only).
 - **Desktop-only extras** (Electron / Node APIs, used only on desktop and turned off on mobile): saving PDFs to a folder
   outside the vault, the Windows Snipping Tool integration, and reading images from the system clipboard when the
@@ -285,7 +288,8 @@ src/tools/hnote2pdf.py  standalone converter; src/tools/embed_script.py copies i
 scripts/                esbuild.config.mjs (build) and deploy.mjs (copies the build into a vault for testing)
 build/                  build output: main.js, manifest.json, styles.css (not committed)
 manifest.json           plugin manifest – stays in the repository root, Obsidian reads it from there
-.github/workflows/      builds and publishes a GitHub release when a version tag is pushed
+.github/workflows/      release.yml: GitHub release on a version tag · pages.yml: the website on GitHub Pages
+site/                   website + live demo: content.mjs (all texts and links), render.mjs, site.css, shim/ (fake Obsidian API)
 ```
 ```bash
 npm install
@@ -294,6 +298,8 @@ npm run build         # production build into build/
 npm run typecheck     # TypeScript check
 npm run embed         # after changing src/tools/hnote2pdf.py
 npm run deploy:local  # build and copy build/* into the vault folder set in .vault-plugin-dir
+npm run site:dev      # website + live demo on http://localhost:8080 (rebuilds on change)
+npm run site:build    # website into build/site/
 ```
 
 ## License
