@@ -59,6 +59,8 @@ export default class HandwritingPlugin extends Plugin {
     lastPrune: Map<string, number> = new Map();
     /** Plugin clipboard (cut / copied strokes and images). */
     clip: { strokes: Stroke[]; images: ImageItem[]; from?: string } | null = null;
+    /** Copied whole page ("Copy page" / "Paste page" in the page menu) – also between notes. */
+    pageClip: { page: PageData; from?: string } | null = null;
     openCalculator() { new CalculatorModal(this.app, this.calcState).open(); }
 
     settings: HandwritingSettings = { ...DEFAULT_SETTINGS };
@@ -610,6 +612,8 @@ export class HandwritingView extends TextFileView {
 
     // Current page (src/view/currentPage.ts)
     currentPageIdx = -1;
+    /** Page made current by tapping / clicking it (stays current while it is visible), -1 = none. */
+    pinnedPageIdx = -1;
     /** "12 / 40" indicator beside the current page. */
     pageNumEl: HTMLElement | null = null;
     pageNumW = 0;
@@ -1143,7 +1147,20 @@ export class HandwritingView extends TextFileView {
             singlePageContainer.addEventListener('pointerenter', (e) => {
                 if (e.pointerType !== 'touch') this.activePageIndex = index;
             });
-            singlePageContainer.addEventListener('pointerdown', () => { this.activePageIndex = index; }, true);
+            // Tapping / clicking / writing on a page makes it the current page (a finger scroll does not).
+            let tapStart: { id: number; x: number; y: number } | null = null;
+            singlePageContainer.addEventListener('pointerdown', (e) => {
+                this.activePageIndex = index;
+                if (e.pointerType === 'touch') tapStart = { id: e.pointerId, x: e.clientX, y: e.clientY };
+                else this.pinCurrentPage(index);
+            }, true);
+            singlePageContainer.addEventListener('pointerup', (e) => {
+                const t = tapStart;
+                if (!t || t.id !== e.pointerId) return;
+                tapStart = null;
+                if (Math.hypot(e.clientX - t.x, e.clientY - t.y) < 10) this.pinCurrentPage(index);
+            }, true);
+            singlePageContainer.addEventListener('pointercancel', () => { tapStart = null; }, true);
 
             const highCanvas = pageContainer.createEl("canvas", { cls: "hw-layer-highlighter" });
             const bottomCanvas = pageContainer.createEl("canvas", { cls: "hw-layer-bottom" });

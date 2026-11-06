@@ -19,10 +19,10 @@ export default {
         /** Custom domain of the GitHub Pages site (written to CNAME). */
         domain: 'handwriting.anulab.tech',
         /** Browser tab title (short – tabs are narrow) and search-engine description of the landing page. */
-        title: 'Handwritten A4 Notebook',
+        title: 'Handwritten Notebook',
         description: 'An Obsidian plugin for pen-first handwritten notes on A4 pages: pressure ink, highlighter, shapes, lasso, PDF import and export, calculator, function plots and version history. Try the live demo in your browser.',
         /** Project name (intro section, demo header). */
-        name: 'Handwritten A4 Notebook',
+        name: 'Handwritten Notebook',
         /** Colour of the browser UI on phones. */
         themeColor: '#4f7552',
     },
@@ -93,7 +93,7 @@ export default {
         steps: [
             {
                 title: 'Community plugins',
-                text: 'Settings → Community plugins → Browse → search <em>Handwritten A4 Notebook</em> → Install → Enable.',
+                text: 'Settings → Community plugins → Browse → search <em>Handwritten Notebook</em> → Install → Enable.',
                 button: { label: 'Open in Obsidian', href: '{{links.obsidian}}', primary: true },
             },
             {
@@ -110,7 +110,7 @@ export default {
 
     footer: {
         /** First line: project name and version (no links). */
-        project: 'Handwritten A4 Notebook <span class="version">v{{version}}</span> · MIT License',
+        project: 'Handwritten Notebook <span class="version">v{{version}}</span> · MIT License',
         /** The lines below are the same as on tycho.anulab.tech / anulab.tech. */
         lines: [
             'Made with <span class="heart">💚</span> by Simon with Claude ;)',
@@ -123,7 +123,7 @@ export default {
     /** The live demo page (/demo/). */
     demo: {
         title: 'Handwriting Demo',
-        description: 'Try the Handwritten A4 Notebook plugin for Obsidian in your browser: write with a pen or a mouse on real A4 pages.',
+        description: 'Try the Handwritten Notebook plugin for Obsidian in your browser: write with a pen or a mouse on real A4 pages.',
         badge: 'Live demo',
         /** Shown once on the first visit. */
         welcome: 'This is the real plugin running in your browser. Write with a pen or a mouse – your changes stay on this device.',

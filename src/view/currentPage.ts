@@ -14,6 +14,7 @@ export const currentPageMixin = defineMixin({
     /** Rebuilds what depends on the page list (after pages were added / removed / renamed). */
     buildPageIndicator() {
         this.currentPageIdx = -1;   // pages were rebuilt: mark the current page again
+        this.pinnedPageIdx = -1;
         if (this.pageNumEl) { this.pageNumEl.remove(); this.pageNumEl = null; }
         if (this.scrollArea) {
             const el = this.scrollArea.createEl('button', { cls: 'hw-page-num' });
@@ -35,12 +36,41 @@ export const currentPageMixin = defineMixin({
         return { i, within: y - (tops[i] ?? 0) };
     },
 
-    /** Current page from the view position: frame, pages panel and the indicator. Called after every view change. */
+    /** Tapped / clicked page becomes the current one (until it leaves the view). */
+    pinCurrentPage(i: number) {
+        if (i < 0 || i >= this.noteData.pages.length) return;
+        this.pinnedPageIdx = i;
+        this.activePageIndex = i;
+        this.updateCurrentPage();
+    },
+
+    /** Whether page i is (at least partly) visible in the view. */
+    pageVisibleInView(i: number): boolean {
+        const area = this.scrollArea;
+        const view = this.pageViews[i];
+        if (!area || !view) return false;
+        const z = this.currentZoom;
+        const top = this.pagePositionY + (view.outer.offsetTop + view.container.offsetTop) * z;
+        const left = this.pagePositionX + (view.outer.offsetLeft + view.container.offsetLeft) * z;
+        const bottom = top + this.pageH(i) * z, right = left + this.pageW(i) * z;
+        return bottom > 0 && top < area.clientHeight && right > 0 && left < area.clientWidth;
+    },
+
+    /**
+     * Current page: the tapped page while it is still visible, otherwise the page in the middle of the view.
+     * Updates the frame, pages panel and the indicator. Called after every view change.
+     */
     updateCurrentPage() {
         const n = this.noteData.pages.length;
-        const viewH = this.scrollArea?.clientHeight ?? 0;
-        const cy = (viewH / 2 - this.pagePositionY) / this.currentZoom;
-        const idx = n ? Math.max(0, Math.min(n - 1, this.pageAtWrapperY(cy).i)) : 0;
+        let idx: number;
+        if (this.pinnedPageIdx >= 0 && this.pinnedPageIdx < n && this.pageVisibleInView(this.pinnedPageIdx)) {
+            idx = this.pinnedPageIdx;
+        } else {
+            this.pinnedPageIdx = -1;
+            const viewH = this.scrollArea?.clientHeight ?? 0;
+            const cy = (viewH / 2 - this.pagePositionY) / this.currentZoom;
+            idx = n ? Math.max(0, Math.min(n - 1, this.pageAtWrapperY(cy).i)) : 0;
+        }
         if (idx !== this.currentPageIdx) {
             this.currentPageIdx = idx;
             this.markPanelCurrent(idx);

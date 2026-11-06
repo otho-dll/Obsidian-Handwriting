@@ -447,6 +447,7 @@ export const selectionEditMixin = defineMixin({
         menu.addItem(i => i.setTitle('Send to back').setIcon('send-to-back').onClick(() => this.arrangeSelection('back')));
         if (this.selectionUnits().length >= 2) menu.addItem(i => i.setTitle('Align…').setIcon('align-center-horizontal').onClick(() => window.setTimeout(() => this.openAlignPanel(at.x, at.y), 30)));
         menu.addItem(i => i.setTitle('Lock').setIcon('lock').onClick(() => this.lockSelection()));
+        if (sel.page < this.noteData.pages.length - 1 && !this.readOnly) menu.addItem(i => i.setTitle('Move to last page').setIcon('arrow-down-to-line').onClick(() => this.moveSelectionToLastPage()));
         menu.addSeparator();
         menu.addItem(i => i.setTitle('Rotate right 90°').setIcon('rotate-cw').onClick(() => this.rotateSelectionBy(Math.PI / 2)));
         menu.addItem(i => i.setTitle('Rotate left 90°').setIcon('rotate-ccw').onClick(() => this.rotateSelectionBy(-Math.PI / 2)));

@@ -126,7 +126,7 @@ export class AppSetting {
         if (this.modal && this.openId === id) return;
         this.close();
         this.openId = id;
-        this.modal = new SettingsModal(this.app, tab, 'Settings – Handwritten A4 Notebook');
+        this.modal = new SettingsModal(this.app, tab, 'Settings – Handwritten Notebook');
         const m = this.modal;
         const origClose = m.onClose.bind(m);
         m.onClose = () => { origClose(); if (this.modal === m) { this.modal = null; this.openId = null; } };

@@ -1,6 +1,6 @@
-<p align="center"><img src="docs/banner.png" alt="Handwritten A4 Notebook - an Obsidian plugin for pen-first handwritten notes" width="100%"></p>
+<p align="center"><img src="docs/banner.png" alt="Handwritten Notebook - an Obsidian plugin for pen-first handwritten notes" width="100%"></p>
 
-<h1 align="center">Handwritten A4 Notebook</h1>
+<h1 align="center">Handwritten Notebook</h1>
 
 <p align="center">
   Write by hand on real pages in Obsidian - pressure ink, shapes, PDFs and a calculator,<br>
@@ -38,7 +38,7 @@
 
 ## Install
 
-- **Community plugins:** Settings → Community plugins → Browse → search *Handwritten A4 Notebook* → Install → Enable.
+- **Community plugins:** Settings → Community plugins → Browse → search *Handwritten Notebook* → Install → Enable.
 - **Beta via BRAT:** install *BRAT* → *Add beta plugin* → `otho-dll/Obsidian-Handwriting`.
 - **Manually:** copy `main.js`, `manifest.json` and `styles.css` from the [latest release](https://github.com/otho-dll/Obsidian-Handwriting/releases/latest)
   into `<vault>/.obsidian/plugins/handwritten-notebook/` and enable the plugin.

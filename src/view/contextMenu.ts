@@ -96,6 +96,11 @@ export const contextMenuMixin = defineMixin({
                 menu.addItem(i => i.setTitle(has ? 'Rename page title…' : 'Page title…').setIcon('heading').onClick(() => this.editPageTitle(idx)));
             }
             menu.addItem(i => i.setTitle('Page style…').setIcon('paintbrush').onClick(() => this.openPageStylePanel({ left: clientX, top: clientY, bottom: clientY })));
+            if (idx >= 0) menu.addItem(i => i.setTitle('Copy page').setIcon('copy').onClick(() => this.copyPage(idx)));
+            if (this.plugin.pageClip && !this.readOnly) {
+                const pos = idx >= 0 ? idx + 1 : this.noteData.pages.length;
+                menu.addItem(i => i.setTitle('Paste page').setIcon('clipboard-paste').onClick(() => this.pastePage(pos)));
+            }
             menu.addSeparator();
             this.addPageQuickItems(menu);
         }

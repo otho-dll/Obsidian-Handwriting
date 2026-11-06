@@ -85,10 +85,18 @@ export const selectionMixin = defineMixin({
         if (!sel) return;
         const target = this.dropTargetPage(from);
         if (target === from) return;
+        const fromView = this.pageViews[from], toView = this.pageViews[target];
+        if (!fromView || !toView) return;
+        this.transferSelection(from, target, fromView.outer.offsetTop - toView.outer.offsetTop);
+    },
+
+    /** Moves the selected items from page `from` to page `target`, shifted down by `dy` (undoable). */
+    transferSelection(from: number, target: number, dy: number) {
+        const sel = this.selection;
+        if (!sel || target === from) return;
         const src = this.noteData.pages[from];
         const dst = this.noteData.pages[target];
         if (!src || !dst) return;
-        const dy = this.pageViews[from].outer.offsetTop - this.pageViews[target].outer.offsetTop;
         const strokes = [...sel.strokes], images = [...sel.images];
         this.translateItems(strokes, images, 0, dy);
         src.strokes = src.strokes.filter(st => !strokes.includes(st));
@@ -100,6 +108,23 @@ export const selectionMixin = defineMixin({
         this.activePageIndex = target;
         this.redrawPage(from);
         this.redrawPage(target);
+    },
+
+    /** Selection menu: moves the selected items to the last page (same place on the page) and shows it. */
+    moveSelectionToLastPage() {
+        const sel = this.selection;
+        if (!sel || !this.canEdit()) return;
+        const from = sel.page;
+        const target = this.noteData.pages.length - 1;
+        if (target <= from) return;
+        // Same position on the page; moved up if the last page is shorter and the items would stick out.
+        const b = this.getSelectionBounds();
+        let dy = 0;
+        if (b) dy = Math.max(-b.y, Math.min(0, this.pageH(target) - (b.y + b.h)));
+        this.transferSelection(from, target, dy);
+        this.requestSave();
+        this.updateSelectionUI();
+        this.scrollToPage(target);
     },
 
     clearSelection() {

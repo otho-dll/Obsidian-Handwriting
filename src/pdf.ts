@@ -57,7 +57,7 @@ export function buildPdf(pages: PdfPageImage[], title: string, outline: PdfOutli
         push(p.data);
         push('\nendstream\nendobj\n');
     });
-    begin(infoObj); push(`<< /Title ${pdfText(title)} /Producer (Handwritten A4 Notebook) >>\nendobj\n`);
+    begin(infoObj); push(`<< /Title ${pdfText(title)} /Producer (Handwritten Notebook) >>\nendobj\n`);
 
     let total = infoObj;
     if (outItems.length) {
