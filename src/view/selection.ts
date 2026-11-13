@@ -187,7 +187,7 @@ export const selectionMixin = defineMixin({
         const center = this.mkPoint((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
         if (s.shape === 'line') return [p0, center, p1];
         const outline = this.shapeOutline(s);
-        if (s.shape === 'rect') {
+        if (s.shape === 'rect' || s.shape === 'triangle') {
             const mids = outline.map((p, i) => {
                 const q = outline[(i + 1) % outline.length];
                 return this.mkPoint((p.x + q.x) / 2, (p.y + q.y) / 2);

@@ -39,7 +39,7 @@ export class HandwritingSettingTab extends PluginSettingTab {
         title.createSpan({ text: m.name, cls: 'hw-about-name' });
         title.createSpan({ text: ` v${m.version}`, cls: 'hw-about-version' });
         info.createDiv({ cls: 'hw-about-text', text: 'Handwritten notes with a pen or a mouse: infinite-feeling pages, shapes, images, PDF import and export, a calculator and function plots.' });
-        info.createDiv({ cls: 'hw-about-text hw-about-ai', text: 'This plugin was written with the help of Claude, an AI assistant made by Anthropic.' });
+        info.createDiv({ cls: 'hw-about-text hw-about-ai', text: 'This extension has been made using ClaudeCode under my supervision' });
         if (m.author) info.createDiv({ cls: 'hw-about-text', text: `Author: ${m.author}` });
     }
 
@@ -129,7 +129,7 @@ export class HandwritingSettingTab extends PluginSettingTab {
 
             new Setting(c)
                 .setName('Eraser on shapes')
-                .setDesc('Off: lines, rectangles and ellipses (and pieces left after partly erasing them) are never erased – handy for diagrams. Whole shape: touching a shape removes all of it. Partial: the eraser cuts out only the part it passes over (a filled shape or an arrow is still removed whole). Also in the eraser menu on the toolbar.')
+                .setDesc('Off: lines, rectangles, ellipses and triangles (and pieces left after partly erasing them) are never erased – handy for diagrams. Whole shape: touching a shape removes all of it. Partial: the eraser cuts out only the part it passes over (a filled shape or an arrow is still removed whole). Also in the eraser menu on the toolbar.')
                 .addDropdown(d => d
                     .addOption('off', 'Off (not erased)')
                     .addOption('whole', 'Whole shape')

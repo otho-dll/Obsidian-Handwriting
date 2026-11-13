@@ -10,7 +10,8 @@ export interface Stroke {
     isHighlighter: boolean;
     isEraser?: boolean;   // old notes only – converted to cut strokes on load
     // Shapes: points = [start, end]
-    shape?: 'line' | 'rect' | 'ellipse';
+    shape?: 'line' | 'rect' | 'ellipse' | 'triangle';
+    right?: boolean;      // triangle: right triangle (missing = isosceles)
     dash?: 'solid' | 'dashed' | 'dotted' | 'dashdot';
     fillAlpha?: number;   // fill opacity 0–1 of a filled shape (missing = 1, solid)
     noLine?: boolean;     // filled shape drawn without its outline
@@ -18,7 +19,7 @@ export interface Stroke {
     fillColor?: string;   // fill colour of a filled shape (missing = the outline colour)
     arrow?: boolean;
     poly?: boolean;       // freehand stroke drawn as a polyline (pieces of cut shapes)
-    rot?: number;         // rotation of a rectangle / ellipse around its centre (radians)
+    rot?: number;         // rotation of a rectangle / ellipse / triangle around its centre (radians)
     g?: string;           // group: items with the same g are selected and moved together (format v3)
     lock?: boolean;       // locked: cannot be selected, moved or erased (format v3)
     alpha?: number;       // pen opacity 0.1–1 (missing = 1, fully opaque)

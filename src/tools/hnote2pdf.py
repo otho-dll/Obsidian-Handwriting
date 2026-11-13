@@ -21,7 +21,7 @@ The .hnote file format (JSON) – in short (full description: src/format.ts, src
     "pages": [ {
         "strokes": [ { "points": [[x, y], [x, y, pressure 0-100], …], "color": "#000000", "width": 2,
                        "isHighlighter": false, "alpha": 0.5,                      # pen opacity
-                       "shape": "line"|"rect"|"ellipse", "dash": "dashed"|"dotted"|"dashdot", "fill": true, "fillColor": "#2563eb", "fillAlpha": 0.25, "noLine": true,
+                       "shape": "line"|"rect"|"ellipse"|"triangle", "right": true (right triangle), "dash": "dashed"|"dotted"|"dashdot", "fill": true, "fillColor": "#2563eb", "fillAlpha": 0.25, "noLine": true,
                        "arrow": true, "rot": 0.3, "poly": true, "isEraser": true (old – skipped) } ],
         "images":  [ { "path": "@/attachments/abc.png" | "Folder/image.png", "data": "data:image/…",
                        "x": 0, "y": 0, "w": 100, "h": 80, "rot": 0 } ],
@@ -442,6 +442,10 @@ def draw_shape(c, s, pts):
             c.add('%s %s m %s %s l' % (fmt(p0[0]), fmt(p0[1]), fmt(p1[0]), fmt(p1[1])))
         elif shape == 'rect':
             c.add('%s %s %s %s re' % (fmt(min(ax, bx)), fmt(min(ay, by)), fmt(abs(bx - ax)), fmt(abs(by - ay))))
+        elif shape == 'triangle':
+            # isosceles: apex in the middle of the starting edge; right: the right angle at (ax, by)
+            tx = ax if s.get('right') else (ax + bx) / 2
+            c.add('%s %s m %s %s l %s %s l h' % (fmt(tx), fmt(ay), fmt(bx), fmt(by), fmt(ax), fmt(by)))
         else:
             c.ops.extend(ellipse_ops((ax + bx) / 2, (ay + by) / 2, abs(bx - ax) / 2, abs(by - ay) / 2))
 

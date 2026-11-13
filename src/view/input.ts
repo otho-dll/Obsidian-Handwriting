@@ -280,6 +280,7 @@ export const inputMixin = defineMixin({
                 if (currentStroke.fill && this.shapeFillColor) currentStroke.fillColor = this.shapeFillColor;
                 if (currentStroke.fill && this.shapeFill === 'light' && !this.shapeLineOn) currentStroke.noLine = true;
                 currentStroke.arrow = this.shapeArrow && this.shapeType === 'line';
+                if (this.shapeType === 'triangle' && this.shapeTriRight) currentStroke.right = true;
             }
 
             topCanvas.setPointerCapture(e.pointerId);

@@ -124,17 +124,19 @@ export interface ToolMemory {
     /** Fill colour of new filled shapes ('' = the same as the outline). */
     shapeFillColor: string;
     customShape: string[];
-    shapeType: 'line' | 'rect' | 'ellipse';
+    shapeType: 'line' | 'rect' | 'ellipse' | 'triangle';
     shapeDash: 'solid' | 'dashed' | 'dotted' | 'dashdot';
     /** Shape fill: none, solid colour or a light (semi-transparent) fill. */
     shapeFill: 'none' | 'solid' | 'light';
-    /** Outline of rectangles / ellipses (off = only the fill is drawn). */
+    /** Outline of rectangles / ellipses / triangles (off = only the fill is drawn). */
     shapeOutline: boolean;
     shapeArrow: boolean;
+    /** Triangle tool: right triangle (false = isosceles). */
+    shapeTriRight: boolean;
 }
 
 export function defaultMemory(): ToolMemory {
-    return { sizes: { pen: 1, highlighter: 1, eraser: 1, shape: 1 }, penColor: '', penAlpha: 1, highlighterColor: '', customPen: [], customHigh: [], shapeColor: '', shapeFillColor: '', customShape: [], shapeType: 'rect', shapeDash: 'solid', shapeFill: 'none', shapeOutline: true, shapeArrow: false };
+    return { sizes: { pen: 1, highlighter: 1, eraser: 1, shape: 1 }, penColor: '', penAlpha: 1, highlighterColor: '', customPen: [], customHigh: [], shapeColor: '', shapeFillColor: '', customShape: [], shapeType: 'rect', shapeDash: 'solid', shapeFill: 'none', shapeOutline: true, shapeArrow: false, shapeTriRight: false };
 }
 
 export const DEFAULT_PEN_PALETTE = ['#000000', '#dc2626', '#2563eb', '#16a34a', '#737373'];

@@ -342,12 +342,13 @@ export default class HandwritingPlugin extends Plugin {
         if (isHexColor(m.shapeColor)) mem.shapeColor = m.shapeColor.toLowerCase();
         mem.shapeFillColor = isHexColor(m.shapeFillColor) ? m.shapeFillColor.toLowerCase() : '';
         mem.customShape = cl(m.customShape);
-        if (m.shapeType === 'line' || m.shapeType === 'rect' || m.shapeType === 'ellipse') mem.shapeType = m.shapeType;
+        if (m.shapeType === 'line' || m.shapeType === 'rect' || m.shapeType === 'ellipse' || m.shapeType === 'triangle') mem.shapeType = m.shapeType;
         if (m.shapeDash === 'solid' || m.shapeDash === 'dashed' || m.shapeDash === 'dotted' || m.shapeDash === 'dashdot') mem.shapeDash = m.shapeDash;
         // Older versions stored the fill as true / false.
         mem.shapeFill = m.shapeFill === true ? 'solid' : (m.shapeFill === 'none' || m.shapeFill === 'solid' || m.shapeFill === 'light' ? m.shapeFill : 'none');
         mem.shapeOutline = m.shapeOutline !== false;
         mem.shapeArrow = m.shapeArrow === true;
+        mem.shapeTriRight = m.shapeTriRight === true;
         return mem;
     }
 
@@ -460,12 +461,14 @@ export class HandwritingView extends TextFileView {
 
     currentTool: 'pen' | 'highlighter' | 'eraser' | 'lasso' | 'shape' = 'pen';
 
-    shapeType: 'line' | 'rect' | 'ellipse' = 'rect';
+    shapeType: 'line' | 'rect' | 'ellipse' | 'triangle' = 'rect';
     shapeDash: 'solid' | 'dashed' | 'dotted' | 'dashdot' = 'solid';
     shapeFill: 'none' | 'solid' | 'light' = 'none';
     /** Outline of filled shapes (false = fill only). */
     shapeLineOn = true;
     shapeArrow = false;
+    /** Triangle tool: right triangle (false = isosceles). */
+    shapeTriRight = false;
 
     penColor = '#000000';
     /** Pen opacity (1 = opaque). */
@@ -510,6 +513,7 @@ export class HandwritingView extends TextFileView {
         m.shapeFill = this.shapeFill;
         m.shapeOutline = this.shapeLineOn;
         m.shapeArrow = this.shapeArrow;
+        m.shapeTriRight = this.shapeTriRight;
         const snap = JSON.stringify(m);
         if (snap === this.memSnap) return;   // unchanged – nothing to save
         this.memSnap = snap;
@@ -740,6 +744,7 @@ export class HandwritingView extends TextFileView {
         this.shapeFill = mem.shapeFill;
         this.shapeLineOn = mem.shapeOutline;
         this.shapeArrow = mem.shapeArrow;
+        this.shapeTriRight = mem.shapeTriRight;
         this.memSnap = JSON.stringify({ ...mem, sizes: { ...mem.sizes } });
     }
     getViewType() { return VIEW_TYPE_HANDWRITING; }
@@ -810,7 +815,7 @@ export class HandwritingView extends TextFileView {
     strokeJson(s: Stroke): string {
         const pts = s.points, n = pts.length;
         const f = pts[0], l = pts[n - 1], m = pts[n >> 1], q = pts[n >> 2];
-        const fp = `${n}|${f?.x},${f?.y}|${l?.x},${l?.y}|${m?.x},${m?.y}|${q?.x},${q?.y}|${s.width}|${s.color}|${s.rot ?? ''}|${s.dash ?? ''}|${s.fill ? 1 : 0}|${s.fillColor ?? ''}|${s.fillAlpha ?? ''}|${s.noLine ? 1 : 0}|${s.arrow ? 1 : 0}|${s.shape ?? ''}|${s.isHighlighter ? 1 : 0}|${s.poly ? 1 : 0}|${s.g ?? ''}|${s.lock ? 1 : 0}|${s.alpha ?? ''}`;
+        const fp = `${n}|${f?.x},${f?.y}|${l?.x},${l?.y}|${m?.x},${m?.y}|${q?.x},${q?.y}|${s.width}|${s.color}|${s.rot ?? ''}|${s.dash ?? ''}|${s.fill ? 1 : 0}|${s.fillColor ?? ''}|${s.fillAlpha ?? ''}|${s.noLine ? 1 : 0}|${s.arrow ? 1 : 0}|${s.shape ?? ''}|${s.right ? 1 : 0}|${s.isHighlighter ? 1 : 0}|${s.poly ? 1 : 0}|${s.g ?? ''}|${s.lock ? 1 : 0}|${s.alpha ?? ''}`;
         const hit = this.serCache.get(s);
         if (hit && hit.fp === fp) return hit.json;
         // Pressure is saved (as 0-100) only for strokes in which it varies.

@@ -60,7 +60,7 @@ export default {
         lead: 'Everything a paper notebook can do, and more.',
         items: [
             { icon: 'pen', title: 'Pen, highlighter & eraser', text: 'Pressure ink with opacity, a flat highlighter, and an eraser that cuts strokes.' },
-            { icon: 'shapes', title: 'Shapes', text: 'Lines, arrows, rectangles and ellipses with dashes, fills and separate outline and fill colors.' },
+            { icon: 'shapes', title: 'Shapes', text: 'Lines, arrows, rectangles, ellipses and triangles with dashes, fills and separate outline and fill colors.' },
             { icon: 'lasso', title: 'Lasso selection', text: 'Move, scale, rotate, recolor, group and lock, even onto another page.' },
             { icon: 'pages', title: 'Pages panel', text: 'Thumbnails and sections: jump to, reorder, duplicate or restyle pages.' },
             { icon: 'pagestyle', title: 'Page styles', text: 'Portrait, landscape or endless; dots, lines, grid, Cornell, music staff and more.' },

@@ -52,6 +52,16 @@ export function rotatePointAbout(p: { x: number; y: number }, cx: number, cy: nu
     return { x: cx + dx * cos - dy * sin, y: cy + dx * sin + dy * cos };
 }
 
+/**
+ * Corners of a triangle shape drawn in the box from (ax, ay) to (bx, by). Isosceles: apex in the middle of the
+ * starting edge; right: the right angle at (ax, by). The drag direction flips the triangle.
+ */
+export function triangleVerts(ax: number, ay: number, bx: number, by: number, right: boolean): { x: number; y: number }[] {
+    return right
+        ? [{ x: ax, y: ay }, { x: bx, y: by }, { x: ax, y: by }]
+        : [{ x: (ax + bx) / 2, y: ay }, { x: bx, y: by }, { x: ax, y: by }];
+}
+
 /** Shrinks a canvas to 1 × 1 px (frees its memory): the bitmap and its displayed size. */
 export function shrinkCanvas(c: HTMLCanvasElement) {
     c.width = 1; c.height = 1;

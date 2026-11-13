@@ -123,8 +123,8 @@ export const navigationMixin = defineMixin({
     },
 
     /**
-     * Applies the current zoom / position. Only the clamping and the CSS transform happen at once (cheap); everything
-     * else (current page, its frame, edge shadows, canvas windows, position memory) runs once per frame – touch and
+     * Applies the current zoom / position. Only the clamping, the CSS transform and moving the current-page frame
+     * happen at once (cheap); everything else (choosing the current page, edge shadows, canvas windows, position memory) runs once per frame – touch and
      * pen report 120–240 events per second, and each of those steps reads the layout.
      */
     applyManualZoom() {
@@ -166,6 +166,9 @@ export const navigationMixin = defineMixin({
 
         this.pagesWrapper.style.transform = `translate(${this.pagePositionX}px, ${this.pagePositionY}px) scale(${this.currentZoom})`;
         this.layoutVersion++;   // pointer -> page coordinates must use the new position right away
+        // The current-page frame and indicator move together with the pages (in the same frame, no trailing).
+        this.positionCurrentFrame();
+        if (this.currentPageIdx >= 0) this.placePageIndicator(this.currentPageIdx);
         // While the view moves the page column is its own compositor layer (moving = no repaint). The hint is removed
         // shortly after the movement stops, so the pages are drawn sharp again at the final zoom.
         if (!this.movingClassOn) { this.pagesWrapper.addClass('hw-moving'); this.movingClassOn = true; }

@@ -1,6 +1,6 @@
 import { defineMixin } from './mixin';
 import { Menu, setIcon } from 'obsidian';
-import { ICON_PEN, ICON_ERASER, ICON_HIGHLIGHTER, ICON_UNDO, ICON_REDO, ICON_TRASH, ICON_SELECT_RECT, ICON_MORE, ICON_SHAPE_LINE, ICON_SHAPE_RECT, ICON_SHAPE_ELLIPSE, ICON_FILL, ICON_FILL_NONE, ICON_FILL_LIGHT, ICON_NO_OUTLINE, ICON_LASSO_LOOP, ICON_ARROW, ICON_DASH_SOLID, ICON_DASH_DASHED, ICON_DASH_DOTTED, ICON_DASH_DASHDOT } from '../icons';
+import { ICON_PEN, ICON_ERASER, ICON_HIGHLIGHTER, ICON_UNDO, ICON_REDO, ICON_TRASH, ICON_SELECT_RECT, ICON_MORE, ICON_SHAPE_LINE, ICON_SHAPE_RECT, ICON_SHAPE_ELLIPSE, ICON_SHAPE_TRIANGLE, ICON_TRI_ISO, ICON_TRI_RIGHT, ICON_FILL, ICON_FILL_NONE, ICON_FILL_LIGHT, ICON_NO_OUTLINE, ICON_LASSO_LOOP, ICON_ARROW, ICON_DASH_SOLID, ICON_DASH_DASHED, ICON_DASH_DOTTED, ICON_DASH_DASHDOT } from '../icons';
 import { Stroke } from '../types';
 import { setSvg } from '../svg';
 
@@ -18,6 +18,7 @@ export const toolbarMixin = defineMixin({
     shapeIcon() {
         if (this.shapeType === 'line') return ICON_SHAPE_LINE;
         if (this.shapeType === 'ellipse') return ICON_SHAPE_ELLIPSE;
+        if (this.shapeType === 'triangle') return this.shapeTriRight ? ICON_TRI_RIGHT : ICON_SHAPE_TRIANGLE;
         return ICON_SHAPE_RECT;
     },
 
@@ -279,6 +280,7 @@ export const toolbarMixin = defineMixin({
             ['line', addOpt(shapeRow, ICON_SHAPE_LINE, 'Line', () => { this.shapeType = 'line'; refreshShapeMenu(); })],
             ['rect', addOpt(shapeRow, ICON_SHAPE_RECT, 'Rectangle', () => { this.shapeType = 'rect'; refreshShapeMenu(); })],
             ['ellipse', addOpt(shapeRow, ICON_SHAPE_ELLIPSE, 'Circle / ellipse', () => { this.shapeType = 'ellipse'; refreshShapeMenu(); })],
+            ['triangle', addOpt(shapeRow, ICON_SHAPE_TRIANGLE, 'Triangle', () => { this.shapeType = 'triangle'; refreshShapeMenu(); })],
         ];
 
         const dashRow = addGroup("Line style");
@@ -289,7 +291,7 @@ export const toolbarMixin = defineMixin({
             ['dashdot', addOpt(dashRow, ICON_DASH_DASHDOT, 'Dash-dot', () => { this.shapeDash = 'dashdot'; refreshShapeMenu(); })],
         ];
 
-        // Fill (rectangle / ellipse): outline only, solid, light fill with outline, light fill only.
+        // Fill (rectangle / ellipse / triangle): outline only, solid, light fill with outline, light fill only.
         // (A solid fill without outline looks the same as with it, so that option doesn't exist.)
         const fillRow = addGroup("Fill");
         const fillGroup = fillRow.parentElement!;
@@ -303,6 +305,9 @@ export const toolbarMixin = defineMixin({
         const extraRow = addGroup("Options");
         const arrowGroup = extraRow.parentElement!;
         const arrowBtn = addOpt(extraRow, ICON_ARROW, 'Arrow at the end', () => { this.shapeArrow = !this.shapeArrow; refreshShapeMenu(); });
+        // Triangle kind (only for the triangle): isosceles or right.
+        const triIsoBtn = addOpt(extraRow, ICON_TRI_ISO, 'Isosceles triangle', () => { this.shapeTriRight = false; refreshShapeMenu(); });
+        const triRightBtn = addOpt(extraRow, ICON_TRI_RIGHT, 'Right triangle', () => { this.shapeTriRight = true; refreshShapeMenu(); });
 
         const refreshShapeMenu = () => {
             shapeOpts.forEach(([t, b]) => b.toggleClass('active', this.shapeType === t));
@@ -311,8 +316,14 @@ export const toolbarMixin = defineMixin({
             const line = this.shapeFill === 'light' ? this.shapeLineOn : true;
             fillOpts.forEach(([f, l, b]) => b.toggleClass('active', this.shapeFill === f && l === line));
             arrowBtn.toggleClass('active', this.shapeArrow);
+            triIsoBtn.toggleClass('active', !this.shapeTriRight);
+            triRightBtn.toggleClass('active', this.shapeTriRight);
             fillGroup.toggle(!(this.shapeType === 'line'));
-            arrowGroup.toggle(this.shapeType === 'line');
+            const tri = this.shapeType === 'triangle';
+            arrowGroup.toggle(this.shapeType === 'line' || tri);
+            arrowBtn.toggle(this.shapeType === 'line');
+            triIsoBtn.toggle(tri);
+            triRightBtn.toggle(tri);
             setSvg(shapeBtn, this.iconSvg(this.shapeIcon()));
             this.persistMemory();
             if (this.refreshToolbarUI) this.refreshToolbarUI();

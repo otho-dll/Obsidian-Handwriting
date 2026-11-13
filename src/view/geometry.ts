@@ -1,5 +1,5 @@
 import { defineMixin } from './mixin';
-import { rotatePointAbout } from '../utils';
+import { rotatePointAbout, triangleVerts } from '../utils';
 import { Point, Stroke, BBox } from '../types';
 
 export const geometryMixin = defineMixin({
@@ -75,6 +75,8 @@ export const geometryMixin = defineMixin({
         let out: Point[] = [];
         if (s.shape === 'rect') {
             out = [this.mkPoint(p0.x, p0.y), this.mkPoint(p1.x, p0.y), this.mkPoint(p1.x, p1.y), this.mkPoint(p0.x, p1.y)];
+        } else if (s.shape === 'triangle') {
+            out = triangleVerts(p0.x, p0.y, p1.x, p1.y, !!s.right).map(p => this.mkPoint(p.x, p.y));
         } else {
             const rx = Math.abs(p1.x - p0.x) / 2, ry = Math.abs(p1.y - p0.y) / 2;
             for (let i = 0; i < 48; i++) {

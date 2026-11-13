@@ -32,8 +32,7 @@ export class VersionHistoryModal extends Modal {
 
         const top = contentEl.createDiv({ cls: 'hw-history-top' });
         top.createDiv({ cls: 'hw-history-hint', text: 'Versions are saved automatically while you work, when you close the note and before risky changes.' });
-        const saveNow = top.createEl('button', { cls: 'hw-history-save' });
-        setIcon(saveNow.createSpan(), 'save');
+        const saveNow = top.createEl('button', { cls: 'hw-history-save' });        setIcon(saveNow.createSpan(), 'save');
         saveNow.createSpan({ text: 'Save version now' });
         saveNow.onclick = async () => {
             const ok = await this.view.snapshotNow('manual');
@@ -79,6 +78,12 @@ export class VersionHistoryModal extends Modal {
             await this.view.restoreVersion(this.current.text);
             this.close();
         };
+        // History turned off: the whole window is dimmed and inactive, with a label over it.
+        if (!this.view.plugin.settings.historyEnabled) {
+            this.modalEl.addClass('is-history-off');
+            saveNow.disabled = delAll.disabled = true;
+            contentEl.createDiv({ cls: 'hw-history-off', text: 'Version History disabled' });
+        }
         void this.reload();
     }
 
@@ -180,7 +185,7 @@ export class VersionHistoryModal extends Modal {
             if (token !== this.loadToken) return;
             this.current = { info: v, text, note };
             this.canvas.show();
-            this.restoreBtn.disabled = this.copyBtn.disabled = this.deleteBtn.disabled = false;
+            this.restoreBtn.disabled = this.copyBtn.disabled = this.deleteBtn.disabled = !this.view.plugin.settings.historyEnabled;
             const n = note.pages.length;
             const strokes = note.pages.reduce((s, p) => s + p.strokes.length, 0);
             const when = new Date(v.time).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });

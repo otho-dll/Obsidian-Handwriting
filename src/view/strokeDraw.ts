@@ -1,6 +1,7 @@
 import { defineMixin } from './mixin';
 import { Point, Stroke } from '../types';
 import type { PathCacheEntry } from '../main';
+import { triangleVerts } from '../utils';
 
 /** Dash pattern for a line style (in page units, scaled with the line width); [] = solid. Same values in src/tools/hnote2pdf.py. */
 export function dashPattern(dash: string | undefined, w: number): number[] {
@@ -126,6 +127,12 @@ export const strokeDrawMixin = defineMixin({
             ctx.lineTo(p1.x, p1.y);
         } else if (stroke.shape === 'rect') {
             ctx.rect(Math.min(ax, bx), Math.min(ay, by), Math.abs(bx - ax), Math.abs(by - ay));
+        } else if (stroke.shape === 'triangle') {
+            const [t0, t1, t2] = triangleVerts(ax, ay, bx, by, !!stroke.right);
+            ctx.moveTo(t0.x, t0.y);
+            ctx.lineTo(t1.x, t1.y);
+            ctx.lineTo(t2.x, t2.y);
+            ctx.closePath();
         } else {
             const rx = Math.abs(bx - ax) / 2;
             const ry = Math.abs(by - ay) / 2;

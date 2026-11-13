@@ -17,7 +17,10 @@ export const ICON_IMAGE = `<rect x="3" y="3" width="18" height="18" rx="2"></rec
 export const ICON_SHAPE_LINE = `<path d="M5 19 19 5"></path>`;
 export const ICON_SHAPE_RECT = `<rect x="4" y="5" width="16" height="14" rx="1"></rect>`;
 export const ICON_SHAPE_ELLIPSE = `<circle cx="12" cy="12" r="8"></circle>`;
-export const ICON_FILL_NONE = `<rect x="4" y="5" width="16" height="14" rx="1"></rect>`;
+export const ICON_SHAPE_TRIANGLE = `<path d="M12 4.5 20.5 19h-17Z"></path>`;
+export const ICON_TRI_ISO = `<path d="M12 4.5 20.5 19h-17Z"></path>`;
+export const ICON_TRI_RIGHT = `<path d="M5 4.5V19h14Z"></path>`;
+export const ICON_FILL_NONE =`<rect x="4" y="5" width="16" height="14" rx="1"></rect>`;
 export const ICON_FILL_LIGHT = `<rect x="4" y="5" width="16" height="14" rx="1" fill="currentColor" fill-opacity="0.3"></rect>`;
 export const ICON_NO_OUTLINE = `<rect x="4" y="5" width="16" height="14" rx="1" fill="currentColor" fill-opacity="0.35" stroke="none"></rect>`;
 export const ICON_LASSO_LOOP = `<path d="M7 22a5 5 0 0 1-2-4"></path><path d="M7 16.9c1 .4 2 .7 3 .9"></path><path d="M3.3 14A6.8 6.8 0 0 1 2 10c0-4.4 4.5-8 10-8s10 3.6 10 8c0 .7-.1 1.3-.3 2"></path><circle cx="5" cy="16" r="2"></circle><path d="M14.3 22h-.1a.4.4 0 0 1-.2-.3v-10c0-.2.1-.3.3-.3h.2l7.3 6a.3.3 0 0 1-.2.6h-4.5l-2.6 3.9a.4.4 0 0 1-.3.1z"></path>`;

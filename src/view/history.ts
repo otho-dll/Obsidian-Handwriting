@@ -52,11 +52,11 @@ export const historyMixin = defineMixin({
         for (const s of strokes) this.bboxCache.delete(s);
     },
 
-    // Rotation around point (cx, cy). Rectangles and ellipses rotate around their own centre (the rot field)
+    // Rotation around point (cx, cy). Rectangles, ellipses and triangles rotate around their own centre (the rot field)
     // and their centre moves along a circle; lines and freehand strokes rotate their points.
     rotateItems(strokes: Stroke[], images: ImageItem[], cx: number, cy: number, a: number) {
         for (const s of strokes) {
-            if (s.shape === 'rect' || s.shape === 'ellipse') {
+            if (s.shape === 'rect' || s.shape === 'ellipse' || s.shape === 'triangle') {
                 const p0 = s.points[0];
                 const p1 = s.points[s.points.length - 1];
                 if (!p0 || !p1) continue;

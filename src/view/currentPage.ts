@@ -130,13 +130,28 @@ export const currentPageMixin = defineMixin({
         this.pagesWrapper?.toggleClass('hw-dim-others', multi);
         if (!multi) { if (fr) fr.hide(); return; }
         if (!fr || fr.parentElement !== area) { fr?.remove(); fr = area.createDiv({ cls: 'hw-current-frame' }); this.curFrame = fr; }
-        const z = this.currentZoom;
-        const x = this.pagePositionX + (view.outer.offsetLeft + view.container.offsetLeft) * z;
-        const y = this.pagePositionY + (view.outer.offsetTop + view.container.offsetTop) * z;
         fr.show();
-        fr.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
-        fr.style.width = `${Math.round(this.pageW(i) * z)}px`;
-        fr.style.height = `${Math.round(this.pageH(i) * z)}px`;
+        this.positionCurrentFrame();
+    },
+
+    /**
+     * Moves the frame (and the "12 / 40" indicator) with the pages. Called right when the page column moves
+     * (applyManualZoom), not one frame later – otherwise the frame trails behind the pages while scrolling.
+     * Which page is current is still decided once per frame (updateCurrentPage).
+     */
+    positionCurrentFrame() {
+        const fr = this.curFrame;
+        const i = this.currentPageIdx;
+        const view = this.pageViews[i];
+        if (!view || !this.scrollArea) return;
+        if (fr && fr.parentElement === this.scrollArea && this.curPageEl === view.outer) {
+            const z = this.currentZoom;
+            const x = this.pagePositionX + (view.outer.offsetLeft + view.container.offsetLeft) * z;
+            const y = this.pagePositionY + (view.outer.offsetTop + view.container.offsetTop) * z;
+            fr.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+            fr.style.width = `${Math.round(this.pageW(i) * z)}px`;
+            fr.style.height = `${Math.round(this.pageH(i) * z)}px`;
+        }
     },
 
     /** Page content changed: thumbnails in the pages panel are redrawn later; an endless page may need more room. */

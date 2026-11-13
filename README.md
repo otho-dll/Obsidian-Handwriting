@@ -27,7 +27,7 @@
 | Feature | |
 |---|---|
 | **Pen, highlighter, eraser** | Pressure ink with opacity, a flat highlighter, an eraser that cuts strokes |
-| **Shapes** | Lines, arrows, rectangles, ellipses - dashes, fills, separate outline and fill colours |
+| **Shapes** | Lines, arrows, rectangles, ellipses, triangles (isosceles and right) - dashes, fills, separate outline and fill colours |
 | **Lasso selection** | Move, scale, rotate, recolour, group, lock - even onto another page |
 | **Pages panel** | Thumbnails grouped into sections; jump to, reorder, duplicate and restyle pages |
 | **Page styles** | Portrait, landscape or one endless page; dots, lines, grid, Cornell, music staff and more |
@@ -66,7 +66,7 @@ Click a section to expand it.
 | **Pen** | Pressure-sensitive ink, three thicknesses, colour palette, opacity 100 / 75 / 50 / 25 %. Jitter is smoothed, sharp corners stay sharp. |
 | **Highlighter** | Transparent marker with flat ends. Overlapping strokes don't get darker. |
 | **Eraser** | Cuts strokes where you rub. Same size on screen at every zoom; rub quickly and it grows up to 4×. The pen's eraser end and side button work too. |
-| **Shapes** | Line (optionally an arrow), rectangle, ellipse. |
+| **Shapes** | Line (optionally an arrow), rectangle, ellipse, triangle (isosceles or right). |
 | **Selection** | Freehand lasso or rectangle. |
 
 **Tap the active tool again** for its options - thickness, opacity (pen), what the eraser erases, the shape options or
