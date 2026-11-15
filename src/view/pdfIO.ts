@@ -15,7 +15,7 @@ interface PdfPageProxy {
     getViewport(options: { scale: number }): PdfViewport;
     render(options: { canvasContext: CanvasRenderingContext2D; viewport: PdfViewport }): { promise: Promise<void> };
 }
-interface PdfDocumentProxy { numPages: number; getPage(n: number): Promise<PdfPageProxy> }
+interface PdfDocumentProxy { numPages: number; getPage(n: number): Promise<PdfPageProxy>; destroy?(): Promise<void> | void }
 interface PdfJsLib { getDocument(src: { data: ArrayBuffer }): { promise: Promise<PdfDocumentProxy> } }
 
 export const pdfIOMixin = defineMixin({
@@ -129,7 +129,10 @@ export const pdfIOMixin = defineMixin({
                 notice.setMessage(`Preparing PDF… page ${i + 1}/${this.noteData.pages.length}`);
                 const canvas = await this.renderPageForExport(i, SCALE);
                 const PW = this.pageW(i), PH = this.pageH(i);
-                const encoded = await encodeCanvasForPdf(canvas);
+                // A page with an imported PDF as its background is a photo-like image (it was stored as a JPEG):
+                // lossless encoding would make the file many times larger for no gain.
+                const pg = this.noteData.pages[i];
+                const encoded = await encodeCanvasForPdf(canvas, !!(pg.bgPath || pg.bgImage));
                 canvas.width = 0;
                 // Page size in points: A4 (800 units) = 595.28 pt wide.
                 if (encoded) pdfPages.push({ ...encoded, pw: Math.round(PW * 595.28 / A4_W * 100) / 100, ph: Math.round(PH * 841.89 / A4_H * 100) / 100 });
@@ -199,9 +202,8 @@ export const pdfIOMixin = defineMixin({
     // --- PDF IMPORT ---
     importPDF() {
         // A note with an endless page can't get more pages (unless that page is still empty – it is replaced).
-        const only = this.noteData.pages.length === 1 ? this.noteData.pages[0] : null;
-        const blankEndless = !!only && only.endless && only.strokes.length === 0 && !(only.images?.length) && !only.bgPath && !only.bgImage;
-        if (!blankEndless && this.endlessBlocksPages()) return;
+        if (!this.canEdit()) return;
+        if (!this.isBlankEndlessNote() && this.endlessBlocksPages()) return;
         const input = createEl('input');
         input.type = 'file';
         input.accept = 'application/pdf';
@@ -212,18 +214,32 @@ export const pdfIOMixin = defineMixin({
         input.click();
     },
 
+    /** Whether the note is one endless page that still has nothing on it (an imported PDF replaces it). */
+    isBlankEndlessNote(): boolean {
+        const only = this.noteData.pages.length === 1 ? this.noteData.pages[0] : null;
+        return !!only && !!only.endless && only.strokes.length === 0 && !(only.images?.length) && !only.bgPath && !only.bgImage;
+    },
+
     async importPdfFile(file: File) {
+        // Also reached by dropping a file on the view: the same rules as the menu command.
+        if (!this.canEdit()) return;
+        if (!this.isBlankEndlessNote() && this.endlessBlocksPages()) return;
+        // The import takes a while: if another note is opened in this view meanwhile, the pages must not land in it.
+        const note = this.noteData, target = this.file;
+        const same = () => this.noteData === note && this.file === target;
         const notice = new Notice('Importing PDF…', 0);
+        let pdf: PdfDocumentProxy | null = null;
         try {
             const arrayBuffer = await file.arrayBuffer();
 
             // pdf.js built into Obsidian – nothing downloaded from the internet (works offline too).
             const pdfjsLib = (await loadPdfJs()) as PdfJsLib;
-            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
             const newPages: PageData[] = [];
 
             for (let i = 1; i <= pdf.numPages; i++) {
+                if (!same()) return;
                 notice.setMessage(`Importing PDF… page ${i}/${pdf.numPages}`);
                 const page = await pdf.getPage(i);
                 const base = page.getViewport({ scale: 1 });
@@ -243,6 +259,7 @@ export const pdfIOMixin = defineMixin({
                 const blob = await canvasToBlob(canvas, 'image/jpeg', 0.88);
                 canvas.width = 0;
                 if (!blob) continue;
+                if (!same()) return;
 
                 // The image goes to a separate file in the vault – the note stays small and saves quickly.
                 const path = await this.saveAsset(await blob.arrayBuffer(), 'jpg');
@@ -252,6 +269,7 @@ export const pdfIOMixin = defineMixin({
                 newPages.push(np);
             }
 
+            if (!same()) return;
             if (newPages.length === 0) { new Notice('Nothing to import.'); return; }
 
             // If the only page was empty, replace it with the imported ones. Otherwise append at the end.
@@ -269,6 +287,8 @@ export const pdfIOMixin = defineMixin({
             new Notice('PDF import failed – the file may be damaged or password-protected.');
         } finally {
             notice.hide();
+            // pdf.js keeps the parsed document (and its worker data) until it is destroyed.
+            try { void pdf?.destroy?.(); } catch { /* not important */ }
         }
     },
 });

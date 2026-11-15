@@ -171,6 +171,7 @@ export const geometryMixin = defineMixin({
                     for (let k = 1; k <= n; k++) dense.push(this.mkPoint(p.x + (q.x - p.x) * k / n, p.y + (q.y - p.y) * k / n));
                 }
                 s = { points: dense, color: s.color, width: s.width, isHighlighter: false, dash: s.dash, poly: true };
+                if (s0.g) s.g = s0.g;   // the pieces stay in the shape's group
             }
 
             const R = r + s.width / 2;

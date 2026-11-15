@@ -473,8 +473,8 @@ export const inputMixin = defineMixin({
                         after: [...this.noteData.pages[pageIndex].strokes]
                     });
                     this.requestSave();
+                    this.redrawPage(pageIndex);
                 }
-                this.redrawPage(pageIndex);
                 drawEraserCursor(g.last, false);
                 if (topCanvas.hasPointerCapture(e.pointerId)) topCanvas.releasePointerCapture(e.pointerId);
                 return;

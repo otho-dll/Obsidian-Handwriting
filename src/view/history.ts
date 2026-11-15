@@ -126,8 +126,9 @@ export const historyMixin = defineMixin({
                 const i = images.indexOf(entry.image);
                 if (i >= 0) images.splice(i, 1);
             } else if (entry.type === 'paste') {
-                page.strokes = page.strokes.filter(st => !entry.strokes.includes(st));
-                page.images = images.filter(im => !entry.images.includes(im));
+                const sSet = new Set(entry.strokes), iSet = new Set(entry.images);
+                page.strokes = page.strokes.filter(st => !sSet.has(st));
+                page.images = images.filter(im => !iSet.has(im));
             } else if (entry.type === 'cropImage') {
                 this.applyImageSnap(entry.image, entry.before);
             } else if (entry.type === 'attrs') {
@@ -141,8 +142,9 @@ export const historyMixin = defineMixin({
                 const to = this.noteData.pages[entry.to];
                 if (to) {
                     this.translateItems(entry.strokes, entry.images, 0, -entry.dy);
-                    to.strokes = to.strokes.filter(st => !entry.strokes.includes(st));
-                    if (to.images) to.images = to.images.filter(im => !entry.images.includes(im));
+                    const sSet = new Set(entry.strokes), iSet = new Set(entry.images);
+                    to.strokes = to.strokes.filter(st => !sSet.has(st));
+                    if (to.images) to.images = to.images.filter(im => !iSet.has(im));
                     page.strokes.push(...entry.strokes);
                     (page.images ?? (page.images = [])).push(...entry.images);
                     this.redrawPage(entry.to);
@@ -201,8 +203,9 @@ export const historyMixin = defineMixin({
                 const to = this.noteData.pages[entry.to];
                 if (to) {
                     this.translateItems(entry.strokes, entry.images, 0, entry.dy);
-                    page.strokes = page.strokes.filter(st => !entry.strokes.includes(st));
-                    if (page.images) page.images = page.images.filter(im => !entry.images.includes(im));
+                    const sSet = new Set(entry.strokes), iSet = new Set(entry.images);
+                    page.strokes = page.strokes.filter(st => !sSet.has(st));
+                    if (page.images) page.images = page.images.filter(im => !iSet.has(im));
                     to.strokes.push(...entry.strokes);
                     (to.images ?? (to.images = [])).push(...entry.images);
                     this.redrawPage(entry.to);

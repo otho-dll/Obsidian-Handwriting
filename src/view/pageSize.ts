@@ -15,10 +15,23 @@ export const pageSizeMixin = defineMixin({
 
     /** Top edges of pages in the page column (from page heights; gap between pages = 15). */
     pageTops(): number[] {
-        const tops: number[] = [];
-        let y = this.pageViews[0]?.outer.offsetTop ?? 20;
-        for (let i = 0; i < this.noteData.pages.length; i++) { tops.push(y); y += this.pageH(i) + 15; }
-        return tops;
+        // Offsets from the first page are kept (they change only when pages are rebuilt or resized); only the
+        // position of the first page is read from the layout. Called several times per frame while scrolling.
+        let rel = this.pageTopsRel;
+        const n = this.noteData.pages.length;
+        if (!rel || rel.length !== n) {
+            rel = [];
+            let y = 0;
+            for (let i = 0; i < n; i++) { rel.push(y); y += this.pageH(i) + 15; }
+            this.pageTopsRel = rel;
+            this.pageTopsFirst = NaN;
+        }
+        const first = this.pageViews[0]?.outer.offsetTop ?? 20;
+        if (first !== this.pageTopsFirst) {
+            this.pageTopsFirst = first;
+            this.pageTopsOut = rel.map(y => y + first);
+        }
+        return this.pageTopsOut;
     },
 
     /** Left edge of a page relative to the page column. */
@@ -31,6 +44,7 @@ export const pageSizeMixin = defineMixin({
         view.container.style.setProperty('--hw-pw', `${this.pageW(i)}px`);
         view.container.style.setProperty('--hw-ph', `${this.pageH(i)}px`);
         view.container.toggleClass('hw-endless', !!this.noteData.pages[i]?.endless);
+        this.pageTopsRel = null;   // page heights changed
         if (this.pagesWrapper) this.pagesWrapper.style.width = `${this.wrapperW()}px`;
     },
 

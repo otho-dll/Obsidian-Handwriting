@@ -84,13 +84,16 @@ export const positionMixin = defineMixin({
         this.posApplyWhenVisible(target);
     },
 
-    /** Sets the position as soon as the view is visible (checked every 100 ms, no limit – a tab may stay in the background for long). */
+    /** Sets the position as soon as the view is visible (no limit – a tab may stay in the background for long). */
     posApplyWhenVisible(target: SavedPos) {
         const key = this.posKey;
         const tick = () => {
-            this.posWait = null;
-            if (this.posKey !== key) return;
-            if (!this.posVisible()) { this.posWait = window.setTimeout(tick, 100); return; }
+            if (this.posWait !== null) { window.clearTimeout(this.posWait); this.posWait = null; }
+            if (this.posKey !== key) { this.posRetry = null; return; }
+            // A hidden view (background tab) is woken by its ResizeObserver when it gets a size; the slow timer is
+            // only a safety net (pages laid out a moment after the view became visible).
+            if (!this.posVisible()) { this.posRetry = tick; this.posWait = window.setTimeout(tick, 400); return; }
+            this.posRetry = null;
             this.posApply(target);
             this.posLast = target;
             this.posReady = true;
@@ -100,6 +103,7 @@ export const positionMixin = defineMixin({
     },
 
     posStopWaiting() {
+        this.posRetry = null;
         if (this.posWait !== null) { window.clearTimeout(this.posWait); this.posWait = null; }
     },
 

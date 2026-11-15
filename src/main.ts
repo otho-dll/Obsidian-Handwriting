@@ -57,6 +57,8 @@ export default class HandwritingPlugin extends Plugin {
     calcState: CalcState = newCalcState();
     /** When the version history of each note was last pruned (id -> time). */
     lastPrune: Map<string, number> = new Map();
+    /** Content hash of history snapshots already read (snapshot path -> hash); snapshot files never change. */
+    snapHashes: Map<string, string> = new Map();
     /** Plugin clipboard (cut / copied strokes and images). */
     clip: { strokes: Stroke[]; images: ImageItem[]; from?: string } | null = null;
     /** Copied whole page ("Copy page" / "Paste page" in the page menu) – also between notes. */
@@ -585,6 +587,18 @@ export class HandwritingView extends TextFileView {
     // Image files from the vault -> blob URLs
     assetUrls: Map<string, string> = new Map();
     assetLoading: Map<string, Promise<string | null>> = new Map();
+    /** Grows every time the note in the view changes: image loads started for the previous note are dropped. */
+    assetGen = 0;
+    /** Theme accent colour (read once, cleared when the theme / CSS changes). */
+    accentCache: string | null = null;
+    /** Page objects the page elements were last built from (undo history follows the pages when they are reordered). */
+    builtPages: PageData[] = [];
+    /** Top edges of the pages relative to the first page (see pageTops). */
+    pageTopsRel: number[] | null = null;
+    pageTopsFirst = NaN;
+    pageTopsOut: number[] = [];
+    /** Restores the view position as soon as the view becomes visible (see posApplyWhenVisible). */
+    posRetry: (() => void) | null = null;
 
     plugin: HandwritingPlugin;
     snipTimer: number | null = null;
@@ -763,7 +777,8 @@ export class HandwritingView extends TextFileView {
     lastSnapAt = 0;
     attachTimer: number | null = null;
     lastAttachSig = '';
-    attachSyncing = false;
+    /** Attachment clean-ups run one after another. */
+    attachChain: Promise<void> = Promise.resolve();
 
     async save(clear?: boolean): Promise<void> {
         await super.save(clear);
@@ -867,9 +882,16 @@ export class HandwritingView extends TextFileView {
             // Unknown stroke fields are kept (a newer version may have added them); points come as [x, y, pressure 0-100].
             const strokes = list(p.strokes).map((rs) => {
                 const s = obj(rs) ?? {};
-                const points = list(s.points).map((pt) =>
-                    Array.isArray(pt) ? { x: pt[0] as number, y: pt[1] as number, pressure: typeof pt[2] === 'number' ? pt[2] / 100 : 0.5 } : pt);
-                return { ...s, points } as unknown as Stroke;
+                // Points with a missing / non-numeric coordinate are dropped (a damaged or hand-edited note must not break drawing).
+                const points: { x: number; y: number; pressure: number }[] = [];
+                for (const pt of list(s.points)) {
+                    const o = Array.isArray(pt) ? { x: pt[0] as unknown, y: pt[1] as unknown, pressure: typeof pt[2] === 'number' ? pt[2] / 100 : 0.5 } : obj(pt);
+                    if (!o || typeof o.x !== 'number' || typeof o.y !== 'number' || !Number.isFinite(o.x) || !Number.isFinite(o.y)) continue;
+                    points.push({ x: o.x, y: o.y, pressure: typeof o.pressure === 'number' && Number.isFinite(o.pressure) ? o.pressure : 0.5 });
+                }
+                const color = typeof s.color === 'string' && s.color ? s.color : '#000000';
+                const width = typeof s.width === 'number' && Number.isFinite(s.width) && s.width > 0 ? s.width : 2;
+                return { ...s, points, color, width, isHighlighter: s.isHighlighter === true };
             });
             const page: PageData = { strokes };
             // Notes may come from other people: only safe vault paths and inline data:image URLs are kept.
@@ -909,6 +931,8 @@ export class HandwritingView extends TextFileView {
         this.posLog('setViewData', this.file?.path, 'posKey', this.posKey);
         this.readOnly = false;
         this.rawData = '';
+        this.cancelCrop();
+        this.releaseAssets();
         try {
             const mig = migrateNote(data ? JSON.parse(data) : null);
             if (mig.tooNew) { this.readOnly = true; this.rawData = data; }
@@ -932,6 +956,8 @@ export class HandwritingView extends TextFileView {
         // The view is about to be cleared: save the position and stop tracking it (an empty view must not overwrite it).
         this.posEnd();
         this.clearHistory();
+        this.cancelCrop();
+        this.releaseAssets();
         this.readOnly = false;
         this.rawData = '';
         this.noteData = { pages: [{ strokes: [] }], id: newId() };
@@ -1076,7 +1102,10 @@ export class HandwritingView extends TextFileView {
         this.setupOledCare();
         this.applyPerfOverlay();
 
+        this.registerEvent(this.app.workspace.on('css-change', () => { this.accentCache = null; }));
+
         this.resizeObserver = new ResizeObserver(() => {
+            this.posRetry?.();   // a view that just became visible restores its position right away
             this.sizeInkLayer();
             this.applyManualZoom();
             if (this.layoutToolbar) this.layoutToolbar();
@@ -1104,10 +1133,50 @@ export class HandwritingView extends TextFileView {
         if (this.roomTimer !== null) { window.clearTimeout(this.roomTimer); this.roomTimer = null; }
         this.closeContentsPanel();
         this.closeZoomPanel();
-        this.thumbBitmaps.forEach(b => { if (b) b.close(); });
-        this.thumbBitmaps.clear();
+        this.cancelCrop();
+        this.printCleanup?.();
+        this.contentEl.ownerDocument.querySelectorAll('.hw-align-pop').forEach(el => el.remove());
+        this.releaseAssets();
+    }
+
+    /** Frees the image URLs and thumbnail copies of the note that was in the view (it is closed or replaced by another one). */
+    releaseAssets() {
+        this.assetGen++;
+        this.assetLoading.clear();
         this.assetUrls.forEach(url => URL.revokeObjectURL(url));
         this.assetUrls.clear();
+        this.thumbSprites.forEach(c => { c.width = 0; });
+        this.thumbSprites.clear();
+        this.thumbFailAt.clear();
+        this.thumbBitmaps.forEach(b => { if (b) b.close(); });
+        this.thumbBitmaps.clear();
+    }
+
+    /**
+     * The page list changed (pages added, removed, reordered): undo / redo steps follow their pages to the new
+     * positions, and steps of pages that are gone are dropped.
+     */
+    remapHistory() {
+        const prev = this.builtPages, now = this.noteData.pages;
+        this.builtPages = [...now];
+        if (this.undoStack.length + this.redoStack.length === 0) return;
+        const where = new Map<PageData, number>();
+        now.forEach((p, i) => where.set(p, i));
+        const move = (i: number) => { const p = prev[i]; return p ? where.get(p) ?? -1 : -1; };
+        const remap = (stack: HistoryEntry[]) => stack.filter(e => {
+            const page = move(e.page);
+            if (page < 0) return false;
+            if (e.type === 'transfer') {
+                const to = move(e.to);
+                if (to < 0) return false;
+                e.to = to;
+            }
+            e.page = page;
+            return true;
+        });
+        this.undoStack = remap(this.undoStack);
+        this.redoStack = remap(this.redoStack);
+        this.updateUndoRedoUI();
     }
 
     // Called after the plugin settings change (palette, pressure...).
@@ -1132,7 +1201,11 @@ export class HandwritingView extends TextFileView {
         this.pagesWrapper.empty();
         this.pageContexts = [];
         this.pageViews = [];
-        this.clearHistory();
+        this.pageTopsRel = null;
+        this.cancelCrop();
+        this.remapHistory();
+        this.selection = null;
+        this.updateSelectionUI();
 
         this.noteData.pages.forEach((pageData, index) => {
             const singlePageContainer = this.pagesWrapper.createDiv({ cls: "hw-single-page-container" });

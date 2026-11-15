@@ -953,6 +953,8 @@ button.hw-pp-act.hw-pp-danger { color: var(--text-error); }
 .hw-pp-toast.is-on { display: flex; }
 .hw-pp-toast span { flex: 1; }
 .hw-pp-toast button { height: 28px; padding: 0 10px; font-weight: 600; color: var(--text-accent); }
+/* "Undo" in an Obsidian notice (page deleted from the page menu while the pages panel is closed) */
+button.hw-notice-undo { margin-left: 10px; height: 26px; padding: 0 10px; font-weight: 600; }
 input.hw-pp-moveto { width: 100%; }
 
 /* --- page style popover (from the pages panel) --- */

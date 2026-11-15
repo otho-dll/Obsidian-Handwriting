@@ -6,7 +6,7 @@ import { newPage, PageFormat } from '../pageFormat';
 export const pageToolsMixin = defineMixin({
     // --- PAGE OPERATIONS (button at the bottom of the note + "More" menu and right-click menu) ---
     addPageAt(position: number) {
-        if (this.endlessBlocksPages()) return;
+        if (!this.canEdit() || this.endlessBlocksPages()) return;
         const pos = Math.max(0, Math.min(position, this.noteData.pages.length));
         this.noteData.pages.splice(pos, 0, newPage(this.noteData));
         this.activePageIndex = pos;
@@ -16,16 +16,9 @@ export const pageToolsMixin = defineMixin({
     },
 
     deleteActivePage() {
-        const index = this.activePageIndex;
-        void this.snapshotNow('delete');   // the state before deleting goes to the version history
-        if (this.noteData.pages.length <= 1) {
-            this.noteData.pages[0] = newPage(this.noteData);
-        } else {
-            this.noteData.pages.splice(index, 1);
-            this.activePageIndex = Math.max(0, Math.min(index, this.noteData.pages.length - 1));
-        }
-        this.requestSave();
-        this.buildPageElements();
+        // Same path as the pages panel: a version is saved first and the deletion can be undone from the toast.
+        const index = Math.max(0, Math.min(this.activePageIndex, this.noteData.pages.length - 1));
+        this.deletePages([index]);
     },
 
     /** Right-click menu items for managing the active page (no submenus). */
@@ -52,6 +45,7 @@ export const pageToolsMixin = defineMixin({
 
     // Moves the active page by `delta` places (-1 = up, +1 = down).
     movePage(delta: number) {
+        if (!this.canEdit()) return;
         const from = this.activePageIndex;
         const to = from + delta;
         const n = this.noteData.pages.length;
@@ -123,9 +117,10 @@ export const pageToolsMixin = defineMixin({
 
     pageIndexAtViewCenter(): number {
         const centerY = (this.scrollArea.clientHeight / 2 - this.pagePositionY) / this.currentZoom;
+        const tops = this.pageTops();
         let idx = 0;
         for (let i = 0; i < this.pageViews.length; i++) {
-            if (centerY >= this.pageViews[i].outer.offsetTop - 8) idx = i;
+            if (centerY >= tops[i] - 8) idx = i; else break;
         }
         return idx;
     },

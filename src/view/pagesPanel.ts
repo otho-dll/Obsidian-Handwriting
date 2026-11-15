@@ -572,7 +572,13 @@ export const pagesPanelMixin = defineMixin({
 
     showPanelToast(text: string, undo: () => void) {
         const t = this.ppToast;
-        if (!t || !this.pagesPanelEl) { new Notice(text); return; }
+        if (!t || !this.pagesPanelEl) {
+            // No pages panel: an Obsidian notice with the same "Undo" button.
+            const b = createEl('button', { cls: 'hw-notice-undo', text: 'Undo' });
+            const n = new Notice(createFragment(f => { f.append(text, b); }), 7000);
+            b.onclick = (e) => { e.stopPropagation(); n.hide(); undo(); };
+            return;
+        }
         t.empty();
         t.createSpan({ text });
         const b = t.createEl('button', { text: 'Undo' });

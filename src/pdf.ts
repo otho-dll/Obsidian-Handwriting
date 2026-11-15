@@ -7,16 +7,17 @@ export interface PdfOutlineItem { title: string; page: number; }
 
 const pdfText = (t: string) => { let hex = 'FEFF'; for (let i = 0; i < t.length; i++) hex += t.charCodeAt(i).toString(16).padStart(4, '0'); return `<${hex}>`; };
 
-export async function encodeCanvasForPdf(canvas: HTMLCanvasElement): Promise<PdfPageImage | null> {
+/** `photo` = the page is mostly a photo-like image (imported PDF page): JPEG instead of lossless. */
+export async function encodeCanvasForPdf(canvas: HTMLCanvasElement, photo = false): Promise<PdfPageImage | null> {
     const w = canvas.width, h = canvas.height;
-    if (typeof CompressionStream === 'function') {
+    if (!photo && typeof CompressionStream === 'function') {
         const px = canvas.getContext('2d')!.getImageData(0, 0, w, h).data;
         const rgb = new Uint8Array(w * h * 3);
         for (let i = 0, j = 0; i < px.length; i += 4, j += 3) { rgb[j] = px[i]; rgb[j + 1] = px[i + 1]; rgb[j + 2] = px[i + 2]; }
         const stream = new Blob([rgb]).stream().pipeThrough(new CompressionStream('deflate'));
         return { w, h, filter: 'FlateDecode', data: new Uint8Array(await new Response(stream).arrayBuffer()) };
     }
-    // Fallback (very old browsers): high-quality JPEG
+    // Photo-like pages, and the fallback for very old browsers: high-quality JPEG
     const blob = await canvasToBlob(canvas, 'image/jpeg', 0.95);
     if (!blob) return null;
     return { w, h, filter: 'DCTDecode', data: new Uint8Array(await blob.arrayBuffer()) };

@@ -8,14 +8,20 @@ import { plotSize } from '../math/plot';
 
 export const imageInsertMixin = defineMixin({
     async addImageBlob(blob: Blob, pageIndex: number, cascade: number, at?: { x: number; y: number }): Promise<ImageItem | null> {
+        // The page is remembered as an object: while the image is read and saved the pages may be reordered,
+        // or another note may be opened in this view (then the image is not inserted anywhere).
+        const note = this.noteData;
+        const page = note.pages[pageIndex];
+        if (!page) return null;
         const prep = await this.prepareImage(blob);
         if (!prep) { new Notice('Could not read this image.'); return null; }
+        if (this.noteData !== note) return null;
         const path = await this.saveAsset(prep.data, prep.ext);
         let dataUrl: string | undefined;
         if (!path) dataUrl = await blobToDataUrl(new Blob([prep.data], { type: prep.type }));
-
-        const page = this.noteData.pages[pageIndex];
-        if (!page) return null;
+        if (this.noteData !== note) return null;
+        pageIndex = note.pages.indexOf(page);
+        if (pageIndex < 0) return null;
         const PW = this.pageW(pageIndex), PH = Math.min(this.pageH(pageIndex), 1131);
         const k = Math.min(1, (PW * 0.6) / prep.w, (PH * 0.6) / prep.h);
         const w = prep.w * k, h = prep.h * k;

@@ -424,7 +424,7 @@ export const selectionEditMixin = defineMixin({
             this.contentEl.ownerDocument.removeEventListener('pointerdown', close, true);
         };
         window.setTimeout(() => this.contentEl.ownerDocument.addEventListener('pointerdown', close, true), 0);
-        this.register(() => pop.remove());
+        // (left-over panels are removed when the view closes – onClose)
     },
 
     // --- MENU ZAZNACZENIA ---

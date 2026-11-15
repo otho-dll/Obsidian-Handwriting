@@ -150,6 +150,9 @@ export const assetsMixin = defineMixin({
     async repairDataFolder() {
         const file = this.file;
         if (!file || this.readOnly) return;
+        const note = this.noteData;
+        // After every wait: the view may show another note by now – then nothing here may touch it.
+        const same = () => this.file === file && this.noteData === note;
         const refs = new Set<string>();
         for (const p of this.noteData.pages) {
             if (isLocalRef(p.bgPath)) refs.add(p.bgPath);
@@ -158,7 +161,7 @@ export const assetsMixin = defineMixin({
         if (refs.size === 0) return;
         const a = this.adapterA();
         const own = dataDirFor(file.path);
-        if (await a.exists(own)) return;
+        if (await a.exists(own) || !same()) return;
         const parent = file.parent?.path && file.parent.path !== '/' ? file.parent.path : '';
         let listing: { folders: string[] };
         try { listing = await a.list(parent || '/'); } catch { return; }
@@ -166,16 +169,18 @@ export const assetsMixin = defineMixin({
             const name = dir.slice(dir.lastIndexOf('/') + 1);
             if (!name.startsWith('.') || !name.endsWith(DATA_SUFFIX)) continue;
             const meta = await readDataMeta(a, dir);
-            if (!meta?.id || meta.id !== this.noteData.id) continue;
+            if (!same()) return;
+            if (!meta?.id || meta.id !== note.id) continue;
             const srcNote = `${parent ? parent + '/' : ''}${name.slice(1, -DATA_SUFFIX.length)}.hnote`;
             if (srcNote === file.path) continue;
             for (const ref of refs) { try { await copyLocalRef(a, srcNote, file.path, ref); } catch { /* missing file */ } }
+            if (!same()) return;
             // The copy gets its own id (so the next copy doesn't confuse the source).
-            this.noteData.id = newId();
-            await writeDataMeta(a, file.path, this.noteData.id);
+            note.id = newId();
+            await writeDataMeta(a, file.path, note.id);
+            if (!same()) return;
             this.requestSave();
-            this.assetUrls.forEach(url => URL.revokeObjectURL(url));
-            this.assetUrls.clear();
+            this.releaseAssets();
             this.pageViews.forEach((v, i) => { v.imgEls.forEach(el => { el.removeAttribute('src'); delete el.dataset.src; }); if (v.active) { this.redrawPage(i, false); void this.loadBg(i); } });
             return;
         }
@@ -221,7 +226,8 @@ export const assetsMixin = defineMixin({
         if (cached) return cached;
         let pending = this.assetLoading.get(ref);
         if (!pending) {
-            pending = (async () => {
+            const gen = this.assetGen;
+            const job: Promise<string | null> = (async () => {
                 try {
                     if (!isSafeRef(ref)) return null;
                     const path = this.file ? resolveRef(this.file.path, ref) : ref;
@@ -232,13 +238,15 @@ export const assetsMixin = defineMixin({
                     else if (await this.app.vault.adapter.exists(path)) buf = await this.app.vault.adapter.readBinary(path);   // hidden folder
                     else if (alt && await this.app.vault.adapter.exists(alt)) buf = await this.app.vault.adapter.readBinary(alt);   // set-aside image (undone removal, older version)
                     else return null;
+                    if (gen !== this.assetGen) return null;   // another note is in the view now
                     const url = URL.createObjectURL(new Blob([buf], { type: mimeFromPath(path) }));
                     this.assetUrls.set(ref, url);
                     return url;
                 } catch {
                     return null;
                 }
-            })().then(url => { this.assetLoading.delete(ref); return url; });
+            })().then(url => { if (this.assetLoading.get(ref) === job) this.assetLoading.delete(ref); return url; });
+            pending = job;
             this.assetLoading.set(ref, pending);
         }
         return pending;

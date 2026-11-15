@@ -46,7 +46,7 @@ export const selectionMixin = defineMixin({
         this.ghostPage = null;
         const view = this.pageViews[g];
         if (view) view.container.removeClass('hw-drop-target');
-        this.redrawPage(g);
+        this.redrawPage(g, false);   // only the outline goes away – the page content did not change
     },
 
     // While dragging the selection over another page: highlight it and show the outline where the selection will land.
@@ -99,8 +99,9 @@ export const selectionMixin = defineMixin({
         if (!src || !dst) return;
         const strokes = [...sel.strokes], images = [...sel.images];
         this.translateItems(strokes, images, 0, dy);
-        src.strokes = src.strokes.filter(st => !strokes.includes(st));
-        if (src.images) src.images = src.images.filter(im => !images.includes(im));
+        const sSet = new Set(strokes), iSet = new Set(images);
+        src.strokes = src.strokes.filter(st => !sSet.has(st));
+        if (src.images) src.images = src.images.filter(im => !iSet.has(im));
         dst.strokes.push(...strokes);
         (dst.images ?? (dst.images = [])).push(...images);
         this.pushHistoryAction({ type: 'transfer', page: from, to: target, strokes, images, dy });
@@ -141,10 +142,10 @@ export const selectionMixin = defineMixin({
         const page = this.noteData.pages[sel.page];
         if (!page) return;
         const images = page.images ?? (page.images = []);
-        const items = sel.strokes
-            .map(stroke => ({ stroke, index: page.strokes.indexOf(stroke) }))
-            .filter(i => i.index >= 0)
-            .sort((a, b) => a.index - b.index);
+        // One pass over the page (not indexOf per selected stroke – slow for a large selection).
+        const picked = new Set(sel.strokes);
+        const items: { stroke: Stroke; index: number }[] = [];
+        page.strokes.forEach((stroke, index) => { if (picked.has(stroke)) items.push({ stroke, index }); });
         const imgItems = sel.images
             .map(image => ({ image, index: images.indexOf(image) }))
             .filter(i => i.index >= 0)

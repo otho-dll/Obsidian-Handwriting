@@ -153,9 +153,14 @@ export const versionsMixin = defineMixin({
      * - a file used again (undo, restored version) moves back to attachments/,
      * - when the note is closed (`final`), files in history/attachments/ that no saved version uses are deleted.
      */
-    async syncAttachments(notePath: string, text: string, final: boolean) {
-        if (this.attachSyncing) return;
-        this.attachSyncing = true;
+    syncAttachments(notePath: string, text: string, final: boolean): Promise<void> {
+        // One clean-up at a time; a request made meanwhile waits for its turn (the final one on close is never skipped).
+        const job = this.attachChain.then(() => this.syncAttachmentsNow(notePath, text, final));
+        this.attachChain = job.catch(() => undefined);
+        return job;
+    },
+
+    async syncAttachmentsNow(notePath: string, text: string, final: boolean) {
         const a = this.adapter();
         const base = dataDirFor(notePath);
         const att = `${base}/attachments`, hist = `${base}/${HISTORY_ATTACH}`;
@@ -195,8 +200,6 @@ export const versionsMixin = defineMixin({
             for (const n of await list(hist)) if (!keep.has(n)) { try { await a.remove(`${hist}/${n}`); } catch { /* stays */ } }
         } catch (e) {
             console.error('Handwriting: attachment clean-up failed', e);
-        } finally {
-            this.attachSyncing = false;
         }
     },
 
@@ -229,16 +232,24 @@ export const versionsMixin = defineMixin({
         const list = await listSnapshots(a, historyDirFor(notePath));
         const seen = new Set<string>();
         let removed = 0;
+        // A snapshot file never changes, so its content hash is computed once per session (reading, unpacking and
+        // re-serializing every version each time the history opens was slow for long histories).
+        const known = this.plugin.snapHashes;
+        const idAssigned = this.idAssigned;   // normalizeNote sets it – it describes the open note, not a snapshot
         for (const v of [...list].reverse()) {   // oldest first
-            let key: string;
-            try {
-                const mig = migrateNote(JSON.parse(await readSnapshot(a, v.path)));
-                if (mig.tooNew) continue;
-                key = contentHash(this.serializeNote(this.normalizeNote(mig.data)));
-            } catch { continue; }
-            if (seen.has(key)) { try { await a.remove(v.path); removed++; } catch { /* stays */ } }
+            let key = known.get(v.path);
+            if (key === undefined) {
+                try {
+                    const mig = migrateNote(JSON.parse(await readSnapshot(a, v.path)));
+                    if (mig.tooNew) continue;
+                    key = contentHash(this.serializeNote(this.normalizeNote(mig.data)));
+                } catch { continue; }
+                known.set(v.path, key);
+            }
+            if (seen.has(key)) { try { await a.remove(v.path); known.delete(v.path); removed++; } catch { /* stays */ } }
             else seen.add(key);
         }
+        this.idAssigned = idAssigned;
         return removed;
     },
 

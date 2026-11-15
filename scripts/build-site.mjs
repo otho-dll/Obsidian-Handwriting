@@ -23,6 +23,7 @@ const port = Number(process.env.PORT) || 8080;
 
 const read = (p) => fs.readFileSync(p, 'utf8');
 /** Imports a module fresh on every rebuild (so edits to content.mjs / render.mjs show up in --serve mode). */
+// eslint-disable-next-line no-unsanitized/method -- a build script importing this repo's own files (site/*.mjs), no outside input
 const fresh = (p) => import(`${pathToFileURL(p).href}?t=${Date.now()}`);
 
 /** HTML, CSS, images – everything except the JavaScript bundle. */

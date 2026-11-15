@@ -7,8 +7,11 @@ export const canvasWindowMixin = defineMixin({
     // --- RESOLUTION, WINDOWED CANVASES AND PAGE VIRTUALIZATION ---
     // Obsidian theme accent colour (selection, handles, frames).
     accentColor(): string {
-        const v = getComputedStyle(activeDocument.body).getPropertyValue('--interactive-accent').trim();
-        return v || '#2563eb';
+        // Cached: reading a computed style every drag frame forces a style recalculation (cleared on 'css-change').
+        if (this.accentCache === null) {
+            this.accentCache = getComputedStyle(this.contentEl.ownerDocument.body).getPropertyValue('--interactive-accent').trim() || '#2563eb';
+        }
+        return this.accentCache;
     },
 
     getCrispScale() {
@@ -307,9 +310,10 @@ export const canvasWindowMixin = defineMixin({
         const viewH = this.scrollArea.clientHeight;
         const z = this.currentZoom;
         const margin = viewH * (z > 2 ? 0.5 : 0.75);
+        const tops = this.pageTops();   // no layout read per page (notes with hundreds of pages)
         this.pageViews.forEach((view, i) => {
-            const top = this.pagePositionY + view.outer.offsetTop * z;
-            const bottom = top + view.outer.offsetHeight * z;
+            const top = this.pagePositionY + (tops[i] ?? 0) * z;
+            const bottom = top + this.pageH(i) * z;
             const near = bottom > -margin && top < viewH + margin;
             if (near && !view.active) this.activatePage(i);
             else if (!near && view.active) this.deactivatePage(i);

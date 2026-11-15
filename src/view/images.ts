@@ -167,6 +167,10 @@ export const imagesMixin = defineMixin({
         };
         bApply.onclick = () => { void apply(); };
         this.cropKeyHandler = (e: KeyboardEvent) => {
+            // Only keys pressed in this view (or with nothing focused) – not typing in another pane or a dialog.
+            const t = e.target as Node | null;
+            const doc = this.contentEl.ownerDocument;
+            if (t && t !== doc.body && !this.contentEl.contains(t)) return;
             if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); this.cancelCrop(); }
             else if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); void apply(); }
         };

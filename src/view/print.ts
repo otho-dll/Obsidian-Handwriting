@@ -104,8 +104,7 @@ export const printMixin = defineMixin({
             };
             // The frame stays until the dialog is closed (afterprint); a timer is the safety net.
             const timer = window.setTimeout(cleanup, 10 * 60 * 1000);
-            this.printCleanup = cleanup;
-            this.register(cleanup);
+            this.printCleanup = cleanup;   // also run when the view closes (onClose)
             win.addEventListener('afterprint', () => window.setTimeout(cleanup, 500));
             notice.hide();
             win.focus();
