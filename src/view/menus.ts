@@ -22,7 +22,7 @@ export const menusMixin = defineMixin({
 
         // Buttons moved from the toolbar to this menu (Settings → Toolbar).
         const hidden = new Set(st.toolbarHidden);
-        const tool = (id: string, title: string, icon: string, t: 'eraser' | 'highlighter' | 'lasso' | 'shape') => {
+        const tool = (id: string, title: string, icon: string, t: 'eraser' | 'highlighter' | 'lasso' | 'shape' | 'hand') => {
             if (!hidden.has(id)) return false;
             menu.addItem(i => i.setTitle(title).setIcon(icon).setChecked(this.currentTool === t).onClick(() => {
                 this.setTool?.(t);
@@ -31,6 +31,7 @@ export const menusMixin = defineMixin({
             return true;
         };
         let any = false;
+        any = tool('hand', 'Hand (move the page)', 'hand', 'hand') || any;
         any = tool('eraser', 'Eraser', 'eraser', 'eraser') || any;
         any = tool('highlighter', 'Highlighter', 'highlighter', 'highlighter') || any;
         any = tool('lasso', 'Select', 'lasso', 'lasso') || any;

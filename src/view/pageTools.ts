@@ -175,7 +175,7 @@ export const pageToolsMixin = defineMixin({
         if (!view || !this.scrollArea) return;
         this.stopInertia();
         this.activePageIndex = i;
-        this.pagePositionY = -(view.outer.offsetTop - 10) * this.currentZoom;
+        this.pagePositionY = -(view.outer.offsetTop - 10) * this.currentZoom + this.topInset;
         this.pinnedPageIdx = i;   // the page jumped to is the current one (also when a shorter page sits below it)
         this.applyManualZoom();
         this.scheduleRedrawAfterZoom();

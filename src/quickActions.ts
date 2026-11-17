@@ -21,6 +21,7 @@ export const DEFAULT_QUICK_ACTIONS = ['calculator', 'zoom', 'contents', 'pages']
 /** Fixed toolbar buttons that can be moved to the "More" menu (Settings → Toolbar). The pen always stays. */
 export const TOOLBAR_ITEMS: { id: string; label: string }[] = [
     { id: 'eraser', label: 'Eraser' },
+    { id: 'hand', label: 'Hand (move the page)' },
     { id: 'highlighter', label: 'Highlighter' },
     { id: 'lasso', label: 'Selection (lasso / rectangle)' },
     { id: 'shapes', label: 'Shapes' },

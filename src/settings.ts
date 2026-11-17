@@ -30,6 +30,19 @@ export interface HandwritingSettings {
     palmContactSize: number;       // px; touches wider than this are treated as a palm (0 = don't check)
     /** Two-finger zoom (can be turned off if a hand zooms the view by accident). */
     pinchZoom: boolean;
+    /** Dragging with the middle mouse button moves the page. */
+    middleMousePan: boolean;
+    /** Key (KeyboardEvent.code) held while dragging with the left mouse button moves the page ('' = off). */
+    panKey: string;
+    /** The Hand tool was put into the ⋯ menu once (it is off the toolbar by default). */
+    handToolIntro?: boolean;
+    /** Options of the active tool: popups (tap the tool again) or a floating dock under the toolbar. */
+    toolOptionsLayout: 'popup' | 'dock';
+
+    /** Thin / medium / thick widths (page pixels) of the pen, the highlighter and shapes. */
+    penSizes: number[];
+    highSizes: number[];
+    shapeSizes: number[];
 
     /** Pen and highlighter colours (5 each). */
     penPalette: string[];
@@ -139,6 +152,18 @@ export function defaultMemory(): ToolMemory {
     return { sizes: { pen: 1, highlighter: 1, eraser: 1, shape: 1 }, penColor: '', penAlpha: 1, highlighterColor: '', customPen: [], customHigh: [], shapeColor: '', shapeFillColor: '', customShape: [], shapeType: 'rect', shapeDash: 'solid', shapeFill: 'none', shapeOutline: true, shapeArrow: false, shapeTriRight: false };
 }
 
+export const DEFAULT_PEN_SIZES = [0.5, 1, 2];
+export const DEFAULT_HIGH_SIZES = [15, 25, 35];
+export const DEFAULT_SHAPE_SIZES = [1.5, 3, 5];
+/** Allowed range of the thickness values (Settings → Pen and touch → Thickness). */
+export const SIZE_LIMITS = { pen: [0.1, 20], high: [2, 80], shape: [0.1, 20] } as const;
+
+/** Three ascending widths within [min, max]; anything else falls back to the defaults. */
+export function cleanSizes(v: unknown, def: number[], min: number, max: number): number[] {
+    if (!Array.isArray(v) || v.length !== 3 || !v.every(x => typeof x === 'number' && isFinite(x))) return [...def];
+    return (v as number[]).map(x => Math.round(Math.max(min, Math.min(max, x)) * 100) / 100).sort((a, b) => a - b);
+}
+
 export const DEFAULT_PEN_PALETTE = ['#000000', '#dc2626', '#2563eb', '#16a34a', '#737373'];
 export const DEFAULT_HIGHLIGHTER_PALETTE = ['#facc15', '#60a5fa', '#4ade80', '#f472b6', '#fb923c'];
 
@@ -156,6 +181,9 @@ export const DEFAULT_SETTINGS: HandwritingSettings = {
     palmPenTimeout: 600,
     palmContactSize: 40,
     pinchZoom: true,
+    middleMousePan: true,
+    panKey: 'Space',
+    toolOptionsLayout: 'popup',
     penPalette: [...DEFAULT_PEN_PALETTE],
     highlighterPalette: [...DEFAULT_HIGHLIGHTER_PALETTE],
     pagesPanelSide: 'right',
@@ -173,6 +201,9 @@ export const DEFAULT_SETTINGS: HandwritingSettings = {
     highlighterErase: 'whole',
     longPressMenu: true,
     longPressMs: 350,
+    penSizes: [...DEFAULT_PEN_SIZES],
+    highSizes: [...DEFAULT_HIGH_SIZES],
+    shapeSizes: [...DEFAULT_SHAPE_SIZES],
     quickActions: [...DEFAULT_QUICK_ACTIONS],
     toolbarHidden: [],
     debugLog: false,

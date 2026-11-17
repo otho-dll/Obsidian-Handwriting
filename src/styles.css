@@ -327,7 +327,7 @@ button.hw-swatch-add.hw-swatch-add.hw-swatch-add {
 
 /* --- TOOLBAR: style button (colour + thickness) and panel --- */
 .hw-style-btn { gap: 4px; }
-.hw-style-btn .hw-style-dot {
+.hw-style-btn .hw-style-dot, .hw-dock-chip .hw-style-dot {
     display: block;
     width: 18px;
     height: 18px;
@@ -1092,3 +1092,65 @@ button.hw-page-num.is-over { opacity: 0; pointer-events: none; }
 button.hw-page-num.is-over.is-recent { opacity: 0.95; pointer-events: auto; }
 .hw-pp-open-right .hw-page-num, .hw-pp-open-sheet .hw-page-num { visibility: hidden; }
 .hw-oled-ui-dim .hw-page-num { opacity: 0.18; }
+
+/* ============================================================
+   Tool dock: options of the active tool in a floating pill under the toolbar (Settings → Toolbar → Tool options).
+   Centred with auto margins (not a transform – the OLED pixel shift transforms every child of the view).
+   ============================================================ */
+.hw-tool-dock {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    top: 56px;
+    width: fit-content;
+    max-width: calc(100% - 16px);
+    margin: 0 auto;
+    z-index: 29;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 4px 10px;
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 999px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    touch-action: pan-x;
+    transition: opacity 0.6s ease;
+}
+.hw-tool-dock::-webkit-scrollbar { display: none; }
+.hw-tool-dock.is-hidden { display: none; }
+.hw-tool-dock > * { flex-shrink: 0; display: flex; align-items: center; padding: 0 10px; }
+.hw-tool-dock > * + * { border-left: 1px solid var(--background-modifier-border); }
+.hw-tool-dock > .hw-no-colors { display: none; }
+.hw-tool-dock .hw-menu-title { display: none; }
+.hw-tool-dock .hw-menu-row { flex-wrap: nowrap; }
+.hw-tool-dock .hw-erase-opts { min-width: 0; gap: 12px; }
+.hw-tool-dock .hw-erase-row { padding: 0; gap: 6px; }
+.hw-tool-dock .hw-alpha-opt { flex-direction: row; padding: 4px 6px; gap: 4px; }
+.hw-tool-dock .hw-style-inline { gap: 10px; }
+.hw-tool-dock .hw-color-palette { flex-wrap: nowrap; }
+@media (max-height: 520px), (max-width: 700px) {
+    .hw-tool-dock { padding: 2px 6px; }
+    .hw-tool-dock > * { padding: 0 6px; }
+}
+.hw-oled-ui-dim .hw-tool-dock { opacity: 0.18; }
+
+/* Moving the page with the mouse: pan key held / Hand tool (grab), while dragging (grabbing). */
+.hw-scroll-area.hw-pan-ready, .hw-scroll-area.hw-pan-ready canvas { cursor: grab; }
+.hw-scroll-area.hw-panning, .hw-scroll-area.hw-panning canvas { cursor: grabbing; }
+.hw-key-label { font-family: var(--font-monospace); font-size: 0.9em; padding: 2px 8px; border: 1px solid var(--background-modifier-border); border-radius: 4px; color: var(--text-muted); }
+
+/* Dock groups that don't fit (narrow window): a chip with the current value, opening a submenu with that group. */
+.hw-tool-dock > .hw-dock-chip { padding: 4px 6px; margin: 0 4px; gap: 4px; display: flex; align-items: center; min-width: 0; }
+.hw-dock-chip > * { pointer-events: none; }
+.hw-dock-chip .hw-chip-sum { display: flex; align-items: center; gap: 4px; font-size: 0.78em; }
+.hw-dock-chip .hw-chip-sum .hw-dot { background: var(--dot, var(--text-normal)); }
+.hw-dock-chip .hw-chip-caret { width: 0; height: 0; border: 4px solid transparent; border-top-color: var(--text-muted); margin-top: 4px; }
+.hw-dock-group-pop .hw-style-inline { flex-direction: column; align-items: flex-start; gap: 14px; display: flex; }
+.hw-dock-group-pop .hw-menu-row { flex-wrap: wrap; }
+.hw-dock-group-pop .hw-color-palette { flex-wrap: wrap; max-width: calc(100vw - 48px); }
+.hw-dock-group-pop .hw-erase-opts { min-width: 230px; }
+.hw-size-input { width: 64px; }

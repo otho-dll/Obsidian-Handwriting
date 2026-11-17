@@ -89,7 +89,7 @@ export const oledCareMixin = defineMixin({
             const r = el.getBoundingClientRect();
             return x > r.left - UI_WAKE_DISTANCE && x < r.right + UI_WAKE_DISTANCE && y > r.top - UI_WAKE_DISTANCE && y < r.bottom + UI_WAKE_DISTANCE;
         };
-        return near(tb);
+        return near(tb) || near(this.contentEl.querySelector<HTMLElement>('.hw-tool-dock:not(.is-hidden)'));
     },
 
     setUiDimmed(on: boolean) {

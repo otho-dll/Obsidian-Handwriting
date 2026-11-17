@@ -49,6 +49,7 @@ export const toolbarMixin = defineMixin({
         const removeCustom = (c: string) => {
             setCustoms(customs().filter(x => x !== c));
             this.renderPalette(container, presets, current, kind, onChange);
+            this.refitToolDock?.();   // the palette got narrower
         };
         customs().forEach(c => {
             if (presets.includes(c)) return;
@@ -90,6 +91,7 @@ export const toolbarMixin = defineMixin({
             const c = picker.value.toLowerCase();
             if (!presets.includes(c) && !customs().includes(c)) setCustoms([c, ...customs()].slice(0, 3));
             this.renderPalette(container, presets, c, kind, onChange);
+            this.refitToolDock?.();   // the palette got wider
         };
 
         refresh();
@@ -100,6 +102,10 @@ export const toolbarMixin = defineMixin({
         const label = (el: HTMLElement, text: string) => { el.setAttribute('aria-label', text); el.setAttribute('title', text); };
 
         let markHiddenTool = () => { };
+        // Tool options in the dock (Settings → Toolbar → Tool options); assigned below, once all the groups exist.
+        let placeOptions = () => { };
+        let refreshChips = () => { };   // dock chips show the current colour / thickness (assigned below)
+        const dockMode = () => this.plugin.settings.toolOptionsLayout === 'dock';
         // --- TOOLS ---
         const secTools = toolbar.createDiv({ cls: "hw-tool-section" });
         const penBtn = this.createToolBtn(secTools, ICON_PEN, true);
@@ -117,6 +123,10 @@ export const toolbarMixin = defineMixin({
         const secShapes = secTools.createDiv({ cls: "hw-shapes-section" });
         const shapeBtn = this.createToolBtn(secShapes, this.shapeIcon());
         label(shapeBtn, 'Shapes');
+        // Hand: dragging with the mouse / pen moves the page (fingers scroll anyway). Off the toolbar by default.
+        const handBtn = secTools.createEl('button', { cls: 'hw-tool-btn' });
+        setIcon(handBtn, 'hand');
+        label(handBtn, 'Hand (drag to move the page)');
 
         toolbar.createDiv({ cls: "hw-toolbar-divider" });
 
@@ -156,10 +166,13 @@ export const toolbarMixin = defineMixin({
         const thicknessWrapper = thGroup.createDiv({ cls: "hw-menu-row hw-thickness-presets" });
         const btnSm = thicknessWrapper.createEl("button", { cls: "hw-thickness-btn" });
         btnSm.createDiv({ cls: "hw-dot hw-dot-sm" });
+        label(btnSm, 'Thin');
         const btnMd = thicknessWrapper.createEl("button", { cls: "hw-thickness-btn active" });
         btnMd.createDiv({ cls: "hw-dot hw-dot-md" });
+        label(btnMd, 'Medium');
         const btnLg = thicknessWrapper.createEl("button", { cls: "hw-thickness-btn" });
         btnLg.createDiv({ cls: "hw-dot hw-dot-lg" });
+        label(btnLg, 'Thick');
         const alphaGroup = sizePop.createDiv({ cls: "hw-menu-group" });
         alphaGroup.createDiv({ cls: "hw-menu-title", text: "Opacity" });
         const secAlpha = alphaGroup.createDiv({ cls: "hw-menu-row hw-alpha-row" });
@@ -267,6 +280,7 @@ export const toolbarMixin = defineMixin({
         };
 
         const shapeThRow = addGroup("Thickness");
+        const shapeThGroup = shapeThRow.parentElement!;
         shapeThRow.addClass('hw-thickness-presets');
         const shapeThBtns = ['sm', 'md', 'lg'].map((sz, i) => {
             const b = shapeThRow.createEl('button', { cls: 'hw-thickness-btn' });
@@ -276,6 +290,7 @@ export const toolbarMixin = defineMixin({
             return b;
         });
         const shapeRow = addGroup("Shape");
+        const shapeTypeGroup = shapeRow.parentElement!;
         const shapeOpts: [NonNullable<Stroke['shape']>, HTMLElement][] = [
             ['line', addOpt(shapeRow, ICON_SHAPE_LINE, 'Line', () => { this.shapeType = 'line'; refreshShapeMenu(); })],
             ['rect', addOpt(shapeRow, ICON_SHAPE_RECT, 'Rectangle', () => { this.shapeType = 'rect'; refreshShapeMenu(); })],
@@ -284,6 +299,7 @@ export const toolbarMixin = defineMixin({
         ];
 
         const dashRow = addGroup("Line style");
+        const dashGroup = dashRow.parentElement!;
         const dashOpts: [NonNullable<Stroke['dash']>, HTMLElement][] = [
             ['solid', addOpt(dashRow, ICON_DASH_SOLID, 'Solid', () => { this.shapeDash = 'solid'; refreshShapeMenu(); })],
             ['dashed', addOpt(dashRow, ICON_DASH_DASHED, 'Dashed', () => { this.shapeDash = 'dashed'; refreshShapeMenu(); })],
@@ -358,6 +374,12 @@ export const toolbarMixin = defineMixin({
             compact = c;
             toolbar.toggleClass('hw-compact', c);
             closeSizePop();
+            if (dockMode()) {
+                // The colours live in the dock (it scrolls sideways on a narrow screen) – no colour button.
+                closeStylePop();
+                updateStyleBtn();
+                return;
+            }
             if (c) {
                 // Narrow screen: the colours go into a panel under one button.
                 stylePop.appendChild(styleInline);
@@ -388,7 +410,8 @@ export const toolbarMixin = defineMixin({
             const color = t === 'pen' ? this.penColor : t === 'shape' ? this.shapeColor : t === 'highlighter' ? this.highlighterColor : t === 'lasso' ? (this.selectionColor() ?? '') : '';
             dot.style.setProperty('--sw', color || 'var(--text-faint)');
             // narrow screen only, and only for tools with colours
-            styleBtn.toggle(!!compact && !styleInline.hasClass('hw-no-colors'));
+            styleBtn.toggle(!!compact && !dockMode() && !styleInline.hasClass('hw-no-colors'));
+            refreshChips();
         };
 
         const currentColor = () => {
@@ -402,6 +425,7 @@ export const toolbarMixin = defineMixin({
             const col = currentColor() || 'var(--text-normal)';
             for (const b of [btnSm, btnMd, btnLg, ...shapeThBtns]) b.style.setProperty('--dot', col);
             void alphaNow;
+            refreshChips();
         };
         const updateThicknessUI = () => {
             const idx = this.currentTool === 'lasso' ? this.selectionSizeIndex() : this.activeSizeIndex;
@@ -508,12 +532,16 @@ export const toolbarMixin = defineMixin({
                 } else {
                     secColor.empty();
                 }
+            } else {
+                // Hand: no options
+                secColor.empty();
             }
             updateThicknessUI();
             refreshEraseGroup();
             // No colours (eraser, lasso without strokes): no colour row and, on a narrow screen, no colour button.
             styleInline.toggleClass('hw-no-colors', secColor.childElementCount === 0);
             updateStyleBtn();
+            placeOptions();
         };
         this.refreshToolbarUI = () => {
             setSvg(lassoBtn, this.iconSvg(selIcon()));
@@ -522,31 +550,43 @@ export const toolbarMixin = defineMixin({
         };
 
         const updateActiveTool = (btn: HTMLElement) => {
+            this.closeToolDockPop?.();
             markHiddenTool();
             closeShapeMenu();
             closeSizePop();
             closeStylePop();
             closeSelModePop();
-            [penBtn, eraserBtn, highBtn, lassoBtn, shapeBtn].forEach(b => b.removeClass("active"));
+            [penBtn, eraserBtn, highBtn, lassoBtn, shapeBtn, handBtn].forEach(b => b.removeClass("active"));
             btn.addClass("active");
             if (this.currentTool !== 'lasso') this.clearSelection();
             updateSharedUI();
+            this.syncPanCursor?.();
         };
 
         // Tapping the active tool again opens its options: thickness (+ opacity for the pen, + what the eraser erases).
+        // With the dock it folds / unfolds the dock instead.
         const toolTap = (tool: 'pen' | 'eraser' | 'highlighter', btn: HTMLElement) => {
-            if (this.currentTool === tool) { openToolOptions(btn); return; }
+            if (this.currentTool === tool) {
+                if (dockMode()) toggleDock(); else openToolOptions(btn);
+                return;
+            }
             this.currentTool = tool;
             updateActiveTool(btn);
         };
         penBtn.onclick = () => toolTap('pen', penBtn);
         eraserBtn.onclick = () => toolTap('eraser', eraserBtn);
         highBtn.onclick = () => toolTap('highlighter', highBtn);
+        handBtn.onclick = () => {
+            if (this.currentTool === 'hand') return;
+            this.currentTool = 'hand';
+            updateActiveTool(handBtn);
+        };
         label(penBtn, 'Pen (tap again: thickness and opacity)');
         label(eraserBtn, 'Eraser (tap again: size and what it erases)');
         label(highBtn, 'Highlighter (tap again: thickness)');
-        const toolBtnOf = (t: string): HTMLElement | null => ({ pen: penBtn, eraser: eraserBtn, highlighter: highBtn, lasso: lassoBtn, shape: shapeBtn } as Record<string, HTMLElement>)[t] ?? null;
+        const toolBtnOf = (t: string): HTMLElement | null => ({ pen: penBtn, eraser: eraserBtn, highlighter: highBtn, lasso: lassoBtn, shape: shapeBtn, hand: handBtn } as Record<string, HTMLElement>)[t] ?? null;
         const openToolOptions = (anchor: HTMLElement) => {
+            if (dockMode()) { showDock(); return; }
             if (sizePop.style.display !== 'none') { closeSizePop(); return; }
             closeShapeMenu();
             closeStylePop();
@@ -564,6 +604,7 @@ export const toolbarMixin = defineMixin({
             }
             // Clicking the active tool again: choose the selection mode (and the thickness of selected strokes).
             void ev;
+            if (dockMode()) { toggleDock(); return; }
             if (selModePop.style.display !== 'none') { closeSelModePop(); return; }
             closeSizePop();
             refreshSelModePop();
@@ -602,9 +643,203 @@ export const toolbarMixin = defineMixin({
             const t = e.target as Node;
             if (!selModePop.contains(t) && !lassoBtn.contains(t)) { closeSelModePop(); }
         }, { capture: true });
+
+        // --- Dock: options of the active tool in a floating pill under the toolbar (instead of the popups) ---
+        // The same option groups as in the popups are moved into it, so everything works the same in both layouts.
+        const dock = container.createDiv({ cls: 'hw-tool-dock is-hidden' });
+        let dockCollapsed = false;
+        let inDock = false;
+        // Groups that don't fit in the dock (narrow window) collapse one by one into small buttons ("chips") showing the
+        // current value; each chip opens its own submenu with just that group.
+        type GroupMeta = { name: string; autoClose: boolean; icon?: string };
+        const meta = new Map<HTMLElement, GroupMeta>([
+            [thGroup, { name: 'Thickness', autoClose: true }],
+            [alphaGroup, { name: 'Opacity', autoClose: true }],
+            [eraseGroup, { name: 'Eraser erases', autoClose: false, icon: 'eraser' }],
+            [shapeThGroup, { name: 'Thickness', autoClose: true }],
+            [shapeTypeGroup, { name: 'Shape', autoClose: true }],
+            [dashGroup, { name: 'Line style', autoClose: true }],
+            [fillGroup, { name: 'Fill', autoClose: true }],
+            [arrowGroup, { name: 'Options', autoClose: false, icon: 'sliders-horizontal' }],
+            [selGroup, { name: 'Selection', autoClose: true }],
+            [styleInline, { name: 'Colours', autoClose: false }],
+        ]);
+        let chips: { group: HTMLElement; chip: HTMLElement }[] = [];
+        let popGroup: HTMLElement | null = null;   // the group shown in the submenu now
+        const groupPop = activeDocument.body.createDiv({ cls: 'hw-menu hw-dock-group-pop' });
+        groupPop.hide();
+        this.register(() => groupPop.remove());
+        const chipOf = (g: HTMLElement) => chips.find(c => c.group === g)?.chip ?? null;
+        const closeGroupPop = () => {
+            groupPop.hide();
+            if (popGroup) { chipOf(popGroup)?.removeClass('active'); popGroup.detach(); }
+            popGroup = null;
+        };
+        /** The chip shows the current value: the active option of the group (or the colour / an icon). */
+        const fillSummary = (chip: HTMLElement, g: HTMLElement) => {
+            const box = chip.querySelector<HTMLElement>('.hw-chip-sum');
+            if (!box) return;
+            box.empty();
+            const m = meta.get(g);
+            if (g === styleInline) {
+                const d = box.createSpan({ cls: 'hw-style-dot' });
+                d.style.setProperty('--sw', currentColor() || 'var(--text-faint)');
+                return;
+            }
+            if (g === thGroup || g === shapeThGroup) {
+                // thickness: a short stroke sample in the current colour (thin / medium / thick)
+                const btns = g === thGroup ? [btnSm, btnMd, btnLg] : shapeThBtns;
+                const i = btns.findIndex(b => b.hasClass('active'));
+                const col = currentColor();
+                const stroke = /^#[0-9a-f]{3,8}$/i.test(col) ? col : 'currentColor';
+                const w = [1.5, 3, 5][i < 0 ? 1 : i];
+                setSvg(box, `<svg viewBox="0 0 28 20" width="28" height="20"${i < 0 ? ' opacity="0.45"' : ''}><path d="M3 14 C 9 3, 17 19, 25 6" stroke="${stroke}" stroke-width="${w}" fill="none" stroke-linecap="round"/></svg>`);
+                return;
+            }
+            // the eraser options have two rows of choices – an icon says more than one of them
+            const act = g === eraseGroup ? null : Array.from(g.querySelectorAll<HTMLElement>('button.active')).find(x => x.style.display !== 'none') ?? null;
+            if (act) {
+                const dot = act.style.getPropertyValue('--dot');
+                if (dot) box.style.setProperty('--dot', dot);
+                act.childNodes.forEach(n => { box.appendChild(n.cloneNode(true)); });
+            } else if (m?.icon) {
+                setIcon(box, m.icon);
+            }
+        };
+        const refreshChipsNow = () => { for (const c of chips) fillSummary(c.chip, c.group); };
+        refreshChips = () => { if (chips.length > 0) refreshChipsNow(); };
+        const openGroupPop = (g: HTMLElement, chip: HTMLElement) => {
+            closeGroupPop();
+            closeSizePop(); closeShapeMenu(); closeStylePop(); closeSelModePop();
+            groupPop.appendChild(g);
+            popGroup = g;
+            chip.addClass('active');
+            placeBelow(groupPop, chip);
+        };
+        /** Replaces a group in the dock with its chip. */
+        const collapseGroup = (g: HTMLElement) => {
+            const m = meta.get(g);
+            const chip = createEl('button', { cls: 'hw-tool-btn hw-dock-chip' });
+            label(chip, m?.name ?? 'Options');
+            chip.createSpan({ cls: 'hw-chip-sum' });
+            chip.createSpan({ cls: 'hw-chip-caret' });
+            dock.insertBefore(chip, g);
+            g.detach();
+            chips.push({ group: g, chip });
+            fillSummary(chip, g);
+            chip.onclick = () => { if (popGroup === g) closeGroupPop(); else openGroupPop(g, chip); };
+        };
+        // After a pick in the submenu: update the chips; single-choice groups close the submenu.
+        groupPop.addEventListener('click', (e: MouseEvent) => {
+            const g = popGroup;
+            const onButton = !!(e.target as HTMLElement | null)?.closest('button');
+            window.setTimeout(() => {
+                refreshChipsNow();
+                if (g && popGroup === g && onButton && meta.get(g)?.autoClose) closeGroupPop();
+            }, 120);
+        }, true);
+        /** The dock's height (plus gaps) is kept free at the top of the note, so it doesn't cover the first page. */
+        const updateInset = () => {
+            const on = inDock && !dock.hasClass('is-hidden');
+            this.setTopInset(on ? dock.offsetHeight + 8 : 0);   // + the usual 20 px margin below it
+        };
+        const positionDock = () => {
+            if (dock.hasClass('is-hidden')) { updateInset(); return; }
+            const c = this.contentEl.getBoundingClientRect();
+            const below = this.scrollArea ? this.scrollArea.getBoundingClientRect().top : toolbar.getBoundingClientRect().bottom;
+            dock.style.top = `${Math.max(0, below - c.top) + 8}px`;
+            updateInset();
+        };
+        const restorePopups = () => {
+            // back to the popups, in their original order
+            sizePop.append(thGroup, alphaGroup, eraseGroup);
+            shapeMenu.append(shapeThGroup, shapeTypeGroup, dashGroup, fillGroup, arrowGroup);
+            selModePop.insertBefore(selGroup, selModePop.firstChild);
+            toolbar.insertBefore(styleInline, styleBtn);
+            closeGroupPop();
+            chips = [];
+            dock.empty();
+            dock.addClass('is-hidden');
+            updateInset();
+        };
+        /**
+         * Collapses groups into chips until the dock fits in the window. `drop` = the order in which groups collapse
+         * (least important first). If even all chips don't fit, the dock scrolls sideways.
+         */
+        const fitDock = (drop: HTMLElement[]) => {
+            const wasOpen = popGroup;
+            groupPop.hide();
+            popGroup = null;
+            chips = [];
+            if (dock.hasClass('is-hidden')) return;
+            const overflows = () => dock.scrollWidth > dock.clientWidth + 1;
+            for (const g of drop) {
+                if (!overflows()) break;
+                if (g.style.display === 'none' || g.hasClass('hw-no-colors') || g.parentElement !== dock) continue;
+                collapseGroup(g);
+            }
+            // The submenu was open and its group is still collapsed: keep it open.
+            const ch = wasOpen ? chipOf(wasOpen) : null;
+            if (wasOpen && ch) openGroupPop(wasOpen, ch);
+        };
+        let dockWidth = -1;
+        placeOptions = () => {
+            if (!dockMode()) {
+                if (inDock) { inDock = false; restorePopups(); }
+                return;
+            }
+            inDock = true;
+            const t = this.currentTool;
+            let parts: HTMLElement[] = [];
+            let drop: HTMLElement[] = [];
+            if (t === 'pen') { parts = [thGroup, alphaGroup, styleInline]; drop = [alphaGroup, thGroup, styleInline]; }
+            else if (t === 'highlighter') { parts = [thGroup, styleInline]; drop = [thGroup, styleInline]; }
+            else if (t === 'eraser') { parts = [thGroup, eraseGroup]; drop = [eraseGroup, thGroup]; }
+            else if (t === 'shape') {
+                parts = [shapeTypeGroup, shapeThGroup, dashGroup, fillGroup, arrowGroup, styleInline];
+                drop = [arrowGroup, shapeThGroup, fillGroup, dashGroup, shapeTypeGroup, styleInline];
+            } else if (t === 'lasso') {
+                parts = this.selectionStyleKind() ? [selGroup, thGroup, alphaGroup, styleInline] : [selGroup];
+                drop = [alphaGroup, thGroup, selGroup, styleInline];
+            }
+            dock.empty();
+            for (const p of parts) dock.appendChild(p);
+            dock.toggleClass('is-hidden', parts.length === 0 || dockCollapsed);
+            dockWidth = this.contentEl.clientWidth;
+            fitDock(drop.filter(g => parts.includes(g)));
+            positionDock();
+        };
+        /** The window got wider / narrower: fit the dock again. */
+        const refitDock = () => { if (inDock && this.contentEl.clientWidth !== dockWidth) placeOptions(); };
+        this.refitToolDock = () => { if (inDock) placeOptions(); };
+        this.closeToolDockPop = closeGroupPop;
+        const showDock = () => { dockCollapsed = false; placeOptions(); };
+        const toggleDock = () => { dockCollapsed = !dockCollapsed; closeGroupPop(); placeOptions(); };
+        this.registerDomEvent(activeDocument, 'pointerdown', (e: PointerEvent) => {
+            const t = e.target as Node;
+            if (popGroup && !groupPop.contains(t) && !(chipOf(popGroup)?.contains(t) ?? false)) closeGroupPop();
+        }, { capture: true });
+        // The dock is not part of the note: wheel scrolls it sideways (when it overflows), nothing reaches the page.
+        this.registerDomEvent(dock, 'wheel', (e: WheelEvent) => {
+            e.stopPropagation();
+            if (dock.scrollWidth <= dock.clientWidth + 2) return;
+            const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+            if (!d) return;
+            e.preventDefault();
+            dock.scrollLeft += d * (e.deltaMode === 1 ? 16 : 1);
+        }, { passive: false });
+        this.registerDomEvent(dock, 'contextmenu', (e: MouseEvent) => e.stopPropagation());
+        /** Settings → Toolbar → Tool options changed: move the groups live. */
+        this.applyToolOptionsLayout = () => {
+            closeSizePop(); closeShapeMenu(); closeStylePop(); closeSelModePop(); closeGroupPop();
+            compact = null;
+            updateSharedUI();
+            this.layoutToolbar?.();
+        };
+
         this.activateLasso = () => { this.currentTool = 'lasso'; updateActiveTool(lassoBtn); };
         this.setTool = (t) => {
-            const btn = { pen: penBtn, eraser: eraserBtn, highlighter: highBtn, lasso: lassoBtn, shape: shapeBtn }[t];
+            const btn = { pen: penBtn, eraser: eraserBtn, highlighter: highBtn, lasso: lassoBtn, shape: shapeBtn, hand: handBtn }[t];
             this.currentTool = t;
             updateActiveTool(btn);
         };
@@ -626,6 +861,8 @@ export const toolbarMixin = defineMixin({
             if (this.currentTool !== 'shape') {
                 this.currentTool = 'shape';
                 updateActiveTool(shapeBtn);
+            } else if (dockMode()) {
+                toggleDock();
             } else if (shapeMenu.style.display === 'none') {
                 openShapeMenu();
             } else {
@@ -634,13 +871,16 @@ export const toolbarMixin = defineMixin({
         };
 
         // --- Custom toolbar layout: buttons turned off in the settings are in the "More" menu ---
-        this.openShapeOptions = (anchor: HTMLElement) => { closeStylePop(); closeSizePop(); placeBelow(shapeMenu, anchor); };
+        this.openShapeOptions = (anchor: HTMLElement) => {
+            if (dockMode()) { showDock(); return; }
+            closeStylePop(); closeSizePop(); placeBelow(shapeMenu, anchor);
+        };
         this.openEraserOptions = (anchor: HTMLElement) => openToolOptions(anchor);
         const itemEls: Record<string, HTMLElement[]> = {
-            eraser: [eraserBtn], highlighter: [highBtn], lasso: [lassoBtn], shapes: [secShapes],
+            hand: [handBtn], eraser: [eraserBtn], highlighter: [highBtn], lasso: [lassoBtn], shapes: [secShapes],
             undo: [this.undoBtn, this.redoBtn].filter((b): b is HTMLButtonElement => !!b),
         };
-        const toolItem: Record<string, string> = { eraser: 'eraser', highlighter: 'highlighter', lasso: 'lasso', shape: 'shapes' };
+        const toolItem: Record<string, string> = { hand: 'hand', eraser: 'eraser', highlighter: 'highlighter', lasso: 'lasso', shape: 'shapes' };
         markHiddenTool = () => {
             const id = toolItem[this.currentTool];
             moreBtn.toggleClass('hw-more-active', !!id && this.plugin.settings.toolbarHidden.includes(id));
@@ -688,6 +928,8 @@ export const toolbarMixin = defineMixin({
             arrR.toggleClass('hw-on', toolbar.hasClass('hw-tb-more-right'));
             const r = toolbar.getBoundingClientRect(), c = this.contentEl.getBoundingClientRect();
             for (const a of [arrL, arrR]) { a.style.top = `${r.top - c.top}px`; a.style.height = `${r.height}px`; }
+            refitDock();
+            positionDock();
         };
         this.registerDomEvent(toolbar, 'scroll', syncArrows);
         const ro2 = new ResizeObserver(() => { updateFade(); syncArrows(); });

@@ -28,7 +28,7 @@ export const navigationMixin = defineMixin({
         const z = Math.max(0.4, Math.min(4, (vw - 24) / this.pageW(idx)));
         const top = this.pageViews[idx]?.outer.offsetTop ?? 0;
         this.currentZoom = z;
-        this.pagePositionY = -(top - 10) * z;
+        this.pagePositionY = -(top - 10) * z + this.topInset;
         this.pagePositionX = (vw - this.wrapperW() * z) / 2;   // pages are centred in the column
         this.activePageIndex = idx;
         this.applyManualZoom();
@@ -85,6 +85,89 @@ export const navigationMixin = defineMixin({
                 this.applyManualZoom();
             }
         }, { passive: false });
+    },
+
+    // --- MOUSE / HAND PANNING ---
+    /**
+     * Dragging the page with the mouse: the middle button, the left button while the pan key (default Space) is held,
+     * or the Hand tool (mouse or pen). Capture phase on the scroll area, so the page canvas never sees the press.
+     */
+    setupMousePan(target: HTMLElement) {
+        let keyDown = false;
+        let pan: { id: number; x: number; y: number } | null = null;
+        const typing = (e: Event) => !!(e.target as HTMLElement | null)?.closest?.('input, textarea, select, [contenteditable="true"]');
+        const syncCursor = () => {
+            target.toggleClass('hw-pan-ready', keyDown || this.currentTool === 'hand');
+            target.toggleClass('hw-panning', !!pan);
+        };
+        this.syncPanCursor = syncCursor;
+
+        this.registerDomEvent(this.contentEl, 'keydown', (e: KeyboardEvent) => {
+            const key = this.plugin.settings.panKey;
+            if (!key || e.code !== key || typing(e) || e.ctrlKey || e.metaKey) return;
+            if (key === 'Space') e.preventDefault();   // no button "click", no page scroll
+            if (!keyDown) { keyDown = true; syncCursor(); }
+        });
+        this.registerDomEvent(activeDocument, 'keyup', (e: KeyboardEvent) => {
+            if (keyDown && e.code === this.plugin.settings.panKey) { keyDown = false; syncCursor(); }
+        });
+        this.registerDomEvent(window, 'blur', () => { if (keyDown) { keyDown = false; syncCursor(); } });
+
+        const startsPan = (e: PointerEvent) => {
+            if (e.pointerType === 'mouse') {
+                if (e.button === 1) return this.plugin.settings.middleMousePan;
+                if (e.button === 0) return keyDown || this.currentTool === 'hand';
+                return false;
+            }
+            return e.pointerType === 'pen' && e.button === 0 && this.currentTool === 'hand';
+        };
+        this.registerDomEvent(target, 'pointerdown', (e: PointerEvent) => {
+            if (pan || !startsPan(e)) return;
+            // only presses on the note itself (not on the pages panel, calculator or other floating panels)
+            const t = e.target as HTMLElement | null;
+            if (t && t !== target && !this.pagesWrapper.contains(t) && !t.closest('.hw-edge')) return;
+            e.preventDefault();       // also blocks the browser's middle-button autoscroll
+            e.stopPropagation();
+            this.stopInertia();
+            pan = { id: e.pointerId, x: e.clientX, y: e.clientY };
+            try { target.setPointerCapture(e.pointerId); } catch { /* the pointer is already gone */ }
+            this.lastActivityAt = performance.now();
+            syncCursor();
+        }, { capture: true });
+        this.registerDomEvent(target, 'pointermove', (e: PointerEvent) => {
+            if (!pan || e.pointerId !== pan.id) return;
+            e.preventDefault();
+            e.stopPropagation();
+            this.pagePositionX += e.clientX - pan.x;
+            this.pagePositionY += e.clientY - pan.y;
+            pan.x = e.clientX; pan.y = e.clientY;
+            this.lastActivityAt = performance.now();
+            this.applyManualZoom();
+        }, { capture: true });
+        const end = (e: PointerEvent) => {
+            if (!pan || e.pointerId !== pan.id) return;
+            e.stopPropagation();
+            pan = null;
+            if (target.hasPointerCapture(e.pointerId)) target.releasePointerCapture(e.pointerId);
+            syncCursor();
+            this.resizeAndRedrawAll();
+        };
+        this.registerDomEvent(target, 'pointerup', end, { capture: true });
+        this.registerDomEvent(target, 'pointercancel', end, { capture: true });
+        // Middle click must not open links / paste (Linux) after a pan.
+        this.registerDomEvent(target, 'auxclick', (e: MouseEvent) => { if (e.button === 1) e.preventDefault(); });
+        this.registerDomEvent(target, 'mousedown', (e: MouseEvent) => { if (e.button === 1 && this.plugin.settings.middleMousePan) e.preventDefault(); }, { capture: true });
+    },
+
+    /** Space covered by the tool dock at the top. A view resting at the top moves down with it (and back up). */
+    setTopInset(v: number) {
+        v = Math.max(0, Math.round(v));
+        const old = this.topInset;
+        if (v === old) return;
+        const atTop = this.pagePositionY >= 20 + old - 1;
+        this.topInset = v;
+        if (atTop) this.pagePositionY += v - old;
+        this.applyManualZoom();
     },
 
     // --- SCROLL INERTIA ---
@@ -156,11 +239,13 @@ export const navigationMixin = defineMixin({
             this.pagePositionX = Math.max(minX, Math.min(maxX, this.pagePositionX));
         }
 
-        if (scaledHeight + marginY * 2 <= viewportHeight) {
-            this.pagePositionY = (viewportHeight - scaledHeight) / 2;
+        // The floating tool dock covers the top of the view: the note can't be pushed under it at the top.
+        const inset = this.topInset;
+        if (scaledHeight + marginY * 2 <= viewportHeight - inset) {
+            this.pagePositionY = inset + (viewportHeight - inset - scaledHeight) / 2;
         } else {
             const minY = viewportHeight - scaledHeight - marginY;
-            const maxY = marginY;
+            const maxY = marginY + inset;
             this.pagePositionY = Math.max(minY, Math.min(maxY, this.pagePositionY));
         }
 

@@ -206,6 +206,7 @@ export const inputMixin = defineMixin({
             rectCache = null;
 
             const effectiveTool = getEffectiveTool(e);
+            if (effectiveTool === 'hand') return;   // the Hand tool moves the view (navigation.ts setupMousePan)
             if (effectiveTool === 'lasso') {
                 const lpos = getPointerPos(e);
                 const bounds = this.selection && this.selection.page === pageIndex ? this.getSelectionBounds() : null;

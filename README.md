@@ -71,6 +71,10 @@ Click a section to expand it.
 
 **Tap the active tool again** for its options - thickness, opacity (pen), what the eraser erases, the shape options or
 the selection mode. Colours sit on the toolbar; in a narrow window they move into a panel under the colour button.
+Prefer everything in view? Settings → Toolbar → **Tool options: Dock** shows the active tool's options and colours in a
+floating bar under the toolbar (tap the active tool again to hide or show it). In a narrow window the options that
+don't fit collapse one by one into small buttons showing the current value, each with its own menu (shapes: options,
+thickness, fill, line style, shape, colours last).
 
 #### Eraser options
 For **shapes** and for the **highlighter** separately: *Off* (left alone), *Whole* (touching removes all of it) or
@@ -111,7 +115,10 @@ For **shapes** and for the **highlighter** separately: *Off* (left alone), *Whol
 
 #### Scrolling and zoom
 - **Fingers / trackpad:** one finger scrolls (with inertia), two fingers pinch-zoom.
-  **Mouse:** wheel scrolls, Ctrl + wheel zooms.
+  **Mouse:** wheel scrolls, Shift + wheel scrolls sideways, Ctrl + wheel zooms. **Drag with the middle button** or
+  **hold Space and drag** to move the page (the key can be changed in Settings → Pen and touch → Mouse).
+- **Hand tool:** dragging with the mouse or the pen moves the page instead of drawing (in the ⋯ menu, or put it on the
+  toolbar in Settings → Toolbar).
 - **Zoom button** (e.g. *135%*): - / +, *Fit width*, *100%* and up to four **favourite zoom levels**.
   *Open notes at …* makes every note open at that zoom.
 - Zoomed in, you can push the page further sideways - bring its edge under your hand.
@@ -245,7 +252,9 @@ Lectures/Physics/.Lecture 1.hnote-data/           ← hidden folder of this note
 
 #### Toolbar and the ⋯ menu
 Settings → **Toolbar** decides what is on the toolbar:
-- **Tools** - eraser, highlighter, selection, shapes, undo / redo (the pen and the colours always stay).
+- **Tool options** - popups (tap the active tool again) or a **dock**: a floating bar under the toolbar with the active
+  tool's thickness, opacity, colours and options.
+- **Tools** - hand, eraser, highlighter, selection, shapes, undo / redo (the pen and the colours always stay).
 - **Shortcut buttons** - calculator, zoom, contents, plot, insert image, pages panel, page style, screenshot,
   import / export PDF, print, version history, fit to width. Reorder (‹ ›), remove (×) or add from *Available*.
 
@@ -254,11 +263,14 @@ rejection.
 
 #### Pen and touch
 - **Pen pressure** on / off and strength.
+- **Thickness:** the widths behind the thin / medium / thick buttons, for the pen, the highlighter and shapes.
 - **Palm rejection:** *Auto* ignores touch while the pen is near or was just used, and large contacts;
   *Strict* - fingers never scroll.
 - **Pinch to zoom:** a sliding hand only scrolls, a resting hand (3+ contacts) does nothing. Can be turned off.
 - **Long-press menu:** hold a finger still for the page menu.
-- **Pen side button:** page menu, undo, redo, Snipping Tool (Windows) or nothing.
+- **Pen side button:** page menu, undo, redo, Snipping Tool (Windows) or nothing. Holding the pen still on the
+  screen (Windows press-and-hold) does not trigger it.
+- **Mouse:** middle-button drag and a hold-a-key drag (default Space) move the page.
 
 #### OLED care
 - **Dark paper on screen** - light pages shown dark with light ink (display only, files and exports unchanged).
@@ -270,10 +282,10 @@ rejection.
 
 | Section | What you can set |
 |---|---|
-| Pen and touch | pressure, palm rejection, pinch zoom, long-press menu, pen side button, eraser on shapes / highlighter, selection mode |
+| Pen and touch | pressure, thickness values, palm rejection, pinch zoom, long-press menu, mouse panning, pen side button, eraser on shapes / highlighter, selection mode |
 | Colors | five quick colours for the pen and for the highlighter |
 | Pages and view | default pattern and paper, favourite zooms, zoom when opening, pages panel side and columns |
-| Toolbar | tools and shortcut buttons |
+| Toolbar | tool options (popups / dock), tools and shortcut buttons |
 | Files and export | where images are stored, the Python converter, new-note naming, PDF location and resolution |
 | Version history | on / off, interval, retention, space limit per note |
 | Performance | canvas sharpness, low-latency ink |

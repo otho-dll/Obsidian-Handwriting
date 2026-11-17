@@ -5,7 +5,7 @@ import { QUICK_ACTIONS, TOOLBAR_ITEMS } from './quickActions';
 import { setSvg, appendSvg } from './svg';
 import { CONVERTER_FILE, saveConverterScript, copyConverterCommand } from './converter';
 import { LOGO_FILE } from './constants';
-import { HandwritingSettings, DEFAULT_PEN_PALETTE, DEFAULT_HIGHLIGHTER_PALETTE } from './settings';
+import { HandwritingSettings, DEFAULT_PEN_PALETTE, DEFAULT_HIGHLIGHTER_PALETTE, DEFAULT_PEN_SIZES, DEFAULT_HIGH_SIZES, DEFAULT_SHAPE_SIZES, SIZE_LIMITS, cleanSizes } from './settings';
 import type HandwritingPlugin from './main';
 
 export class HandwritingSettingTab extends PluginSettingTab {
@@ -69,6 +69,44 @@ export class HandwritingSettingTab extends PluginSettingTab {
                 .addSlider(sl => sl.setLimits(0, 100, 5).setValue(Math.round(st.pressureSensitivity * 100))
                     .onChange(async (v) => { st.pressureSensitivity = v / 100; await this.plugin.saveSettings(); this.plugin.refreshViews(); }));
 
+            // Thin / medium / thick widths of each tool (the three thickness buttons on the toolbar / in the dock).
+            new Setting(c).setName('Thickness').setHeading().settingEl.addClass('hw-set-sub');
+            c.createEl('p', { cls: 'setting-item-description', text: 'Widths behind the thin / medium / thick buttons, in page pixels (an A4 page is about 794 px wide). Strokes already written keep their width.' });
+            const sizeRow = (name: string, key: 'penSizes' | 'highSizes' | 'shapeSizes', def: number[], lim: readonly [number, number], step: number) => {
+                const s = new Setting(c).setName(name).setDesc(`Default ${def.join(' / ')} · allowed ${lim[0]}–${lim[1]}`);
+                const inputs: HTMLInputElement[] = [];
+                const show = () => inputs.forEach((inp, i) => { inp.value = String(st[key][i]); });
+                const commit = async () => {
+                    const vals = inputs.map(inp => parseFloat(inp.value.replace(',', '.')));
+                    if (vals.some(v => !isFinite(v))) { show(); return; }
+                    st[key] = cleanSizes(vals, def, lim[0], lim[1]);
+                    show();
+                    await this.plugin.saveSettings();
+                    this.plugin.refreshViews();
+                };
+                ['Thin', 'Medium', 'Thick'].forEach(lbl => s.addText(t => {
+                    t.inputEl.type = 'number';
+                    t.inputEl.step = String(step);
+                    t.inputEl.min = String(lim[0]);
+                    t.inputEl.max = String(lim[1]);
+                    t.inputEl.addClass('hw-size-input');
+                    t.inputEl.setAttribute('aria-label', `${name}: ${lbl}`);
+                    t.inputEl.setAttribute('title', lbl);
+                    t.inputEl.addEventListener('change', () => { void commit(); });
+                    inputs.push(t.inputEl);
+                }));
+                s.addExtraButton(b => b.setIcon('reset').setTooltip('Reset to default').onClick(async () => {
+                    st[key] = [...def];
+                    show();
+                    await this.plugin.saveSettings();
+                    this.plugin.refreshViews();
+                }));
+                show();
+            };
+            sizeRow('Pen thickness', 'penSizes', DEFAULT_PEN_SIZES, SIZE_LIMITS.pen, 0.1);
+            sizeRow('Highlighter thickness', 'highSizes', DEFAULT_HIGH_SIZES, SIZE_LIMITS.high, 1);
+            sizeRow('Shape thickness', 'shapeSizes', DEFAULT_SHAPE_SIZES, SIZE_LIMITS.shape, 0.5);
+
             new Setting(c).setName('Palm rejection').setHeading().settingEl.addClass('hw-set-sub');
             new Setting(c)
                 .setName('Mode')
@@ -104,6 +142,41 @@ export class HandwritingSettingTab extends PluginSettingTab {
                 .setDesc('How long to hold a finger (in milliseconds) before the menu opens. Shorter = faster, but a resting hand may trigger it more easily.')
                 .addSlider(sl => sl.setLimits(200, 1000, 50).setValue(st.longPressMs)
                     .onChange(async (v) => { st.longPressMs = v; await this.plugin.saveSettings(); }));
+
+            new Setting(c).setName('Mouse').setHeading().settingEl.addClass('hw-set-sub');
+            new Setting(c)
+                .setName('Middle button moves the page')
+                .setDesc('Hold the mouse wheel (middle button) and drag to move the note. The wheel scrolls, Shift + wheel scrolls sideways, Ctrl + wheel zooms.')
+                .addToggle(t => t.setValue(st.middleMousePan).onChange(async (v) => { st.middleMousePan = v; await this.plugin.saveSettings(); }));
+            const keyName = (code: string) => !code ? 'Off'
+                : code.replace(/^Key/, '').replace(/^Digit/, '').replace(/^(Alt|Control|Shift|Meta)(Left|Right)$/, '$2 $1');
+            const panKeySetting = new Setting(c)
+                .setName('Hold a key and drag to move the page')
+                .setDesc('While this key is held, dragging with the left mouse button moves the note instead of drawing. The Hand tool (Settings → Toolbar) does the same without a key.');
+            const keyLabel = panKeySetting.controlEl.createSpan({ cls: 'hw-key-label' });
+            const showKey = () => { keyLabel.setText(keyName(st.panKey)); };
+            showKey();
+            let recording: ((e: KeyboardEvent) => void) | null = null;
+            const stopRecording = () => { if (recording) { activeDocument.removeEventListener('keydown', recording, true); recording = null; } };
+            panKeySetting.addButton(b => b.setButtonText('Change…').onClick(() => {
+                stopRecording();
+                keyLabel.setText('Press a key… (Esc cancels)');
+                recording = (e: KeyboardEvent) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const code = e.code;
+                    stopRecording();
+                    if (code !== 'Escape' && code) { st.panKey = code; void this.plugin.saveSettings(); }
+                    showKey();
+                };
+                activeDocument.addEventListener('keydown', recording, true);
+            }));
+            panKeySetting.addButton(b => b.setButtonText('Turn off').onClick(async () => {
+                stopRecording();
+                st.panKey = '';
+                showKey();
+                await this.plugin.saveSettings();
+            }));
 
             new Setting(c).setName('Pen button and eraser').setHeading().settingEl.addClass('hw-set-sub');
             new Setting(c)
@@ -225,6 +298,14 @@ export class HandwritingSettingTab extends PluginSettingTab {
             const c = section('Toolbar', false);
             c.createEl('p', { cls: 'setting-item-description', text: 'Decide what sits on the toolbar. Anything you turn off here moves into the "More" (⋯) menu, so it is still one tap away. The pen and the colours always stay on the toolbar; tap a tool again for its thickness and options.' });
             const save = async () => { await this.plugin.saveSettings(); this.plugin.refreshViews(); };
+            new Setting(c)
+                .setName('Tool options')
+                .setDesc('Popups: tap the active tool again to open its thickness, opacity and other options. Dock: the options of the active tool (thickness, opacity, colours, shape and eraser options) are always shown in a floating bar under the toolbar – tap the active tool again to hide or show it.')
+                .addDropdown(d => d
+                    .addOption('popup', 'Popups (tap the tool again)')
+                    .addOption('dock', 'Dock under the toolbar')
+                    .setValue(st.toolOptionsLayout)
+                    .onChange(async (v) => { st.toolOptionsLayout = v as HandwritingSettings['toolOptionsLayout']; await save(); }));
             // Tools: chips that are on (on the toolbar) or off (in the ⋯ menu).
             new Setting(c).setName('Tools').setHeading().settingEl.addClass('hw-set-sub');
             c.createEl('p', { cls: 'setting-item-description', text: 'Tap a tool to show or hide it on the toolbar.' });

@@ -11,7 +11,7 @@ import { DEFAULT_QUICK_ACTIONS, QUICK_ACTIONS, TOOLBAR_ITEMS } from './quickActi
 import { migrateNote, NOTE_FORMAT_VERSION } from './format';
 import { usesV4, isFormat, ENDLESS_MAX, pageWidth, pageHeight } from './pageFormat';
 import { VaultAdapter, writeDataMeta, moveDataFolder, trashDataFolder, isSafeRef, isSafeDataUrl } from './dataFolder';
-import { HandwritingSettings, LastPosition, ToolMemory, defaultMemory, DEFAULT_PEN_PALETTE, DEFAULT_HIGHLIGHTER_PALETTE, DEFAULT_SETTINGS } from './settings';
+import { HandwritingSettings, LastPosition, ToolMemory, defaultMemory, DEFAULT_PEN_PALETTE, DEFAULT_HIGHLIGHTER_PALETTE, DEFAULT_SETTINGS, DEFAULT_PEN_SIZES, DEFAULT_HIGH_SIZES, DEFAULT_SHAPE_SIZES, SIZE_LIMITS, cleanSizes } from './settings';
 import { HandwritingSettingTab } from './settingTab';
 import { saveConverterScript, copyConverterCommand } from './converter';
 import { historyMixin, HistoryMethods } from './view/history';
@@ -309,6 +309,18 @@ export default class HandwritingPlugin extends Plugin {
         st.zoomPresets = presets;
         if (!(st.openZoom === 0 || (okZ(st.openZoom) && presets.includes(st.openZoom)))) st.openZoom = 0;
         if (typeof st.pinchZoom !== 'boolean') st.pinchZoom = true;
+        st.penSizes = cleanSizes(st.penSizes, DEFAULT_PEN_SIZES, SIZE_LIMITS.pen[0], SIZE_LIMITS.pen[1]);
+        st.highSizes = cleanSizes(st.highSizes, DEFAULT_HIGH_SIZES, SIZE_LIMITS.high[0], SIZE_LIMITS.high[1]);
+        st.shapeSizes = cleanSizes(st.shapeSizes, DEFAULT_SHAPE_SIZES, SIZE_LIMITS.shape[0], SIZE_LIMITS.shape[1]);
+        if (typeof st.middleMousePan !== 'boolean') st.middleMousePan = true;
+        if (typeof st.panKey !== 'string') st.panKey = 'Space';
+        if (!oneOf(st.toolOptionsLayout, ['popup', 'dock'])) st.toolOptionsLayout = 'popup';
+        // Hand tool (added later): it starts in the ⋯ menu – it can be put on the toolbar in the settings.
+        if (!st.handToolIntro) {
+            st.handToolIntro = true;
+            const hid = strings(st.toolbarHidden);
+            if (!hid.includes('hand')) st.toolbarHidden = [...hid, 'hand'];
+        }
         for (const k of ['oledDarkPaper', 'oledDimToolbar', 'oledPixelShift', 'oledIdleDim']) if (typeof st[k] !== 'boolean') st[k] = false;
         if (!oneOf(st.oledIdleMinutes, [1, 2, 3, 5, 10, 15, 30])) st.oledIdleMinutes = 3;
         if (typeof st.longPressMs !== 'number' || !(st.longPressMs >= 150 && st.longPressMs <= 1500)) st.longPressMs = 350;
@@ -461,7 +473,7 @@ export class HandwritingView extends TextFileView {
     edgeEls: Partial<Record<'top' | 'right' | 'bottom' | 'left', HTMLElement>> = {};
     resizeObserver!: ResizeObserver;
 
-    currentTool: 'pen' | 'highlighter' | 'eraser' | 'lasso' | 'shape' = 'pen';
+    currentTool: 'pen' | 'highlighter' | 'eraser' | 'lasso' | 'shape' | 'hand' = 'pen';
 
     shapeType: 'line' | 'rect' | 'ellipse' | 'triangle' = 'rect';
     shapeDash: 'solid' | 'dashed' | 'dotted' | 'dashdot' = 'solid';
@@ -489,11 +501,11 @@ export class HandwritingView extends TextFileView {
     sizeMem: { pen: number; highlighter: number; eraser: number; shape: number } = { pen: 1, highlighter: 1, eraser: 1, shape: 1 };
     get activeSizeIndex(): number {
         const t = this.currentTool;
-        return t === 'lasso' ? 1 : this.sizeMem[t];
+        return t === 'lasso' || t === 'hand' ? 1 : this.sizeMem[t];
     }
     set activeSizeIndex(v: number) {
         const t = this.currentTool;
-        if (t === 'lasso') return;
+        if (t === 'lasso' || t === 'hand') return;
         this.sizeMem[t] = v;
         this.persistMemory();
     }
@@ -522,9 +534,10 @@ export class HandwritingView extends TextFileView {
         if (this.memTimer !== null) window.clearTimeout(this.memTimer);
         this.memTimer = window.setTimeout(() => { this.memTimer = null; void this.plugin.saveSettings(); }, 400);
     }
-    penSizes = [0.5, 1, 2];
-    shapeSizes = [1.5, 3, 5];
-    highSizes = [15, 25, 35];
+    // Thin / medium / thick widths – set in Settings → Pen and touch → Thickness.
+    get penSizes(): number[] { return this.plugin.settings.penSizes; }
+    get shapeSizes(): number[] { return this.plugin.settings.shapeSizes; }
+    get highSizes(): number[] { return this.plugin.settings.highSizes; }
     /**
      * Eraser diameters in SCREEN pixels – like in Nebo: the eraser always has the same size on screen at any zoom
      * (in page units = size / zoom). Fast rubbing grows it up to 4×.
@@ -534,6 +547,8 @@ export class HandwritingView extends TextFileView {
     currentZoom = 1.0;
     pagePositionX = 0;
     pagePositionY = 0;
+    /** Space at the top of the view covered by the floating tool dock (the first page starts below it). */
+    topInset = 0;
     layoutVersion = 0;
 
     undoStack: HistoryEntry[] = [];
@@ -542,9 +557,16 @@ export class HandwritingView extends TextFileView {
     redoBtn: HTMLButtonElement | null = null;
     deleteSelBtn: HTMLButtonElement | null = null;
     activateLasso: (() => void) | null = null;
-    setTool: ((t: 'pen' | 'highlighter' | 'eraser' | 'lasso' | 'shape') => void) | null = null;
+    setTool: ((t: 'pen' | 'highlighter' | 'eraser' | 'lasso' | 'shape' | 'hand') => void) | null = null;
+    /** Moves the active tool's options between the popups and the dock (Settings → Toolbar). */
+    applyToolOptionsLayout: (() => void) | null = null;
+    /** Fits the tool dock again (its content got wider / narrower) and closes its "⋯" submenu. */
+    refitToolDock: (() => void) | null = null;
+    closeToolDockPop: (() => void) | null = null;
+    /** Updates the grab cursor (pan key held / Hand tool). */
+    syncPanCursor: (() => void) | null = null;
     /** Tool used before the automatic switch to the lasso (after inserting an image / plot / pasting). */
-    toolBeforeInsert: 'pen' | 'highlighter' | 'eraser' | 'shape' | null = null;
+    toolBeforeInsert: 'pen' | 'highlighter' | 'eraser' | 'shape' | 'hand' | null = null;
 
     // Lasso selection
     selection: Selection | null = null;
@@ -619,6 +641,8 @@ export class HandwritingView extends TextFileView {
     menuPending = false;
     lastActivityAt = 0;
     lastPenButtonAt = 0;
+    /** Last time a pen event reported the barrel button pressed (tells it apart from Windows press-and-hold). */
+    lastPenBarrelAt = 0;
     cancelTouchGestures: (() => void) | null = null;
 
     // Moving the selection between pages
@@ -978,6 +1002,7 @@ export class HandwritingView extends TextFileView {
 
         this.setupTouchPanZoom(this.scrollArea);
         this.setupWheel(this.scrollArea);
+        this.setupMousePan(this.scrollArea);
         this.setupInkLayer();
 
         // Edge shadows: show that the page continues beyond the screen (when zoomed in).
@@ -988,10 +1013,13 @@ export class HandwritingView extends TextFileView {
         // Context menu: right mouse button (a long finger press is handled by setupTouchPanZoom).
         // Windows turns a held palm/finger into a contextmenu event, so we only react to the mouse;
         // the pen side button is handled by runPenButton, and touch has its own long-press timer.
+        // Windows Ink also turns a pen held still on the screen (press-and-hold, e.g. a pause at the corner of a
+        // square) into a contextmenu event – that one must NOT run the pen button action (it launched the Snipping
+        // Tool while writing). The pen path only counts when the barrel button was really seen pressed just now.
         this.registerDomEvent(this.scrollArea, 'contextmenu', (e: MouseEvent) => {
             e.preventDefault();
             if (this.lastPointerType === 'mouse') this.requestPageMenu(e.clientX, e.clientY);
-            else if (this.lastPointerType === 'pen') this.runPenButton(e.clientX, e.clientY);
+            else if (this.lastPointerType === 'pen' && performance.now() - this.lastPenBarrelAt < 1000) this.runPenButton(e.clientX, e.clientY);
         });
         // Track pressed pointers: menus open only after the button / finger is released,
         // otherwise the release itself closed them immediately.
@@ -1076,6 +1104,7 @@ export class HandwritingView extends TextFileView {
             if (e.type === 'pointerdown' || e.type === 'pointermove') this.lastPointerType = e.pointerType;
             if (e.pointerType !== 'pen') return;
             this.lastPenAt = performance.now();
+            if ((e.buttons & 2) !== 0 || e.button === 2) this.lastPenBarrelAt = performance.now();
             // Pen side button: don't draw, run the configured action instead.
             if ((e.type === 'pointerdown' && (e.button === 2 || (e.buttons & 2) !== 0)) || (e.type === 'pointermove' && e.button === 2)) {
                 e.preventDefault();
@@ -1190,6 +1219,8 @@ export class HandwritingView extends TextFileView {
         this.renderQuickSlots();
         if (this.refreshToolbarUI) this.refreshToolbarUI();
         if (this.applyToolbarItems) this.applyToolbarItems();
+        if (this.applyToolOptionsLayout) this.applyToolOptionsLayout();
+        this.syncPanCursor?.();
         this.applyOledCare();
         if (!!this.inkCanvas !== this.plugin.settings.lowLatencyInk) this.setupInkLayer();
         this.applyPerfOverlay();
