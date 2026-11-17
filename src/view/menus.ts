@@ -7,7 +7,8 @@ export const menusMixin = defineMixin({
     showMenuBelow(menu: Menu, anchor: HTMLElement) {
         const tb = this.contentEl.querySelector<HTMLElement>('.hw-toolbar');
         const r = anchor.getBoundingClientRect();
-        const y = (tb ? tb.getBoundingClientRect().bottom : r.bottom) + 2;
+        // (a button in the tool dock or in a submenu sits below the toolbar – then the menu opens below the button)
+        const y = Math.max(tb ? tb.getBoundingClientRect().bottom : 0, r.bottom) + 2;
         // Button in the right half of the window: menu aligned to its right edge (opens to the left),
         // in the left half – to the left edge. Previously a wide menu was pushed far away from the button.
         if (r.left + r.width / 2 > window.innerWidth / 2) menu.showAtPosition({ x: r.right, y, left: true });

@@ -1154,3 +1154,6 @@ button.hw-page-num.is-over.is-recent { opacity: 0.95; pointer-events: auto; }
 .hw-dock-group-pop .hw-color-palette { flex-wrap: wrap; max-width: calc(100vw - 48px); }
 .hw-dock-group-pop .hw-erase-opts { min-width: 230px; }
 .hw-size-input { width: 64px; }
+
+/* Delete / selection options buttons in the dock (moved there from the toolbar while the dock is on). */
+.hw-sel-actions { display: flex; align-items: center; gap: 4px; }

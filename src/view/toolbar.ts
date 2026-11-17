@@ -149,6 +149,9 @@ export const toolbarMixin = defineMixin({
         label(this.selMenuBtn, 'Selection options');
         const smb = this.selMenuBtn;
         smb.onclick = () => this.showSelectionMenu(smb);
+        const delBtn = this.deleteSelBtn;
+        // With the dock on, both selection buttons move from the toolbar into the dock (next to the selection's options).
+        const selActions = createDiv({ cls: 'hw-sel-actions' });
 
         const styleDivider = toolbar.createDiv({ cls: "hw-toolbar-divider" });
 
@@ -662,6 +665,7 @@ export const toolbarMixin = defineMixin({
             [fillGroup, { name: 'Fill', autoClose: true }],
             [arrowGroup, { name: 'Options', autoClose: false, icon: 'sliders-horizontal' }],
             [selGroup, { name: 'Selection', autoClose: true }],
+            [selActions, { name: 'Selection actions', autoClose: true, icon: 'trash-2' }],
             [styleInline, { name: 'Colours', autoClose: false }],
         ]);
         let chips: { group: HTMLElement; chip: HTMLElement }[] = [];
@@ -755,6 +759,7 @@ export const toolbarMixin = defineMixin({
             sizePop.append(thGroup, alphaGroup, eraseGroup);
             shapeMenu.append(shapeThGroup, shapeTypeGroup, dashGroup, fillGroup, arrowGroup);
             selModePop.insertBefore(selGroup, selModePop.firstChild);
+            secHistory.append(delBtn, smb);   // the selection buttons back on the toolbar
             toolbar.insertBefore(styleInline, styleBtn);
             closeGroupPop();
             chips = [];
@@ -789,6 +794,7 @@ export const toolbarMixin = defineMixin({
                 return;
             }
             inDock = true;
+            if (delBtn.parentElement !== selActions) selActions.append(delBtn, smb);
             const t = this.currentTool;
             let parts: HTMLElement[] = [];
             let drop: HTMLElement[] = [];
@@ -800,7 +806,9 @@ export const toolbarMixin = defineMixin({
                 drop = [arrowGroup, shapeThGroup, fillGroup, dashGroup, shapeTypeGroup, styleInline];
             } else if (t === 'lasso') {
                 parts = this.selectionStyleKind() ? [selGroup, thGroup, alphaGroup, styleInline] : [selGroup];
-                drop = [alphaGroup, thGroup, selGroup, styleInline];
+                // delete / selection options: in the dock while something is selected (they collapse last)
+                if (this.selection) parts.push(selActions);
+                drop = [alphaGroup, thGroup, selGroup, styleInline, selActions];
             }
             dock.empty();
             for (const p of parts) dock.appendChild(p);
