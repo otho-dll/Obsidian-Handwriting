@@ -38,6 +38,7 @@ export const pageToolsMixin = defineMixin({
         // An endless page grows by itself – no more pages in such a note.
         if (this.noteData.pages.some(p => p.endless)) return;
         const row = this.pagesWrapper.createDiv({ cls: 'hw-add-page-row' });
+        this.addRowEl = row;
         const btn = row.createEl('button', { cls: 'hw-add-page-btn', text: '+ Add new page' });
         row.addEventListener('pointerdown', (e) => e.stopPropagation());
         btn.onclick = () => this.addPageAt(this.noteData.pages.length);
@@ -116,13 +117,11 @@ export const pageToolsMixin = defineMixin({
     },
 
     pageIndexAtViewCenter(): number {
-        const centerY = (this.scrollArea.clientHeight / 2 - this.pagePositionY) / this.currentZoom;
-        const tops = this.pageTops();
-        let idx = 0;
-        for (let i = 0; i < this.pageViews.length; i++) {
-            if (centerY >= tops[i] - 8) idx = i; else break;
-        }
-        return idx;
+        if (!this.scrollArea || this.noteData.pages.length === 0) return 0;
+        const z = this.currentZoom;
+        const cx = (this.scrollArea.clientWidth / 2 - this.pagePositionX) / z;
+        const cy = (this.scrollArea.clientHeight / 2 - this.pagePositionY) / z;
+        return this.pageAtWrapperPoint(cx, cy).i;
     },
 
     templatePreviewSvg(id: PageTemplate): string {
@@ -175,7 +174,12 @@ export const pageToolsMixin = defineMixin({
         if (!view || !this.scrollArea) return;
         this.stopInertia();
         this.activePageIndex = i;
-        this.pagePositionY = -(view.outer.offsetTop - 10) * this.currentZoom + this.topInset;
+        const z = this.currentZoom;
+        this.pagePositionY = -(this.pageTop(i) - 10) * z + this.topInset;
+        // Two pages side by side and zoomed in: bring the page into view sideways too.
+        const vw = this.scrollArea.clientWidth;
+        const left = this.pagePositionX + this.pageLeft(i) * z, right = left + this.pageW(i) * z;
+        if (this.twoUp && (left < 0 || right > vw)) this.pagePositionX = vw / 2 - (this.pageLeft(i) + this.pageW(i) / 2) * z;
         this.pinnedPageIdx = i;   // the page jumped to is the current one (also when a shorter page sits below it)
         this.applyManualZoom();
         this.scheduleRedrawAfterZoom();

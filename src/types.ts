@@ -45,6 +45,7 @@ export interface PageData {
     h?: number;         // page height (missing = 1131)
     endless?: boolean;  // endless page: grows down by itself when you write near its bottom edge
     title?: string;     // page title – entry in the table of contents (bookmark)
+    pair?: boolean;     // shown side by side with the next page (manual pair; display only)
 }
 export interface NoteData {
     pages: PageData[];
@@ -77,7 +78,7 @@ export type HistoryEntry =
     | { type: 'delete'; page: number; items: { stroke: Stroke; index: number }[]; imgItems: { image: ImageItem; index: number }[] }
     | { type: 'replace'; page: number; before: Stroke[]; after: Stroke[] }
     | { type: 'addImage'; page: number; image: ImageItem; index: number }
-    | { type: 'transfer'; page: number; to: number; strokes: Stroke[]; images: ImageItem[]; dy: number }
+    | { type: 'transfer'; page: number; to: number; strokes: Stroke[]; images: ImageItem[]; dy: number; dx?: number }
     | { type: 'paste'; page: number; strokes: Stroke[]; images: ImageItem[] }
     | { type: 'cropImage'; page: number; image: ImageItem; before: ImageSnap; after: ImageSnap }
     | { type: 'attrs'; page: number; changes: AttrChange[] }

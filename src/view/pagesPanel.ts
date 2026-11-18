@@ -547,6 +547,10 @@ export const pagesPanelMixin = defineMixin({
             menu.addItem(it => it.setTitle(many ? `Duplicate ${set.length} pages` : 'Duplicate').setIcon('copy').onClick(() => this.duplicatePages(set)));
             if (!many) menu.addItem(it => it.setTitle(this.noteData.pages[i]?.title ? 'Rename section…' : 'Set title…').setIcon('heading').onClick(() => this.editPageTitle(i)));
             menu.addItem(it => it.setTitle('Page style…').setIcon('paintbrush').onClick(() => this.openPageStylePop(set)));
+            if (!many) this.addPairMenuItems(menu, i);
+            else if (set.length === 2 && set[1] === set[0] + 1 && this.canPair(set[0]) && this.pairStart(set[0]) !== set[0]) {
+                menu.addItem(it => it.setTitle('Show side by side').setIcon('columns-2').onClick(() => this.setManualPair(set[0], true)));
+            }
             menu.addItem(it => it.setTitle('Move to…').setIcon('move-vertical').onClick(() => this.promptMovePages(set)));
             menu.addSeparator();
             menu.addItem(it => it.setTitle(many ? `Delete ${set.length} pages` : n > 1 ? 'Delete page' : 'Clear page').setIcon('trash-2').onClick(() => this.deletePages(set)));
@@ -602,7 +606,7 @@ export const pagesPanelMixin = defineMixin({
         const pages = [...this.noteData.pages];
         const sorted = [...indices].sort((a, b) => a - b);
         const copies = sorted.map(i => JSON.parse(JSON.stringify(pages[i])) as PageData);
-        copies.forEach(c => { delete c.title; for (const im of c.images ?? []) im.id = `${im.id}-${Math.random().toString(36).slice(2, 7)}`; });
+        copies.forEach(c => { delete c.title; delete c.pair; for (const im of c.images ?? []) im.id = `${im.id}-${Math.random().toString(36).slice(2, 7)}`; });
         const at = sorted[sorted.length - 1] + 1;
         pages.splice(at, 0, ...copies);
         this.applyPagesArray(pages, at, copies.length > 1 ? `Duplicated ${copies.length} pages` : 'Page duplicated');

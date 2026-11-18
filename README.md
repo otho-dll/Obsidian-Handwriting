@@ -29,7 +29,7 @@
 | **Pen, highlighter, eraser** | Pressure ink with opacity, a flat highlighter, an eraser that cuts strokes |
 | **Shapes** | Lines, arrows, rectangles, ellipses, triangles (isosceles and right) - dashes, fills, separate outline and fill colours |
 | **Lasso selection** | Move, scale, rotate, recolour, group, lock - even onto another page |
-| **Pages panel** | Thumbnails grouped into sections; jump to, reorder, duplicate and restyle pages |
+| **Pages panel** | Thumbnails grouped into sections; jump to, reorder, duplicate and restyle pages; two pages side by side |
 | **Page styles** | Portrait, landscape or one endless page; dots, lines, grid, Cornell, music staff and more |
 | **Images and PDFs** | Paste and crop images, import a PDF and write on it |
 | **Calculator and plots** | Scientific calculator with units and matrices, editable function plots |
@@ -123,6 +123,14 @@ For **shapes** and for the **highlighter** separately: *Off* (left alone), *Whol
   *Open notes at …* makes every note open at that zoom.
 - Zoomed in, you can push the page further sideways - bring its edge under your hand.
 - Notes remember **where you stopped** and open there.
+- **Two pages side by side:** Settings → Pages and view → *Two pages side by side*: choose *Off*, *Always* or *Auto* -
+  pages are shown in pairs 1-2, 3-4, … like an open notebook; with *Auto* the pairs appear when you zoom out far enough
+  for two pages to fit, and one column comes back when you zoom in. With an odd number of pages choose whether the
+  **last** or the **first** page sits alone (1 | 2-3 | 4-5, like a book). Only pages of the same orientation are paired;
+  an endless page sits alone, centred.
+- **Just two pages side by side:** right-click a page → *Show beside next page* / *Show beside previous page* (also in
+  the pages panel, or select two neighbouring pages → *Show side by side*). Only that pair changes, also when the
+  two-page view is off; *Unpair pages* undoes it. The pair is saved in the note.
 - The **current page** has an accent frame, the other pages are slightly dimmed, and its number (*12 / 40*) sits
   beside it - tap it to open the pages panel.
 
@@ -130,7 +138,8 @@ For **shapes** and for the **highlighter** separately: *Off* (left alone), *Whol
 Open it with the **Pages** button, ⋯ → *Pages panel*, or right-click / long-press a page.
 - **Sections:** pages are grouped by their titles; tap a header to fold it. Search jumps to a page number or a title.
 - **Tap** a thumbnail to go there; **drag** it (or long-press and drag) to move it.
-- **Long-press / right-click** a thumbnail: add page before / after, duplicate, title, style, move to…, delete.
+- **Long-press / right-click** a thumbnail: add page before / after, duplicate, title, style, show beside the next /
+  previous page, move to…, delete.
 - **Select** several pages for *Style*, *Duplicate*, *Move to…* or *Delete*.
 - **Contents** tab lists the titled pages. **Columns:** 1, 2 or 3.
 - Every change can be undone from the **Undo** message; deleting pages first saves a version.
@@ -284,7 +293,7 @@ rejection.
 |---|---|
 | Pen and touch | pressure, thickness values, palm rejection, pinch zoom, long-press menu, mouse panning, pen side button, eraser on shapes / highlighter, selection mode |
 | Colors | five quick colours for the pen and for the highlighter |
-| Pages and view | default pattern and paper, favourite zooms, zoom when opening, pages panel side and columns |
+| Pages and view | default pattern and paper, favourite zooms, zoom when opening, two pages side by side (and which page is alone), pages panel side and columns |
 | Toolbar | tool options (popups / dock), tools and shortcut buttons |
 | Files and export | where images are stored, the Python converter, new-note naming, PDF location and resolution |
 | Version history | on / off, interval, retention, space limit per note |

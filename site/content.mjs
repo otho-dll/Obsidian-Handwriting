@@ -62,7 +62,7 @@ export default {
             { icon: 'pen', title: 'Pen, highlighter & eraser', text: 'Pressure ink with opacity, a flat highlighter, and an eraser that cuts strokes.' },
             { icon: 'shapes', title: 'Shapes', text: 'Lines, arrows, rectangles, ellipses and triangles with dashes, fills and separate outline and fill colors.' },
             { icon: 'lasso', title: 'Lasso selection', text: 'Move, scale, rotate, recolor, group and lock, even onto another page.' },
-            { icon: 'pages', title: 'Pages panel', text: 'Thumbnails and sections: jump to, reorder, duplicate or restyle pages.' },
+            { icon: 'pages', title: 'Pages panel', text: 'Thumbnails and sections: jump to, reorder, duplicate or restyle pages – or see two pages side by side.' },
             { icon: 'pagestyle', title: 'Page styles', text: 'Portrait, landscape or endless; dots, lines, grid, Cornell, music staff and more.' },
             { icon: 'image', title: 'Images & PDFs', text: 'Paste, crop and rotate images; import a PDF and write on it.' },
             { icon: 'plot', title: 'Calculator & plots', text: 'Scientific calculator with units and matrices; editable function plots.' },

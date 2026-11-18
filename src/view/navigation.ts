@@ -12,21 +12,18 @@ export const navigationMixin = defineMixin({
         }, 150);
     },
 
-    // Page across the full view width (centred), keeping the page you're looking at.
+    // Page (or the pair of pages in the two-page view) across the full view width (centred), keeping the page you're looking at.
     fitToWidth() {
         if (!this.scrollArea) return;
         this.stopInertia();
         const vw = this.scrollArea.clientWidth;
-        const vh = this.scrollArea.clientHeight;
-        const oldZ = this.currentZoom;
         // Page in the middle of the view (before the zoom change)
-        const centerY = (vh / 2 - this.pagePositionY) / oldZ;
-        let idx = 0;
-        for (let i = 0; i < this.pageViews.length; i++) {
-            if (centerY >= this.pageViews[i].outer.offsetTop - 8) idx = i;
-        }
-        const z = Math.max(0.4, Math.min(4, (vw - 24) / this.pageW(idx)));
-        const top = this.pageViews[idx]?.outer.offsetTop ?? 0;
+        const idx = this.pageIndexAtViewCenter();
+        const L = this.layoutNow();
+        // Two-page view: the whole column (a pair), also when the current page sits alone in its row.
+        const rowW = this.twoUp ? L.w : (L.rows[L.row[idx]]?.w ?? this.pageW(idx));
+        const z = Math.max(0.4, Math.min(4, (vw - 24) / rowW));
+        const top = this.pageTop(idx);
         this.currentZoom = z;
         this.pagePositionY = -(top - 10) * z + this.topInset;
         this.pagePositionX = (vw - this.wrapperW() * z) / 2;   // pages are centred in the column
@@ -288,16 +285,17 @@ export const navigationMixin = defineMixin({
             bottom: this.pagePositionY + scaledHeight > viewportHeight + eps,
         };
         for (const k of ['top', 'right', 'bottom', 'left'] as const) this.edgeEls[k]?.toggleClass('hw-edge-on', more[k]);
-        // The hints cover only the page (not the app background next to it).
-        const fit = (el: HTMLElement | undefined, i: number) => {
-            if (!el || !this.pageViews[i]) return;
-            const x0 = Math.max(0, this.pagePositionX + this.pageOffsetX(i) * z);
-            const x1 = Math.min(viewportWidth, this.pagePositionX + (this.pageOffsetX(i) + this.pageW(i)) * z);
+        // The hints cover only the pages of the row at that edge (not the app background next to them).
+        const fit = (el: HTMLElement | undefined, r: number) => {
+            const row = this.layoutNow().rows[r];
+            if (!el || !row) return;
+            const x0 = Math.max(0, this.pagePositionX + row.x * z);
+            const x1 = Math.min(viewportWidth, this.pagePositionX + (row.x + row.w) * z);
             el.style.left = `${x0}px`;
             el.style.width = `${Math.max(0, x1 - x0)}px`;
         };
-        if (more.top) fit(this.edgeEls.top, this.pageAtWrapperY(-this.pagePositionY / z).i);
-        if (more.bottom) fit(this.edgeEls.bottom, this.pageAtWrapperY((viewportHeight - this.pagePositionY) / z).i);
+        if (more.top) fit(this.edgeEls.top, this.rowAtWrapperY(-this.pagePositionY / z));
+        if (more.bottom) fit(this.edgeEls.bottom, this.rowAtWrapperY((viewportHeight - this.pagePositionY) / z));
         for (const k of ['left', 'right'] as const) {
             const el = this.edgeEls[k];
             if (!el || !more[k]) continue;

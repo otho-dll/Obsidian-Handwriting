@@ -502,9 +502,11 @@ export const inputMixin = defineMixin({
                 lassoDrag = null;
                 this.endDragLayer(pageIndex);
                 if (this.selection && (drag.dx !== 0 || drag.dy !== 0)) {
-                    this.pushHistoryAction({ type: 'move', page: pageIndex, strokes: [...this.selection.strokes], images: [...this.selection.images], dx: drag.dx, dy: drag.dy });
                     this.clearGhost();
-                    this.transferSelectionIfNeeded(pageIndex);
+                    // Dropped on another page: one undo step (move + transfer together); otherwise a plain move.
+                    if (!this.transferSelectionIfNeeded(pageIndex, { dx: drag.dx, dy: drag.dy })) {
+                        this.pushHistoryAction({ type: 'move', page: pageIndex, strokes: [...this.selection.strokes], images: [...this.selection.images], dx: drag.dx, dy: drag.dy });
+                    }
                     this.requestSave();
                 }
                 this.clearGhost();

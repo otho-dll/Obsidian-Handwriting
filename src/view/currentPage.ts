@@ -28,14 +28,6 @@ export const currentPageMixin = defineMixin({
         this.refreshPagesPanel();
     },
 
-    /** Index of the page under point y (page column coordinates) and the offset from its top edge. */
-    pageAtWrapperY(y: number): { i: number; within: number } {
-        const tops = this.pageTops();
-        let i = 0;
-        while (i + 1 < tops.length && y >= tops[i + 1] - 7.5) i++;
-        return { i, within: y - (tops[i] ?? 0) };
-    },
-
     /** Tapped / clicked page becomes the current one (until it leaves the view). */
     pinCurrentPage(i: number) {
         if (i < 0 || i >= this.noteData.pages.length) return;
@@ -50,8 +42,8 @@ export const currentPageMixin = defineMixin({
         const view = this.pageViews[i];
         if (!area || !view) return false;
         const z = this.currentZoom;
-        const top = this.pagePositionY + (view.outer.offsetTop + view.container.offsetTop) * z;
-        const left = this.pagePositionX + (view.outer.offsetLeft + view.container.offsetLeft) * z;
+        const top = this.pagePositionY + this.pageTop(i) * z;
+        const left = this.pagePositionX + this.pageLeft(i) * z;
         const bottom = top + this.pageH(i) * z, right = left + this.pageW(i) * z;
         return bottom > 0 && top < area.clientHeight && right > 0 && left < area.clientWidth;
     },
@@ -67,9 +59,7 @@ export const currentPageMixin = defineMixin({
             idx = this.pinnedPageIdx;
         } else {
             this.pinnedPageIdx = -1;
-            const viewH = this.scrollArea?.clientHeight ?? 0;
-            const cy = (viewH / 2 - this.pagePositionY) / this.currentZoom;
-            idx = n ? Math.max(0, Math.min(n - 1, this.pageAtWrapperY(cy).i)) : 0;
+            idx = n ? Math.max(0, Math.min(n - 1, this.pageIndexAtViewCenter())) : 0;
         }
         if (idx !== this.currentPageIdx) {
             this.currentPageIdx = idx;
@@ -94,13 +84,24 @@ export const currentPageMixin = defineMixin({
         const w = this.pageNumW, h = 26;
         const z = this.currentZoom;
         const vw = area.clientWidth, vh = area.clientHeight;
-        const left = this.pagePositionX + (view.outer.offsetLeft + view.container.offsetLeft) * z;
-        const top = this.pagePositionY + (view.outer.offsetTop + view.container.offsetTop) * z;
+        const left = this.pagePositionX + this.pageLeft(i) * z;
+        const top = this.pagePositionY + this.pageTop(i) * z;
         const right = left + this.pageW(i) * z, bottom = top + this.pageH(i) * z;
-        // beside the page when there is room, otherwise at the edge of the view (over the page – only for a moment)
-        let x = right + INDICATOR_GAP;
-        const beside = x + w <= vw - 8;
-        if (!beside) x = vw - w - 8;
+        // Beside the page when there is room, otherwise at the edge of the view (over the page – only for a moment).
+        // The left page of a pair gets it on its left side, so it never covers the page next to it.
+        const L = this.layoutNow();
+        const row = L.rows[L.row[i]];
+        const leftOfPair = !!row && row.end > row.start && i === row.start;
+        let x: number, beside: boolean;
+        if (leftOfPair) {
+            x = left - INDICATOR_GAP - w;
+            beside = x >= 8;
+            if (!beside) x = 8;
+        } else {
+            x = right + INDICATOR_GAP;
+            beside = x + w <= vw - 8;
+            if (!beside) x = vw - w - 8;
+        }
         const y = Math.max(8, Math.min(Math.min(vh - h - 8, bottom - h), Math.max(top, 8)));
         el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
         el.toggleClass('is-over', !beside);
@@ -146,8 +147,8 @@ export const currentPageMixin = defineMixin({
         if (!view || !this.scrollArea) return;
         if (fr && fr.parentElement === this.scrollArea && this.curPageEl === view.outer) {
             const z = this.currentZoom;
-            const x = this.pagePositionX + (view.outer.offsetLeft + view.container.offsetLeft) * z;
-            const y = this.pagePositionY + (view.outer.offsetTop + view.container.offsetTop) * z;
+            const x = this.pagePositionX + this.pageLeft(i) * z;
+            const y = this.pagePositionY + this.pageTop(i) * z;
             fr.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
             fr.style.width = `${Math.round(this.pageW(i) * z)}px`;
             fr.style.height = `${Math.round(this.pageH(i) * z)}px`;

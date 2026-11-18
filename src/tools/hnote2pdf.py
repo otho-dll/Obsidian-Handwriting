@@ -28,7 +28,8 @@ The .hnote file format (JSON) – in short (full description: src/format.ts, src
         "bgPath": "@/attachments/page1.jpg",     # imported PDF page (background of the whole page)
         "tpl": "lines", "paper": "#fffbea",       # pattern and colour of this page
         "w": 1131, "h": 800, "endless": true,     # v4: page size (missing = A4 portrait 800×1131)
-        "title": "Lecture 3"                      # v4: page title (table of contents)
+        "title": "Lecture 3",                     # v4: page title (table of contents)
+        "pair": true                              # shown beside the next page in the plugin (ignored here)
     } ] }
 
   Coordinates are "logical": A4 = 800 × 1131 units, Y axis pointing down.

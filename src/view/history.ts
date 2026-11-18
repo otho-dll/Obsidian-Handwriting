@@ -141,7 +141,7 @@ export const historyMixin = defineMixin({
             } else if (entry.type === 'transfer') {
                 const to = this.noteData.pages[entry.to];
                 if (to) {
-                    this.translateItems(entry.strokes, entry.images, 0, -entry.dy);
+                    this.translateItems(entry.strokes, entry.images, -(entry.dx ?? 0), -entry.dy);
                     const sSet = new Set(entry.strokes), iSet = new Set(entry.images);
                     to.strokes = to.strokes.filter(st => !sSet.has(st));
                     if (to.images) to.images = to.images.filter(im => !iSet.has(im));
@@ -202,7 +202,7 @@ export const historyMixin = defineMixin({
             } else if (entry.type === 'transfer') {
                 const to = this.noteData.pages[entry.to];
                 if (to) {
-                    this.translateItems(entry.strokes, entry.images, 0, entry.dy);
+                    this.translateItems(entry.strokes, entry.images, entry.dx ?? 0, entry.dy);
                     const sSet = new Set(entry.strokes), iSet = new Set(entry.images);
                     page.strokes = page.strokes.filter(st => !sSet.has(st));
                     if (page.images) page.images = page.images.filter(im => !iSet.has(im));

@@ -78,7 +78,9 @@ export const clipboardMixin = defineMixin({
     copyPage(i: number) {
         const page = this.noteData.pages[i];
         if (!page) return;
-        this.plugin.pageClip = { page: JSON.parse(JSON.stringify(page)) as PageData, from: this.file?.path };
+        const copy = JSON.parse(JSON.stringify(page)) as PageData;
+        delete copy.pair;   // a pasted page is not paired with its new neighbour
+        this.plugin.pageClip = { page: copy, from: this.file?.path };
         new Notice('Page copied. Paste it in any note with the right-click menu (Paste page).');
     },
 

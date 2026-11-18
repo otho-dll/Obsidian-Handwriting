@@ -274,6 +274,24 @@ export class HandwritingSettingTab extends PluginSettingTab {
                     d.setValue(String(st.openZoom)).onChange(async (v) => { st.openZoom = Number(v); await this.plugin.saveSettings(); });
                 });
 
+            new Setting(c)
+                .setName('Two pages side by side')
+                .setDesc('Show pages in pairs (1-2, 3-4, …) like an open notebook. Auto: pairs appear when you zoom out far enough for two pages to fit the view, and go back to one column when you zoom in. Only pages of the same orientation are paired; an endless page or a page without a partner sits alone, centred. To show just two chosen pages side by side, right-click a page → Show beside next page.')
+                .addDropdown(d => d
+                    .addOption('off', 'Off (one column)')
+                    .addOption('auto', 'Auto (when two pages fit)')
+                    .addOption('always', 'Always')
+                    .setValue(st.twoPageMode)
+                    .onChange(async (v) => { st.twoPageMode = v as HandwritingSettings['twoPageMode']; await this.plugin.saveSettings(); this.plugin.refreshViews(); }));
+            new Setting(c)
+                .setName('Odd number of pages')
+                .setDesc('Which page sits alone when the note has an odd number of pages: the last one (1-2, 3-4, 5) or the first one, like an open book (1 | 2-3 | 4-5). With an even number all pages are in pairs.')
+                .addDropdown(d => d
+                    .addOption('last', 'Last page alone')
+                    .addOption('first', 'First page alone')
+                    .setValue(st.twoPageAlone)
+                    .onChange(async (v) => { st.twoPageAlone = v as HandwritingSettings['twoPageAlone']; await this.plugin.saveSettings(); this.plugin.refreshViews(); }));
+
             new Setting(c).setName('Page navigation').setHeading().settingEl.addClass('hw-set-sub');
             new Setting(c)
                 .setName('Pages panel side')

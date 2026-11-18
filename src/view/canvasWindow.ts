@@ -29,8 +29,8 @@ export const canvasWindowMixin = defineMixin({
         const view = this.pageViews[index];
         if (!view || !this.scrollArea) return null;
         const z = this.currentZoom;
-        const left = this.pagePositionX + this.pageOffsetX(index) * z;
-        const top = this.pagePositionY + view.outer.offsetTop * z;
+        const left = this.pagePositionX + this.pageLeft(index) * z;
+        const top = this.pagePositionY + this.pageTop(index) * z;
         const x0 = Math.max(0, -left / z), x1 = Math.min(this.pageW(index), (this.scrollArea.clientWidth - left) / z);
         const y0 = Math.max(0, -top / z), y1 = Math.min(this.pageH(index), (this.scrollArea.clientHeight - top) / z);
         if (x1 <= x0 || y1 <= y0) return null;
@@ -57,9 +57,8 @@ export const canvasWindowMixin = defineMixin({
         const vis = this.computeVisible(index);
         if (vis) return this.fixedWindow(index, vis, this.idealWindowSize(index));
         // Page loaded "in advance" (off screen): a strip at the edge it is coming in from is enough.
-        const view = this.pageViews[index];
         const z = this.currentZoom;
-        const top = this.pagePositionY + view.outer.offsetTop * z;
+        const top = this.pagePositionY + this.pageTop(index) * z;
         const strip = Math.min(this.pageH(index), Math.max(60, (this.scrollArea.clientHeight * 0.4) / z));
         const w = Math.min(this.pageW(index), Math.max(60, (this.scrollArea.clientWidth * 0.4) / z));
         const below = top > this.scrollArea.clientHeight / 2;
@@ -464,6 +463,8 @@ export const canvasWindowMixin = defineMixin({
     },
 
     resizeAndRedrawAll(force = false) {
+        // After a zoom / pan / resize settles: the 'auto' two-page view may switch the layout (never mid-gesture).
+        this.relayoutIfNeeded();
         this.pageViews.forEach((view, i) => {
             if (!view.active) return;
             this.ensureWindow(i, { scale: true, force });

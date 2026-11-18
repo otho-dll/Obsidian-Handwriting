@@ -52,6 +52,10 @@ export interface HandwritingSettings {
     pagesPanelSide: 'right' | 'left';
     /** Thumbnail columns in the pages panel. */
     pagesPanelColumns: 1 | 2 | 3;
+    /** Two pages side by side: never, automatically when a pair fits the view width, or always. */
+    twoPageMode: 'off' | 'auto' | 'always';
+    /** Two-page view with an odd number of pages: the last page sits alone (1-2, 3-4, 5) or the first one (1 | 2-3 | 4-5). */
+    twoPageAlone: 'last' | 'first';
     /** The pages panel button was added to the toolbar (one-time, 3.15). */
     pagesPanelIntro?: boolean;
 
@@ -188,6 +192,8 @@ export const DEFAULT_SETTINGS: HandwritingSettings = {
     highlighterPalette: [...DEFAULT_HIGHLIGHTER_PALETTE],
     pagesPanelSide: 'right',
     pagesPanelColumns: 2,
+    twoPageMode: 'off',
+    twoPageAlone: 'last',
     defaultTemplate: 'dots',
     defaultPaper: '#ffffff',
     pdfScale: 3,

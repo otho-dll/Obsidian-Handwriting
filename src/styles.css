@@ -234,13 +234,10 @@ button.hw-swatch-add.hw-swatch-add.hw-swatch-add {
 }
 
 .hw-pages-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 15px; /* Smaller gap between pages */
-    padding: 20px 0;
+    /* Pages are placed absolutely from the layout computed in pageSize.ts (one or two pages per row);
+       width and height are set from it too. */
     transform-origin: top left;
-    width: 800px; /* Fixed width for correct centring */
+    width: 800px;
     position: absolute; /* Makes smooth camera locking easier */
     top: 0;
     left: 0;
@@ -249,9 +246,8 @@ button.hw-swatch-add.hw-swatch-add.hw-swatch-add {
 .hw-pages-wrapper.hw-moving { will-change: transform; }
 
 .hw-single-page-container {
-    position: relative;
+    position: absolute;
     display: flex;
-    justify-content: center;
 }
 
 .handwriting-container:focus {
@@ -569,7 +565,7 @@ button.hw-swatch-add.hw-swatch-add.hw-swatch-add {
 }
 
 /* --- Add page button at the bottom of the note --- */
-.hw-add-page-row { display: flex; justify-content: center; padding: 18px 0 70px; width: 100%; }
+.hw-add-page-row { position: absolute; left: 0; display: flex; justify-content: center; align-items: flex-start; box-sizing: border-box; height: 140px; padding: 18px 0 70px; width: 100%; }
 .hw-add-page-btn { padding: 12px 28px; font-size: 1.05em; border-radius: 999px; background: var(--background-secondary); border: 1px dashed var(--text-faint); color: var(--text-muted); cursor: pointer; }
 .hw-add-page-btn:hover { border-color: var(--interactive-accent); color: var(--interactive-accent); }
 

@@ -38,7 +38,7 @@ import { selectionMixin, SelectionMethods } from './view/selection';
 import { contextMenuMixin, ContextMenuMethods } from './view/contextMenu';
 import { navigationMixin, NavigationMethods } from './view/navigation';
 import { inputMixin, InputMethods } from './view/input';
-import { pageSizeMixin, PageSizeMethods } from './view/pageSize';
+import { pageSizeMixin, PageSizeMethods, PageLayout } from './view/pageSize';
 import { contentsMixin, ContentsMethods } from './view/contents';
 import { oledCareMixin, OledCareMethods } from './view/oledCare';
 import { zoomPanelMixin, ZoomPanelMethods } from './view/zoomPanel';
@@ -261,6 +261,8 @@ export default class HandwritingPlugin extends Plugin {
         for (const k of ['railPrecision', 'minimap', 'minimapSide']) delete st[k];
         if (!oneOf(st.pagesPanelSide, ['right', 'left'])) st.pagesPanelSide = 'right';
         if (!oneOf(st.pagesPanelColumns, [1, 2, 3])) st.pagesPanelColumns = 2;
+        if (!oneOf(st.twoPageMode, ['off', 'auto', 'always'])) st.twoPageMode = 'off';
+        if (!oneOf(st.twoPageAlone, ['last', 'first'])) st.twoPageAlone = 'last';
         // 3.15: the pages panel replaces the old Pages dialog – put its button on the toolbar once.
         if (!st.pagesPanelIntro) {
             st.pagesPanelIntro = true;
@@ -615,10 +617,14 @@ export class HandwritingView extends TextFileView {
     accentCache: string | null = null;
     /** Page objects the page elements were last built from (undo history follows the pages when they are reordered). */
     builtPages: PageData[] = [];
-    /** Top edges of the pages relative to the first page (see pageTops). */
-    pageTopsRel: number[] | null = null;
-    pageTopsFirst = NaN;
-    pageTopsOut: number[] = [];
+    /** Where the pages sit in the page column (see pageSize.ts layoutNow / applyLayout). */
+    pageLayout: PageLayout | null = null;
+    /** Two pages side by side (settings: twoPageMode; 'auto' switches it with the zoom). */
+    twoUp = false;
+    /** The "+ Add new page" row under the last page (absent in a note with an endless page). */
+    addRowEl: HTMLElement | null = null;
+    /** True while buildPageElements creates the pages (the layout is applied once at the end). */
+    buildingPages = false;
     /** Restores the view position as soon as the view becomes visible (see posApplyWhenVisible). */
     posRetry: (() => void) | null = null;
 
@@ -883,6 +889,7 @@ export class HandwritingView extends TextFileView {
             if (p.h !== undefined) rest.h = r2(p.h);
             if (p.endless) rest.endless = true;
             if (p.title) rest.title = p.title;
+            if (p.pair) rest.pair = true;
             if (p.images && p.images.length > 0) rest.images = p.images.map(i => ({ ...i, x: r2(i.x), y: r2(i.y), w: r2(i.w), h: r2(i.h) }));
             const restStr = JSON.stringify(rest);
             return '{"strokes":[' + p.strokes.map(st => this.strokeJson(st)).join(',') + ']' + (restStr === '{}' ? '' : ',' + restStr.slice(1, -1)) + '}';
@@ -929,6 +936,7 @@ export class HandwritingView extends TextFileView {
             if (h !== undefined) page.h = h;
             if (p.endless === true) page.endless = true;
             if (typeof p.title === 'string' && p.title.trim()) page.title = p.title.trim().slice(0, 200);
+            if (p.pair === true) page.pair = true;
             if (Array.isArray(p.images)) {
                 page.images = list(p.images)
                     .map(obj)
@@ -1136,7 +1144,7 @@ export class HandwritingView extends TextFileView {
         this.resizeObserver = new ResizeObserver(() => {
             this.posRetry?.();   // a view that just became visible restores its position right away
             this.sizeInkLayer();
-            this.applyManualZoom();
+            if (!this.relayoutIfNeeded()) this.applyManualZoom();   // 'auto' two-page view follows the view width
             if (this.layoutToolbar) this.layoutToolbar();
         });
         this.resizeObserver.observe(this.scrollArea);
@@ -1232,7 +1240,10 @@ export class HandwritingView extends TextFileView {
         this.pagesWrapper.empty();
         this.pageContexts = [];
         this.pageViews = [];
-        this.pageTopsRel = null;
+        this.pageLayout = null;
+        this.addRowEl = null;
+        this.twoUp = this.wantTwoUp();
+        this.buildingPages = true;
         this.cancelCrop();
         this.remapHistory();
         this.selection = null;
@@ -1297,9 +1308,10 @@ export class HandwritingView extends TextFileView {
             this.applyPageSize(index);
             this.setupDrawingCanvas(topCanvas, bottomCanvas, highCanvas, index);
         });
-        if (this.pagesWrapper) this.pagesWrapper.style.width = `${this.wrapperW()}px`;
+        this.buildingPages = false;
 
         this.createAddPageButton();
+        this.applyLayout();
         this.applyAllPageStyles();
         this.applyManualZoom();
         this.updateVirtualization();

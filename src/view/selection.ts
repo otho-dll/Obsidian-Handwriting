@@ -32,10 +32,11 @@ export const selectionMixin = defineMixin({
         const b = this.getSelectionBounds();
         const fromView = this.pageViews[from];
         if (!b || !fromView) return from;
-        const cy = fromView.outer.offsetTop + b.y + b.h / 2;
+        const cx = this.pageLeft(from) + b.x + b.w / 2;
+        const cy = this.pageTop(from) + b.y + b.h / 2;
         for (let i = 0; i < this.pageViews.length; i++) {
-            const top = this.pageViews[i].outer.offsetTop;
-            if (cy >= top - 7 && cy < top + this.pageH(i) + 8) return i;
+            const top = this.pageTop(i), left = this.pageLeft(i);
+            if (cy >= top - 7 && cy < top + this.pageH(i) + 8 && cx >= left - 7 && cx < left + this.pageW(i) + 8) return i;
         }
         return from;
     },
@@ -64,47 +65,56 @@ export const selectionMixin = defineMixin({
         const sx = ctx.canvas.width / win.w, sy = ctx.canvas.height / win.h;
         ctx.setTransform(sx, 0, 0, sy, -win.x * sx, -win.y * sy);
         ctx.clearRect(win.x - 1, win.y - 1, win.w + 2, win.h + 2);
-        const dy = this.pageViews[from].outer.offsetTop - view.outer.offsetTop;
+        const dy = this.pageTop(from) - this.pageTop(target);
+        const dx = this.pageLeft(from) - this.pageLeft(target);
         const z = Math.max(0.5, this.currentZoom);
         ctx.globalCompositeOperation = 'source-over';
         const accent = this.accentColor();
         ctx.fillStyle = accent;
         ctx.globalAlpha = 0.16;
-        ctx.fillRect(b.x, b.y + dy, b.w, b.h);
+        ctx.fillRect(b.x + dx, b.y + dy, b.w, b.h);
         ctx.globalAlpha = 1;
         ctx.strokeStyle = accent;
         ctx.lineWidth = 1.5 / z;
         ctx.setLineDash([6 / z, 4 / z]);
-        ctx.strokeRect(b.x, b.y + dy, b.w, b.h);
+        ctx.strokeRect(b.x + dx, b.y + dy, b.w, b.h);
         ctx.setLineDash([]);
     },
 
-    // After dropping the selection on another page moves the items into its data.
-    transferSelectionIfNeeded(from: number) {
+    /**
+     * After dropping the selection on another page moves the items into its data. `pre` = the drag that brought them
+     * there: it goes into the same undo step. Returns true when the items were moved to another page.
+     */
+    transferSelectionIfNeeded(from: number, pre?: { dx: number; dy: number }): boolean {
         const sel = this.selection;
-        if (!sel) return;
+        if (!sel) return false;
         const target = this.dropTargetPage(from);
-        if (target === from) return;
+        if (target === from) return false;
         const fromView = this.pageViews[from], toView = this.pageViews[target];
-        if (!fromView || !toView) return;
-        this.transferSelection(from, target, fromView.outer.offsetTop - toView.outer.offsetTop);
+        if (!fromView || !toView) return false;
+        this.transferSelection(from, target, this.pageTop(from) - this.pageTop(target), this.pageLeft(from) - this.pageLeft(target), pre);
+        return true;
     },
 
-    /** Moves the selected items from page `from` to page `target`, shifted down by `dy` (undoable). */
-    transferSelection(from: number, target: number, dy: number) {
+    /**
+     * Moves the selected items from page `from` to page `target`, shifted by `dx`, `dy` (undoable). `pre`: a shift the
+     * items already got (a drag) – undo reverts it too.
+     */
+    transferSelection(from: number, target: number, dy: number, dx = 0, pre?: { dx: number; dy: number }) {
         const sel = this.selection;
         if (!sel || target === from) return;
         const src = this.noteData.pages[from];
         const dst = this.noteData.pages[target];
         if (!src || !dst) return;
         const strokes = [...sel.strokes], images = [...sel.images];
-        this.translateItems(strokes, images, 0, dy);
+        this.translateItems(strokes, images, dx, dy);
         const sSet = new Set(strokes), iSet = new Set(images);
         src.strokes = src.strokes.filter(st => !sSet.has(st));
         if (src.images) src.images = src.images.filter(im => !iSet.has(im));
         dst.strokes.push(...strokes);
         (dst.images ?? (dst.images = [])).push(...images);
-        this.pushHistoryAction({ type: 'transfer', page: from, to: target, strokes, images, dy });
+        const hdx = dx + (pre?.dx ?? 0), hdy = dy + (pre?.dy ?? 0);
+        this.pushHistoryAction({ type: 'transfer', page: from, to: target, strokes, images, dy: hdy, ...(hdx ? { dx: hdx } : {}) });
         this.selection = { page: target, strokes, images };
         this.activePageIndex = target;
         this.redrawPage(from);

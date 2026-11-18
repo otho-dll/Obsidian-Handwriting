@@ -28,7 +28,7 @@ export const positionMixin = defineMixin({
         if (!this.posVisible()) return null;
         const top = -this.pagePositionY / this.currentZoom;   // top edge of the view in page-container coordinates
         const page = this.pageIndexAtViewCenter();
-        return { page, off: top - this.pageViews[page].outer.offsetTop, zoom: this.currentZoom };
+        return { page, off: top - this.pageTop(page), zoom: this.currentZoom };
     },
 
     posLog(...args: unknown[]) {
@@ -111,7 +111,7 @@ export const positionMixin = defineMixin({
         const page = Math.max(0, Math.min(this.pageViews.length - 1, Math.round(r.page)));
         this.stopInertia();
         this.currentZoom = Math.max(0.4, Math.min(4, r.zoom || 1));
-        this.pagePositionY = -(this.pageViews[page].outer.offsetTop + r.off) * this.currentZoom;
+        this.pagePositionY = -(this.pageTop(page) + r.off) * this.currentZoom;
         this.activePageIndex = page;
         this.applyManualZoom();
         this.scheduleRedrawAfterZoom();

@@ -10,6 +10,8 @@
  * v4 – like v3 + optional page fields: w, h (page size; missing = A4 portrait 800×1131), endless (the page
  *      grows downwards), title (page title for the table of contents) and defaults.format (format of new pages).
  *      A note without these fields is still saved as v3 – an older plugin opens it normally.
+ *      Optional page field pair (display only: the page is shown beside the next one) does not change the version –
+ *      an older plugin just ignores it.
  *
  * Each migration converts data from version n to n+1, so an old note goes through the whole chain.
  * A note saved by a NEWER plugin version is opened read-only so it doesn't get damaged.
