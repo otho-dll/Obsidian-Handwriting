@@ -75,7 +75,7 @@
 }
 
 .hw-thickness-btn {
-    width: 28px; 
+    width: 38px;
     height: 28px;
     border-radius: 14px;
     border: 1px solid transparent;
@@ -405,6 +405,14 @@ button.hw-swatch-add.hw-swatch-add.hw-swatch-add {
 .hw-edge-right { right: 0; background: linear-gradient(to left, rgba(0, 0, 0, 0.32), rgba(0, 0, 0, 0)); }
 
 /* Eraser circle (DOM element instead of a drawing on the canvas) */
+/* right-angle path (line tool): where the next segment starts */
+.hw-ortho-end {
+    position: absolute; left: 0; top: 0; z-index: 6; box-sizing: border-box; pointer-events: none;
+    border-radius: 50%; border-style: solid; border-color: var(--interactive-accent);
+    background: color-mix(in srgb, var(--interactive-accent) 30%, transparent);
+}
+/* splitting the selection: the next line drawn cuts it */
+.hw-split-mode .hw-page-a4 canvas { cursor: crosshair; }
 .hw-eraser-cursor {
     position: absolute;
     left: 0;
@@ -695,7 +703,7 @@ button.hw-swatch-add.hw-swatch-add.hw-swatch-add {
 .hw-size-dot { display: block; border-radius: 50%; background: var(--sw, currentColor); box-shadow: 0 0 0 1px rgba(128,128,128,.45); }
 .hw-size-pop { min-width: 0; }
 .hw-size-pop .hw-thickness-presets { gap: 6px; }
-.hw-alpha-opt { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 8px; height: auto; font-size: 0.78em; }
+.hw-alpha-opt { display: flex; align-items: center; justify-content: center; padding: 4px 6px; height: auto; }
 .hw-alpha-opt.active { background: var(--interactive-accent); color: var(--text-on-accent); }
 
 /* v3.9: narrow screen – colours, thickness and opacity in one panel */
@@ -1012,9 +1020,19 @@ button.hw-switch { flex: 0 0 auto; position: relative; width: 40px; height: 22px
 button.hw-switch.is-on { background: var(--interactive-accent); }
 .hw-switch-knob { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); transition: transform 0.15s; }
 button.hw-switch.is-on .hw-switch-knob { transform: translateX(18px); }
-/* thickness dots in the current colour */
-.hw-thickness-btn .hw-dot { background: var(--dot, var(--text-normal)); }
-.hw-thickness-btn.active .hw-dot { background: var(--dot, var(--text-on-accent)); box-shadow: 0 0 0 1.5px var(--text-on-accent); }
+/* thickness: a wave of that width in the current colour, with a faint halo so black ink shows on a dark background */
+.hw-wave { display: block; overflow: visible; }
+.hw-wave .hw-wave-ink { stroke: var(--dot, var(--text-normal)); }
+.hw-wave .hw-wave-halo { stroke: color-mix(in srgb, var(--text-normal) 30%, transparent); }
+.hw-thickness-btn.active .hw-wave .hw-wave-halo { stroke: var(--text-on-accent); }
+.hw-chip-wave { display: flex; }
+.hw-chip-wave.is-mixed { opacity: 0.45; }
+.hw-chip-part { display: flex; align-items: center; }
+.hw-chip-part svg { width: 18px; height: 18px; }
+/* opacity: a circle filled with the colour up to the level of the opacity */
+.hw-opacity-level { display: block; }
+.hw-opacity-level .hw-opacity-ring { stroke: var(--text-muted); }
+.hw-alpha-opt.active .hw-opacity-ring { stroke: var(--text-on-accent); }
 /* selection mode popover: icons only */
 .hw-selmode-pop { min-width: 0; gap: 12px; padding: 10px 12px; }
 /* settings: tool and shortcut chips */

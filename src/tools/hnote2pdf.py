@@ -22,7 +22,8 @@ The .hnote file format (JSON) – in short (full description: src/format.ts, src
         "strokes": [ { "points": [[x, y], [x, y, pressure 0-100], …], "color": "#000000", "width": 2,
                        "isHighlighter": false, "alpha": 0.5,                      # pen opacity
                        "shape": "line"|"rect"|"ellipse"|"triangle", "right": true (right triangle), "dash": "dashed"|"dotted"|"dashdot", "fill": true, "fillColor": "#2563eb", "fillAlpha": 0.25, "noLine": true,
-                       "arrow": true, "rot": 0.3, "poly": true, "isEraser": true (old – skipped) } ],
+                       "arrow": true, "rot": 0.3, "poly": true, "closed": true (poly: closed polygon, may have fill / fillColor / fillAlpha / noLine),
+                       "isEraser": true (old – skipped) } ],
         "images":  [ { "path": "@/attachments/abc.png" | "Folder/image.png", "data": "data:image/…",
                        "x": 0, "y": 0, "w": 100, "h": 80, "rot": 0 } ],
         "bgPath": "@/attachments/page1.jpg",     # imported PDF page (background of the whole page)
@@ -568,6 +569,37 @@ def pressure_path(pts, width, st):
     return ops
 
 
+def draw_closed_poly(c, s, pts):
+    """Closed polygon (a shape split in two or stretched after rotating) – like drawClosedPoly in strokeDraw.ts."""
+    w = max(0.5, float(s.get('width', 1)))
+    c.color(parse_color(s.get('color')), stroke=True, fill=True)
+    c.add('%s w 0 j 4 M' % fmt(w))
+    dash = dash_ops(s, w)
+    c.add(dash if dash else '1 J [] 0 d')
+
+    def path():
+        c.add('%s %s m' % (fmt(pts[0][0]), fmt(pts[0][1])))
+        for p in pts[1:]:
+            c.add('%s %s l' % (fmt(p[0]), fmt(p[1])))
+        c.add('h')
+
+    filled = bool(s.get('fill'))
+    if filled:
+        fa = float(s.get('fillAlpha', 1) or 1)
+        c.add('q')
+        if fa < 1:
+            c.alpha(fa)
+        if s.get('fillColor'):
+            c.color(parse_color(s.get('fillColor')), stroke=False, fill=True)
+        path()
+        c.add('f')
+        c.add('Q')
+    if not (filled and s.get('noLine')):
+        path()
+        c.add('S')
+    c.add('[] 0 d')
+
+
 def draw_stroke(c, s, st):
     """One stroke (pen, highlighter or shape) – like drawSmoothStroke."""
     if s.get('isEraser'):
@@ -583,6 +615,10 @@ def draw_stroke(c, s, st):
         c.alpha(float(alpha))
     if s.get('shape'):
         draw_shape(c, s, pts)
+        c.add('Q')
+        return
+    if s.get('poly') and s.get('closed') and len(pts) >= 2:
+        draw_closed_poly(c, s, pts)
         c.add('Q')
         return
     w = float(s.get('width', 1))

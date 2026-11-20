@@ -128,7 +128,7 @@ export const currentPageMixin = defineMixin({
             want?.addClass('hw-page-current');
             this.curPageEl = want;
         }
-        this.pagesWrapper?.toggleClass('hw-dim-others', multi);
+        this.pagesWrapper?.toggleClass('hw-dim-others', multi && this.plugin.settings.dimInactivePages);
         if (!multi) { if (fr) fr.hide(); return; }
         if (!fr || fr.parentElement !== area) { fr?.remove(); fr = area.createDiv({ cls: 'hw-current-frame' }); this.curFrame = fr; }
         fr.show();

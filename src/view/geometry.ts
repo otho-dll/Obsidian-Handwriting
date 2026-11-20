@@ -125,6 +125,22 @@ export const geometryMixin = defineMixin({
         return false;
     },
 
+    /** Closed polygon (split / stretched shape): touching its outline, or its inside when it is filled. */
+    closedPolyHit(s: Stroke, a: Point, b: Point, r: number) {
+        const poly = s.points;
+        if (poly.length < 2) return false;
+        const R = r + s.width / 2;
+        for (let i = 0; i < poly.length; i++) {
+            if (this.segSegDist(poly[i], poly[(i + 1) % poly.length], a, b) <= R) return true;
+        }
+        return !!s.fill && this.pointInPolygon(b.x, b.y, poly);
+    },
+
+    /** Filled area: a filled rectangle / ellipse / triangle or a filled closed polygon (they have a fill colour). */
+    isFilledArea(s: Stroke): boolean {
+        return !s.isHighlighter && !!s.fill && ((!!s.shape && s.shape !== 'line') || (!!s.poly && !!s.closed));
+    },
+
     /** `skip` (only for the eraser tool): shapes / highlighter strokes the eraser must leave alone (toolbar switches). */
     eraseFromList(strokes: Stroke[], a: Point, b: Point, r: number, wholeHighlighterArg?: boolean, dirty?: BBox, skip?: { shapes?: boolean; highlighter?: boolean }): { list: Stroke[]; changed: boolean } {
         const wholeHighlighter = wholeHighlighterArg ?? (this.plugin.settings.highlighterErase === 'whole');
@@ -172,6 +188,24 @@ export const geometryMixin = defineMixin({
                 }
                 s = { points: dense, color: s.color, width: s.width, isHighlighter: false, dash: s.dash, poly: true };
                 if (s0.g) s.g = s0.g;   // the pieces stay in the shape's group
+            } else if (s.closed) {
+                // A filled polygon goes whole (like filled shapes); an outline is opened into a ring and cut like a piece.
+                if (s.fill || wholeShapes) {
+                    if (this.closedPolyHit(s, a, b, r)) { changed = true; mark(s0); continue; }
+                    out.push(s);
+                    continue;
+                }
+                const ring = [...s.points, s.points[0]];
+                const step = Math.max(3, Math.min(r, 8));
+                const dense: Point[] = [ring[0]];
+                for (let i = 1; i < ring.length; i++) {
+                    const p = ring[i - 1], q = ring[i];
+                    const n = Math.max(1, Math.ceil(Math.hypot(q.x - p.x, q.y - p.y) / step));
+                    for (let k = 1; k <= n; k++) dense.push(this.mkPoint(p.x + (q.x - p.x) * k / n, p.y + (q.y - p.y) * k / n));
+                }
+                s = { points: dense, color: s.color, width: s.width, isHighlighter: false, dash: s.dash, poly: true };
+                if (s0.alpha !== undefined) s.alpha = s0.alpha;
+                if (s0.g) s.g = s0.g;
             }
 
             const R = r + s.width / 2;

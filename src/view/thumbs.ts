@@ -35,6 +35,7 @@ export const thumbsMixin = defineMixin({
     // Simplified stroke drawing for thumbnails: constant-width polyline that skips points denser than a thumbnail pixel.
     drawThumbStroke(ctx: CanvasRenderingContext2D, st: Stroke, minW: number, k: number) {
         if (st.shape) { this.drawShape(ctx, { ...st, width: Math.max(st.width, minW) }); return; }
+        if (st.poly && st.closed) { this.drawClosedPoly(ctx, { ...st, width: Math.max(st.width, minW) }); return; }
         const pts = st.points;
         if (pts.length === 0) return;
         if (st.alpha !== undefined && !st.isHighlighter) {

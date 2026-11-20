@@ -11,10 +11,7 @@
   <a href="https://handwriting.anulab.tech/demo/"><b>Try the live demo</b></a> ·
   <a href="https://handwriting.anulab.tech/">Website</a> ·
   <a href="#install">Install</a> ·
-  <a href="#user-guide">User guide</a> ·
-  <a href="https://community.obsidian.md/plugins/handwritten-notebook">View in Obsidian Community</a>
-
-  
+  <a href="#user-guide">User guide</a>
 </p>
 
 
@@ -26,9 +23,9 @@
 
 | Feature | |
 |---|---|
-| **Pen, highlighter, eraser** | Pressure ink with opacity, a flat highlighter, an eraser that cuts strokes |
+| **Pen, highlighter, eraser** | Pressure ink, a flat highlighter, an eraser that cuts strokes |
 | **Shapes** | Lines, arrows, rectangles, ellipses, triangles (isosceles and right) - dashes, fills, separate outline and fill colours |
-| **Lasso selection** | Move, scale, rotate, recolour, group, lock - even onto another page |
+| **Lasso selection** | Move, scale, stretch, rotate, split, recolour, group, lock - even onto another page |
 | **Pages panel** | Thumbnails grouped into sections; jump to, reorder, duplicate and restyle pages; two pages side by side |
 | **Page styles** | Portrait, landscape or one endless page; dots, lines, grid, Cornell, music staff and more |
 | **Images and PDFs** | Paste and crop images, import a PDF and write on it |
@@ -63,18 +60,18 @@ Click a section to expand it.
 
 | Tool | |
 |---|---|
-| **Pen** | Pressure-sensitive ink, three thicknesses, colour palette, opacity 100 / 75 / 50 / 25 %. Jitter is smoothed, sharp corners stay sharp. |
+| **Pen** | Pressure-sensitive ink, three thicknesses, colour palette. Jitter is smoothed, sharp corners stay sharp. |
 | **Highlighter** | Transparent marker with flat ends. Overlapping strokes don't get darker. |
 | **Eraser** | Cuts strokes where you rub. Same size on screen at every zoom; rub quickly and it grows up to 4×. The pen's eraser end and side button work too. |
-| **Shapes** | Line (optionally an arrow), rectangle, ellipse, triangle (isosceles or right). |
+| **Shapes** | Line (optionally an arrow or a right-angle path), rectangle, ellipse, triangle (isosceles or right). |
 | **Selection** | Freehand lasso or rectangle. |
 
-**Tap the active tool again** for its options - thickness, opacity (pen), what the eraser erases, the shape options or
+**Tap the active tool again** for its options - thickness, what the eraser erases, the shape options or
 the selection mode. Colours sit on the toolbar; in a narrow window they move into a panel under the colour button.
 Prefer everything in view? Settings → Toolbar → **Tool options: Dock** shows the active tool's options and colours in a
-floating bar under the toolbar (tap the active tool again to hide or show it). In a narrow window the options that
-don't fit collapse one by one into small buttons showing the current value, each with its own menu (shapes: options,
-thickness, fill, line style, shape, colours last).
+floating bar under the toolbar; it stays visible while you switch tools. The shapes' line style and fill always sit
+together in one small button with their own menu. In a narrow window the other options that don't fit collapse one
+by one into such buttons showing the current value (shapes: options, thickness, shape, colours last).
 
 #### Eraser options
 For **shapes** and for the **highlighter** separately: *Off* (left alone), *Whole* (touching removes all of it) or
@@ -82,14 +79,21 @@ For **shapes** and for the **highlighter** separately: *Off* (left alone), *Whol
 
 #### Shapes
 - Line styles: solid, dashed, dotted, dash-dot.
-- Fill: outline only, solid, light fill with outline, or light fill only.
+- Fill: outline only, solid, light fill with outline, or light fill only (the icons show the chosen shape).
+- **Right-angle path** (line options): draw like wires in a schematic editor - every segment is horizontal or
+  vertical, lifting the pen makes a corner and the next segment continues from the end at 90°. Tap without moving
+  (or press Escape, or change the tool) to finish. The segments form one group.
 - **Outline and fill colours** are separate: with a fill on, the *Outline* / *Fill* fields before the palette pick
   which one the palette changes. Right-click or long-press *Fill* to match the outline again.
 - Hold **Shift** for straight angles, squares and circles.
 
 #### Selection
 - **Draw around** strokes and images, or **tap** one (it is selected with its whole group).
-- **Drag** to move - also onto another page. **Corner handle:** scale. **Round handle:** rotate (Shift = 15° steps).
+- **Drag** to move - also onto another page. **Corner handle:** scale. **Edge handles** (middle of the right / bottom
+  edge): stretch only the width / height. **Round handle:** rotate (Shift = 15° steps).
+- **Split** (the dashed-square button next to the trash while strokes are selected, or *Split along a line…* in the
+  selection options): draw a line across the selection - strokes and shapes are cut along it
+  (filled shapes into two filled parts) and each side becomes its own group, so you can recolour one half.
 - The palette recolours the selection; tap the selection tool again for thickness.
 - **Selection options** (toolbar button or right-click): group / ungroup, lock, bring to front / send to back, align,
   rotate 90°, duplicate, copy, cut, delete.
@@ -131,8 +135,8 @@ For **shapes** and for the **highlighter** separately: *Off* (left alone), *Whol
 - **Just two pages side by side:** right-click a page → *Show beside next page* / *Show beside previous page* (also in
   the pages panel, or select two neighbouring pages → *Show side by side*). Only that pair changes, also when the
   two-page view is off; *Unpair pages* undoes it. The pair is saved in the note.
-- The **current page** has an accent frame, the other pages are slightly dimmed, and its number (*12 / 40*) sits
-  beside it - tap it to open the pages panel.
+- The **current page** has an accent frame, the other pages are slightly dimmed (Settings → Pages and view →
+  *Dim other pages*), and its number (*12 / 40*) sits beside it - tap it to open the pages panel.
 
 #### Pages panel
 Open it with the **Pages** button, ⋯ → *Pages panel*, or right-click / long-press a page.
@@ -262,7 +266,7 @@ Lectures/Physics/.Lecture 1.hnote-data/           ← hidden folder of this note
 #### Toolbar and the ⋯ menu
 Settings → **Toolbar** decides what is on the toolbar:
 - **Tool options** - popups (tap the active tool again) or a **dock**: a floating bar under the toolbar with the active
-  tool's thickness, opacity, colours and options.
+  tool's thickness, colours and options.
 - **Tools** - hand, eraser, highlighter, selection, shapes, undo / redo (the pen and the colours always stay).
 - **Shortcut buttons** - calculator, zoom, contents, plot, insert image, pages panel, page style, screenshot,
   import / export PDF, print, version history, fit to width. Reorder (‹ ›), remove (×) or add from *Available*.
@@ -293,7 +297,7 @@ rejection.
 |---|---|
 | Pen and touch | pressure, thickness values, palm rejection, pinch zoom, long-press menu, mouse panning, pen side button, eraser on shapes / highlighter, selection mode |
 | Colors | five quick colours for the pen and for the highlighter |
-| Pages and view | default pattern and paper, favourite zooms, zoom when opening, two pages side by side (and which page is alone), pages panel side and columns |
+| Pages and view | default pattern and paper, favourite zooms, zoom when opening, two pages side by side (and which page is alone), dim other pages, pages panel side and columns |
 | Toolbar | tool options (popups / dock), tools and shortcut buttons |
 | Files and export | where images are stored, the Python converter, new-note naming, PDF location and resolution |
 | Version history | on / off, interval, retention, space limit per note |

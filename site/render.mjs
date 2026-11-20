@@ -30,6 +30,7 @@ export const ICONS = {
     chevronRight: '<path d="m9 18 6-6-6-6"/>',
     moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
     grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+    puzzle: '<path d="M15.4 8.6h2.1a2 2 0 1 1 0 4h-2.1V17a1 1 0 0 1-1 1H10v-2.1a2 2 0 1 0-4 0V18H4a1 1 0 0 1-1-1v-4.4h2.1a2 2 0 1 0 0-4H3V4a1 1 0 0 1 1-1h4.4v2.1a2 2 0 1 0 4 0V3H14.4a1 1 0 0 1 1 1z"/>',
     shield: '<path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>',
 };
 const icon = (name, cls = '') => ICONS[name] ? `<svg${cls ? ` class="${cls}"` : ''} viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>` : '';

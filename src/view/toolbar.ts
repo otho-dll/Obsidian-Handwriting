@@ -1,8 +1,8 @@
 import { defineMixin } from './mixin';
 import { Menu, setIcon } from 'obsidian';
-import { ICON_PEN, ICON_ERASER, ICON_HIGHLIGHTER, ICON_UNDO, ICON_REDO, ICON_TRASH, ICON_SELECT_RECT, ICON_MORE, ICON_SHAPE_LINE, ICON_SHAPE_RECT, ICON_SHAPE_ELLIPSE, ICON_SHAPE_TRIANGLE, ICON_TRI_ISO, ICON_TRI_RIGHT, ICON_FILL, ICON_FILL_NONE, ICON_FILL_LIGHT, ICON_NO_OUTLINE, ICON_LASSO_LOOP, ICON_ARROW, ICON_DASH_SOLID, ICON_DASH_DASHED, ICON_DASH_DOTTED, ICON_DASH_DASHDOT } from '../icons';
+import { ICON_PEN, ICON_ERASER, ICON_HIGHLIGHTER, ICON_UNDO, ICON_REDO, ICON_TRASH, ICON_SELECT_RECT, ICON_MORE, ICON_SHAPE_LINE, ICON_SHAPE_RECT, ICON_SHAPE_ELLIPSE, ICON_SHAPE_TRIANGLE, ICON_TRI_ISO, ICON_TRI_RIGHT, ICON_FILL, ICON_FILL_NONE, ICON_FILL_LIGHT, ICON_NO_OUTLINE, ICON_LASSO_LOOP, ICON_ARROW, ICON_DASH_SOLID, ICON_DASH_DASHED, ICON_DASH_DOTTED, ICON_DASH_DASHDOT, ICON_SHAPES, ICON_RIGHT_ANGLE_PATH, ICON_SPLIT, shapeFillIcons, thicknessWaveSvg } from '../icons';
 import { Stroke } from '../types';
-import { setSvg } from '../svg';
+import { setSvg, appendSvg } from '../svg';
 
 export const toolbarMixin = defineMixin({
     createToolBtn(parent: HTMLElement, svgPath: string, isActive = false) {
@@ -121,7 +121,7 @@ export const toolbarMixin = defineMixin({
 
         // Shapes menu (next to the other tools)
         const secShapes = secTools.createDiv({ cls: "hw-shapes-section" });
-        const shapeBtn = this.createToolBtn(secShapes, this.shapeIcon());
+        const shapeBtn = this.createToolBtn(secShapes, ICON_SHAPES);
         label(shapeBtn, 'Shapes');
         // Hand: dragging with the mouse / pen moves the page (fingers scroll anyway). Off the toolbar by default.
         const handBtn = secTools.createEl('button', { cls: 'hw-tool-btn' });
@@ -149,6 +149,11 @@ export const toolbarMixin = defineMixin({
         label(this.selMenuBtn, 'Selection options');
         const smb = this.selMenuBtn;
         smb.onclick = () => this.showSelectionMenu(smb);
+        // Split the selection along a line (shown while strokes are selected): tap, then draw a line across them.
+        this.splitBtn = this.createToolBtn(secHistory, ICON_SPLIT);
+        label(this.splitBtn, 'Split along a line (then draw a line across the selection)');
+        const spb = this.splitBtn;
+        spb.onclick = () => { if (this.splitMode) this.cancelSplitMode(); else this.startSplitMode(); };
         const delBtn = this.deleteSelBtn;
         // With the dock on, both selection buttons move from the toolbar into the dock (next to the selection's options).
         const selActions = createDiv({ cls: 'hw-sel-actions' });
@@ -167,42 +172,17 @@ export const toolbarMixin = defineMixin({
         const thGroup = sizePop.createDiv({ cls: "hw-menu-group" });
         thGroup.createDiv({ cls: "hw-menu-title", text: "Thickness" });
         const thicknessWrapper = thGroup.createDiv({ cls: "hw-menu-row hw-thickness-presets" });
+        // Each thickness is shown as a short wave of that width in the current colour (same as the folded dock chip).
         const btnSm = thicknessWrapper.createEl("button", { cls: "hw-thickness-btn" });
-        btnSm.createDiv({ cls: "hw-dot hw-dot-sm" });
+        appendSvg(btnSm, thicknessWaveSvg(0));
         label(btnSm, 'Thin');
         const btnMd = thicknessWrapper.createEl("button", { cls: "hw-thickness-btn active" });
-        btnMd.createDiv({ cls: "hw-dot hw-dot-md" });
+        appendSvg(btnMd, thicknessWaveSvg(1));
         label(btnMd, 'Medium');
         const btnLg = thicknessWrapper.createEl("button", { cls: "hw-thickness-btn" });
-        btnLg.createDiv({ cls: "hw-dot hw-dot-lg" });
+        appendSvg(btnLg, thicknessWaveSvg(2));
         label(btnLg, 'Thick');
-        const alphaGroup = sizePop.createDiv({ cls: "hw-menu-group" });
-        alphaGroup.createDiv({ cls: "hw-menu-title", text: "Opacity" });
-        const secAlpha = alphaGroup.createDiv({ cls: "hw-menu-row hw-alpha-row" });
         const secColor = styleInline.createDiv({ cls: "hw-tool-section" });
-        const ALPHAS = [1, 0.75, 0.5, 0.25];
-        let alphaNow: number | null = 1;
-        /** Opacity in the thickness menu (null = a tool without opacity – the group is hidden). */
-        const renderAlpha = (current: number | null, color: string, onPick: ((a: number) => void) | null) => {
-            secAlpha.empty();
-            alphaGroup.toggle(!!onPick);
-            alphaNow = onPick ? current : 1;
-            if (!onPick) return;
-            for (const a of ALPHAS) {
-                const opt = secAlpha.createEl('button', { cls: 'hw-alpha-opt' });
-                const sw = opt.createSpan({ cls: 'hw-alpha-btn' });
-                sw.style.setProperty('--sw', color || 'var(--text-normal)');
-                sw.style.setProperty('--sa', String(a));
-                opt.createSpan({ text: `${Math.round(a * 100)}%` });
-                opt.toggleClass('active', current !== null && Math.abs(current - a) < 0.01);
-                opt.onclick = () => {
-                    alphaNow = a;
-                    onPick(a);
-                    secAlpha.querySelectorAll<HTMLElement>('.hw-alpha-opt').forEach((x, i) => x.toggleClass('active', ALPHAS[i] === a));
-                    updateSizeBtn();
-                };
-            }
-        };
         const closeSizePop = () => { sizePop.hide(); };
 
         // What the eraser erases (only shown for the eraser): shapes and highlighter – off / whole / partial each.
@@ -285,9 +265,9 @@ export const toolbarMixin = defineMixin({
         const shapeThRow = addGroup("Thickness");
         const shapeThGroup = shapeThRow.parentElement!;
         shapeThRow.addClass('hw-thickness-presets');
-        const shapeThBtns = ['sm', 'md', 'lg'].map((sz, i) => {
+        const shapeThBtns = [0, 1, 2].map((i) => {
             const b = shapeThRow.createEl('button', { cls: 'hw-thickness-btn' });
-            b.createDiv({ cls: `hw-dot hw-dot-${sz}` });
+            appendSvg(b, thicknessWaveSvg(i));
             b.setAttribute('aria-label', ['Thin', 'Medium', 'Thick'][i]);
             b.onclick = () => pickSize(i);
             return b;
@@ -324,6 +304,18 @@ export const toolbarMixin = defineMixin({
         const extraRow = addGroup("Options");
         const arrowGroup = extraRow.parentElement!;
         const arrowBtn = addOpt(extraRow, ICON_ARROW, 'Arrow at the end', () => { this.shapeArrow = !this.shapeArrow; refreshShapeMenu(); });
+        // Right-angle path (like wires in KiCad): each lift of the pen makes a corner, the next segment is perpendicular.
+        const orthoBtn = addOpt(extraRow, ICON_RIGHT_ANGLE_PATH, 'Right-angle path: lift the pen for a corner, tap to finish', () => {
+            this.shapeOrtho = !this.shapeOrtho;
+            this.endOrthoPath();
+            refreshShapeMenu();
+        });
+        /** Fill icons follow the shape (rectangle, circle, triangle). */
+        const paintFillIcons = () => {
+            const ic = shapeFillIcons(this.shapeType, this.shapeTriRight);
+            const icons = [ic.none, ic.solid, ic.light, ic.noLine];
+            fillOpts.forEach(([, , b], i) => setSvg(b, this.iconSvg(icons[i])));
+        };
         // Triangle kind (only for the triangle): isosceles or right.
         const triIsoBtn = addOpt(extraRow, ICON_TRI_ISO, 'Isosceles triangle', () => { this.shapeTriRight = false; refreshShapeMenu(); });
         const triRightBtn = addOpt(extraRow, ICON_TRI_RIGHT, 'Right triangle', () => { this.shapeTriRight = true; refreshShapeMenu(); });
@@ -335,15 +327,18 @@ export const toolbarMixin = defineMixin({
             const line = this.shapeFill === 'light' ? this.shapeLineOn : true;
             fillOpts.forEach(([f, l, b]) => b.toggleClass('active', this.shapeFill === f && l === line));
             arrowBtn.toggleClass('active', this.shapeArrow);
+            orthoBtn.toggleClass('active', this.shapeOrtho);
             triIsoBtn.toggleClass('active', !this.shapeTriRight);
             triRightBtn.toggleClass('active', this.shapeTriRight);
             fillGroup.toggle(!(this.shapeType === 'line'));
             const tri = this.shapeType === 'triangle';
             arrowGroup.toggle(this.shapeType === 'line' || tri);
             arrowBtn.toggle(this.shapeType === 'line');
+            orthoBtn.toggle(this.shapeType === 'line');
             triIsoBtn.toggle(tri);
             triRightBtn.toggle(tri);
-            setSvg(shapeBtn, this.iconSvg(this.shapeIcon()));
+            paintFillIcons();
+            if (this.shapeType !== 'line') this.endOrthoPath();
             this.persistMemory();
             if (this.refreshToolbarUI) this.refreshToolbarUI();
         };
@@ -427,7 +422,6 @@ export const toolbarMixin = defineMixin({
             // the thickness dots show the current colour
             const col = currentColor() || 'var(--text-normal)';
             for (const b of [btnSm, btnMd, btnLg, ...shapeThBtns]) b.style.setProperty('--dot', col);
-            void alphaNow;
             refreshChips();
         };
         const updateThicknessUI = () => {
@@ -497,12 +491,9 @@ export const toolbarMixin = defineMixin({
         const updateSharedUI = () => {
             const allSizeBtns = [btnSm, btnMd, btnLg];
             const st = this.plugin.settings;
-            renderAlpha(null, '', null);
             if (this.currentTool === 'pen') {
                 allSizeBtns.forEach(b => b.disabled = false);
-                const alphaUI = () => { renderAlpha(this.penAlpha, this.penColor, (a) => { this.penAlpha = a; this.persistMemory(); }); updateSizeBtn(); };
-                this.renderPalette(secColor, st.penPalette, this.penColor, 'pen', (c) => { this.penColor = c; this.persistMemory(); updateStyleBtn(); alphaUI(); });
-                alphaUI();
+                this.renderPalette(secColor, st.penPalette, this.penColor, 'pen', (c) => { this.penColor = c; this.persistMemory(); updateStyleBtn(); updateSizeBtn(); });
             } else if (this.currentTool === 'shape') {
                 allSizeBtns.forEach(b => b.disabled = false);
                 const filled = this.shapeFill !== 'none' && this.shapeType !== 'line';
@@ -525,13 +516,10 @@ export const toolbarMixin = defineMixin({
                     // filled shapes in the selection: outline / fill colour fields like for the shape tool
                     renderShapeColors(this.selectionColor() ?? '', this.selectionFillColor() ?? '', filledSel.every(x => !x.fillColor),
                         (c) => this.setSelectionColor(c), (c) => this.setSelectionFillColor(c),
-                        (this.selection?.strokes ?? []).every(x => !x.isHighlighter && x.shape && x.shape !== 'line' && x.fill && x.noLine));
-                    renderAlpha(this.selectionAlpha(), this.selectionColor() ?? '', (a) => this.setSelectionAlpha(a));
+                        (this.selection?.strokes ?? []).every(x => this.isFilledArea(x) && x.noLine));
                 } else if (kind) {
                     const pal = kind === 'highlighter' ? st.highlighterPalette : st.penPalette;
                     this.renderPalette(secColor, pal, this.selectionColor() ?? '', kind, (c) => { this.setSelectionColor(c); updateStyleBtn(); });
-                    if (kind === 'pen') renderAlpha(this.selectionAlpha(), this.selectionColor() ?? '', (a) => this.setSelectionAlpha(a));
-                    else renderAlpha(null, '', null);
                 } else {
                     secColor.empty();
                 }
@@ -554,6 +542,8 @@ export const toolbarMixin = defineMixin({
 
         const updateActiveTool = (btn: HTMLElement) => {
             this.closeToolDockPop?.();
+            this.endOrthoPath();
+            this.cancelSplitMode();
             markHiddenTool();
             closeShapeMenu();
             closeSizePop();
@@ -567,10 +557,11 @@ export const toolbarMixin = defineMixin({
         };
 
         // Tapping the active tool again opens its options: thickness (+ opacity for the pen, + what the eraser erases).
-        // With the dock it folds / unfolds the dock instead.
+        // With the dock the options are always shown, so a second tap changes nothing.
         const toolTap = (tool: 'pen' | 'eraser' | 'highlighter', btn: HTMLElement) => {
             if (this.currentTool === tool) {
-                if (dockMode()) toggleDock(); else openToolOptions(btn);
+                // Dock: the options are already on screen – a second tap keeps them (only popups toggle).
+                if (dockMode()) showDock(); else openToolOptions(btn);
                 return;
             }
             this.currentTool = tool;
@@ -584,7 +575,7 @@ export const toolbarMixin = defineMixin({
             this.currentTool = 'hand';
             updateActiveTool(handBtn);
         };
-        label(penBtn, 'Pen (tap again: thickness and opacity)');
+        label(penBtn, 'Pen (tap again: thickness)');
         label(eraserBtn, 'Eraser (tap again: size and what it erases)');
         label(highBtn, 'Highlighter (tap again: thickness)');
         const toolBtnOf = (t: string): HTMLElement | null => ({ pen: penBtn, eraser: eraserBtn, highlighter: highBtn, lasso: lassoBtn, shape: shapeBtn, hand: handBtn } as Record<string, HTMLElement>)[t] ?? null;
@@ -594,7 +585,6 @@ export const toolbarMixin = defineMixin({
             closeShapeMenu();
             closeStylePop();
             sizePop.appendChild(thGroup);
-            sizePop.appendChild(alphaGroup);
             sizePop.appendChild(eraseGroup);
             updateSharedUI();
             placeBelow(sizePop, anchor);
@@ -607,12 +597,12 @@ export const toolbarMixin = defineMixin({
             }
             // Clicking the active tool again: choose the selection mode (and the thickness of selected strokes).
             void ev;
-            if (dockMode()) { toggleDock(); return; }
+            if (dockMode()) { showDock(); return; }
             if (selModePop.style.display !== 'none') { closeSelModePop(); return; }
             closeSizePop();
             refreshSelModePop();
-            if (this.selectionStyleKind()) { selModePop.appendChild(thGroup); selModePop.appendChild(alphaGroup); updateSharedUI(); }
-            else { sizePop.appendChild(thGroup); sizePop.appendChild(alphaGroup); }
+            if (this.selectionStyleKind()) { selModePop.appendChild(thGroup); updateSharedUI(); }
+            else sizePop.appendChild(thGroup);
             placeBelow(selModePop, lassoBtn);
         };
         // Selection mode: just two icons (lasso / rectangle).
@@ -650,14 +640,13 @@ export const toolbarMixin = defineMixin({
         // --- Dock: options of the active tool in a floating pill under the toolbar (instead of the popups) ---
         // The same option groups as in the popups are moved into it, so everything works the same in both layouts.
         const dock = container.createDiv({ cls: 'hw-tool-dock is-hidden' });
-        let dockCollapsed = false;
         let inDock = false;
         // Groups that don't fit in the dock (narrow window) collapse one by one into small buttons ("chips") showing the
-        // current value; each chip opens its own submenu with just that group.
+        // current value; each chip opens its own submenu with just that group. Some groups always fold together into
+        // one chip and stay folded even when there is room (line style + fill).
         type GroupMeta = { name: string; autoClose: boolean; icon?: string };
         const meta = new Map<HTMLElement, GroupMeta>([
             [thGroup, { name: 'Thickness', autoClose: true }],
-            [alphaGroup, { name: 'Opacity', autoClose: true }],
             [eraseGroup, { name: 'Eraser erases', autoClose: false, icon: 'eraser' }],
             [shapeThGroup, { name: 'Thickness', autoClose: true }],
             [shapeTypeGroup, { name: 'Shape', autoClose: true }],
@@ -668,22 +657,20 @@ export const toolbarMixin = defineMixin({
             [selActions, { name: 'Selection actions', autoClose: true, icon: 'trash-2' }],
             [styleInline, { name: 'Colours', autoClose: false }],
         ]);
-        let chips: { group: HTMLElement; chip: HTMLElement }[] = [];
-        let popGroup: HTMLElement | null = null;   // the group shown in the submenu now
+        type Chip = { groups: HTMLElement[]; chip: HTMLElement };
+        let chips: Chip[] = [];
+        let popGroups: HTMLElement[] | null = null;   // the groups shown in the submenu now
         const groupPop = activeDocument.body.createDiv({ cls: 'hw-menu hw-dock-group-pop' });
         groupPop.hide();
         this.register(() => groupPop.remove());
-        const chipOf = (g: HTMLElement) => chips.find(c => c.group === g)?.chip ?? null;
+        const chipOf = (g: HTMLElement) => chips.find(c => c.groups.includes(g))?.chip ?? null;
         const closeGroupPop = () => {
             groupPop.hide();
-            if (popGroup) { chipOf(popGroup)?.removeClass('active'); popGroup.detach(); }
-            popGroup = null;
+            if (popGroups) { chipOf(popGroups[0])?.removeClass('active'); popGroups.forEach(g => g.detach()); }
+            popGroups = null;
         };
-        /** The chip shows the current value: the active option of the group (or the colour / an icon). */
-        const fillSummary = (chip: HTMLElement, g: HTMLElement) => {
-            const box = chip.querySelector<HTMLElement>('.hw-chip-sum');
-            if (!box) return;
-            box.empty();
+        /** Summary of one group in a chip: the active option of the group (or the colour / an icon). */
+        const groupSummary = (box: HTMLElement, g: HTMLElement) => {
             const m = meta.get(g);
             if (g === styleInline) {
                 const d = box.createSpan({ cls: 'hw-style-dot' });
@@ -691,55 +678,62 @@ export const toolbarMixin = defineMixin({
                 return;
             }
             if (g === thGroup || g === shapeThGroup) {
-                // thickness: a short stroke sample in the current colour (thin / medium / thick)
+                // thickness: the same wave as on the thickness buttons, in the current colour (faded when mixed)
                 const btns = g === thGroup ? [btnSm, btnMd, btnLg] : shapeThBtns;
                 const i = btns.findIndex(b => b.hasClass('active'));
-                const col = currentColor();
-                const stroke = /^#[0-9a-f]{3,8}$/i.test(col) ? col : 'currentColor';
-                const w = [1.5, 3, 5][i < 0 ? 1 : i];
-                setSvg(box, `<svg viewBox="0 0 28 20" width="28" height="20"${i < 0 ? ' opacity="0.45"' : ''}><path d="M3 14 C 9 3, 17 19, 25 6" stroke="${stroke}" stroke-width="${w}" fill="none" stroke-linecap="round"/></svg>`);
+                const span = box.createSpan({ cls: 'hw-chip-wave' });
+                span.style.setProperty('--dot', currentColor() || 'var(--text-normal)');
+                if (i < 0) span.addClass('is-mixed');
+                appendSvg(span, thicknessWaveSvg(i < 0 ? 1 : i));
                 return;
             }
             // the eraser options have two rows of choices – an icon says more than one of them
             const act = g === eraseGroup ? null : Array.from(g.querySelectorAll<HTMLElement>('button.active')).find(x => x.style.display !== 'none') ?? null;
             if (act) {
+                const span = box.createSpan({ cls: 'hw-chip-part' });
                 const dot = act.style.getPropertyValue('--dot');
-                if (dot) box.style.setProperty('--dot', dot);
-                act.childNodes.forEach(n => { box.appendChild(n.cloneNode(true)); });
+                if (dot) span.style.setProperty('--dot', dot);
+                act.childNodes.forEach(n => { span.appendChild(n.cloneNode(true)); });
             } else if (m?.icon) {
-                setIcon(box, m.icon);
+                setIcon(box.createSpan({ cls: 'hw-chip-part' }), m.icon);
             }
         };
-        const refreshChipsNow = () => { for (const c of chips) fillSummary(c.chip, c.group); };
+        const fillSummary = (c: Chip) => {
+            const box = c.chip.querySelector<HTMLElement>('.hw-chip-sum');
+            if (!box) return;
+            box.empty();
+            for (const g of c.groups) groupSummary(box, g);
+        };
+        const refreshChipsNow = () => { for (const c of chips) fillSummary(c); };
         refreshChips = () => { if (chips.length > 0) refreshChipsNow(); };
-        const openGroupPop = (g: HTMLElement, chip: HTMLElement) => {
+        const openGroupPop = (groups: HTMLElement[], chip: HTMLElement) => {
             closeGroupPop();
             closeSizePop(); closeShapeMenu(); closeStylePop(); closeSelModePop();
-            groupPop.appendChild(g);
-            popGroup = g;
+            for (const g of groups) groupPop.appendChild(g);
+            popGroups = groups;
             chip.addClass('active');
             placeBelow(groupPop, chip);
         };
-        /** Replaces a group in the dock with its chip. */
-        const collapseGroup = (g: HTMLElement) => {
-            const m = meta.get(g);
+        /** Replaces groups in the dock with one chip. */
+        const collapseGroups = (groups: HTMLElement[]) => {
             const chip = createEl('button', { cls: 'hw-tool-btn hw-dock-chip' });
-            label(chip, m?.name ?? 'Options');
+            label(chip, groups.map(g => meta.get(g)?.name ?? 'Options').join(' and '));
             chip.createSpan({ cls: 'hw-chip-sum' });
             chip.createSpan({ cls: 'hw-chip-caret' });
-            dock.insertBefore(chip, g);
-            g.detach();
-            chips.push({ group: g, chip });
-            fillSummary(chip, g);
-            chip.onclick = () => { if (popGroup === g) closeGroupPop(); else openGroupPop(g, chip); };
+            dock.insertBefore(chip, groups[0]);
+            groups.forEach(g => g.detach());
+            const c: Chip = { groups, chip };
+            chips.push(c);
+            fillSummary(c);
+            chip.onclick = () => { if (popGroups && popGroups[0] === groups[0]) closeGroupPop(); else openGroupPop(groups, chip); };
         };
         // After a pick in the submenu: update the chips; single-choice groups close the submenu.
         groupPop.addEventListener('click', (e: MouseEvent) => {
-            const g = popGroup;
+            const gs = popGroups;
             const onButton = !!(e.target as HTMLElement | null)?.closest('button');
             window.setTimeout(() => {
                 refreshChipsNow();
-                if (g && popGroup === g && onButton && meta.get(g)?.autoClose) closeGroupPop();
+                if (gs && popGroups === gs && onButton && gs.length === 1 && meta.get(gs[0])?.autoClose) closeGroupPop();
             }, 120);
         }, true);
         /** The dock's height (plus gaps) is kept free at the top of the note, so it doesn't cover the first page. */
@@ -756,36 +750,41 @@ export const toolbarMixin = defineMixin({
         };
         const restorePopups = () => {
             // back to the popups, in their original order
-            sizePop.append(thGroup, alphaGroup, eraseGroup);
+            sizePop.append(thGroup, eraseGroup);
             shapeMenu.append(shapeThGroup, shapeTypeGroup, dashGroup, fillGroup, arrowGroup);
             selModePop.insertBefore(selGroup, selModePop.firstChild);
-            secHistory.append(delBtn, smb);   // the selection buttons back on the toolbar
+            secHistory.append(delBtn, spb, smb);   // the selection buttons back on the toolbar
             toolbar.insertBefore(styleInline, styleBtn);
             closeGroupPop();
             chips = [];
             dock.empty();
             dock.addClass('is-hidden');
+            this.posLog('dock hidden: back to popups');
             updateInset();
         };
+        /** Groups of one drop step that are really shown in the dock now. */
+        const shown = (gs: HTMLElement[]) => gs.filter(g => g.style.display !== 'none' && !g.hasClass('hw-no-colors') && g.parentElement === dock);
         /**
          * Collapses groups into chips until the dock fits in the window. `drop` = the order in which groups collapse
-         * (least important first). If even all chips don't fit, the dock scrolls sideways.
+         * (least important first; an array = groups that collapse together into one chip). `always` = chips that are
+         * folded even when there is room. If even all chips don't fit, the dock scrolls sideways.
          */
-        const fitDock = (drop: HTMLElement[]) => {
-            const wasOpen = popGroup;
+        const fitDock = (drop: HTMLElement[][], always: HTMLElement[][]) => {
+            const wasOpen = popGroups;
             groupPop.hide();
-            popGroup = null;
+            popGroups = null;
             chips = [];
             if (dock.hasClass('is-hidden')) return;
+            for (const step of always) { const gs = shown(step); if (gs.length > 0) collapseGroups(gs); }
             const overflows = () => dock.scrollWidth > dock.clientWidth + 1;
-            for (const g of drop) {
+            for (const step of drop) {
                 if (!overflows()) break;
-                if (g.style.display === 'none' || g.hasClass('hw-no-colors') || g.parentElement !== dock) continue;
-                collapseGroup(g);
+                const gs = shown(step);
+                if (gs.length > 0) collapseGroups(gs);
             }
-            // The submenu was open and its group is still collapsed: keep it open.
-            const ch = wasOpen ? chipOf(wasOpen) : null;
-            if (wasOpen && ch) openGroupPop(wasOpen, ch);
+            // The submenu was open and its groups are still collapsed: keep it open.
+            const c = wasOpen ? chips.find(x => x.groups[0] === wasOpen[0]) : null;
+            if (c) openGroupPop(c.groups, c.chip);
         };
         let dockWidth = -1;
         placeOptions = () => {
@@ -794,38 +793,41 @@ export const toolbarMixin = defineMixin({
                 return;
             }
             inDock = true;
-            if (delBtn.parentElement !== selActions) selActions.append(delBtn, smb);
+            if (delBtn.parentElement !== selActions) selActions.append(delBtn, spb, smb);
             const t = this.currentTool;
             let parts: HTMLElement[] = [];
-            let drop: HTMLElement[] = [];
-            if (t === 'pen') { parts = [thGroup, alphaGroup, styleInline]; drop = [alphaGroup, thGroup, styleInline]; }
-            else if (t === 'highlighter') { parts = [thGroup, styleInline]; drop = [thGroup, styleInline]; }
-            else if (t === 'eraser') { parts = [thGroup, eraseGroup]; drop = [eraseGroup, thGroup]; }
+            let drop: HTMLElement[][] = [];
+            if (t === 'pen') { parts = [thGroup, styleInline]; drop = [[thGroup], [styleInline]]; }
+            else if (t === 'highlighter') { parts = [thGroup, styleInline]; drop = [[thGroup], [styleInline]]; }
+            else if (t === 'eraser') { parts = [thGroup, eraseGroup]; drop = [[eraseGroup], [thGroup]]; }
             else if (t === 'shape') {
                 parts = [shapeTypeGroup, shapeThGroup, dashGroup, fillGroup, arrowGroup, styleInline];
-                drop = [arrowGroup, shapeThGroup, fillGroup, dashGroup, shapeTypeGroup, styleInline];
+                drop = [[arrowGroup], [shapeThGroup], [shapeTypeGroup], [styleInline]];
             } else if (t === 'lasso') {
-                parts = this.selectionStyleKind() ? [selGroup, thGroup, alphaGroup, styleInline] : [selGroup];
+                parts = this.selectionStyleKind() ? [selGroup, thGroup, styleInline] : [selGroup];
                 // delete / selection options: in the dock while something is selected (they collapse last)
                 if (this.selection) parts.push(selActions);
-                drop = [alphaGroup, thGroup, selGroup, styleInline, selActions];
+                drop = [[thGroup], [selGroup], [styleInline], [selActions]];
             }
             dock.empty();
             for (const p of parts) dock.appendChild(p);
-            dock.toggleClass('is-hidden', parts.length === 0 || dockCollapsed);
+            // The dock is hidden only for a tool without options (hand) – never by tapping the active tool again.
+            const hide = parts.length === 0;
+            if (hide !== dock.hasClass('is-hidden')) this.posLog('dock', hide ? 'hidden' : 'shown', 'tool', t);
+            dock.toggleClass('is-hidden', hide);
             dockWidth = this.contentEl.clientWidth;
-            fitDock(drop.filter(g => parts.includes(g)));
+            // line style + fill: always one folded chip (changed less often than the shape and its colour)
+            fitDock(drop.map(gs => gs.filter(g => parts.includes(g))), [[dashGroup, fillGroup].filter(g => parts.includes(g))]);
             positionDock();
         };
         /** The window got wider / narrower: fit the dock again. */
         const refitDock = () => { if (inDock && this.contentEl.clientWidth !== dockWidth) placeOptions(); };
         this.refitToolDock = () => { if (inDock) placeOptions(); };
         this.closeToolDockPop = closeGroupPop;
-        const showDock = () => { dockCollapsed = false; placeOptions(); };
-        const toggleDock = () => { dockCollapsed = !dockCollapsed; closeGroupPop(); placeOptions(); };
+        const showDock = () => { placeOptions(); };
         this.registerDomEvent(activeDocument, 'pointerdown', (e: PointerEvent) => {
             const t = e.target as Node;
-            if (popGroup && !groupPop.contains(t) && !(chipOf(popGroup)?.contains(t) ?? false)) closeGroupPop();
+            if (popGroups && !groupPop.contains(t) && !(chipOf(popGroups[0])?.contains(t) ?? false)) closeGroupPop();
         }, { capture: true });
         // The dock is not part of the note: wheel scrolls it sideways (when it overflows), nothing reaches the page.
         this.registerDomEvent(dock, 'wheel', (e: WheelEvent) => {
@@ -870,7 +872,7 @@ export const toolbarMixin = defineMixin({
                 this.currentTool = 'shape';
                 updateActiveTool(shapeBtn);
             } else if (dockMode()) {
-                toggleDock();
+                showDock();
             } else if (shapeMenu.style.display === 'none') {
                 openShapeMenu();
             } else {

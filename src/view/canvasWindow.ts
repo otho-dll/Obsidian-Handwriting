@@ -164,7 +164,7 @@ export const canvasWindowMixin = defineMixin({
      */
     drawStrokeInRegion(ctx: CanvasRenderingContext2D, st: Stroke, x0: number, y0: number, x1: number, y1: number) {
         const pts = st.points;
-        if (st.shape || pts.length < 48 || this.pathFresh(st) || (st.alpha !== undefined && st.alpha < 1)) {
+        if (st.shape || st.closed || pts.length < 48 || this.pathFresh(st) || (st.alpha !== undefined && st.alpha < 1)) {
             this.drawSmoothStroke(ctx, st);
             return;
         }
@@ -436,7 +436,7 @@ export const canvasWindowMixin = defineMixin({
         // While scaling / rotating the stroke shape changes every frame – instead of rebuilding it,
         // the preview draws a constant-width line (full quality returns on release).
         const draw = (st: Stroke) => {
-            if (st.shape || st.points.length < 2 || this.pathFresh(st)) this.drawSmoothStroke(ctx, st);
+            if (st.shape || st.closed || st.points.length < 2 || this.pathFresh(st)) this.drawSmoothStroke(ctx, st);
             else this.drawFastStroke(ctx, st);
         };
         for (const st of sel.strokes) {

@@ -21,6 +21,7 @@ export const selectionEditMixin = defineMixin({
             const bb = this.getStrokeBBox(s);
             if (pos.x < bb.x0 - tol || pos.x > bb.x1 + tol || pos.y < bb.y0 - tol || pos.y > bb.y1 + tol) continue;
             if (s.shape) { if (this.shapeHit(s, pos, pos, tol)) return s; continue; }
+            if (s.poly && s.closed) { if (this.closedPolyHit(s, pos, pos, tol)) return s; continue; }
             const r = tol + s.width * 0.75;
             const pts = s.points;
             if (pts.length === 1) { if (Math.hypot(pts[0].x - pos.x, pts[0].y - pos.y) <= r) return s; continue; }
@@ -153,7 +154,7 @@ export const selectionEditMixin = defineMixin({
 
     /** Selected filled shapes (rectangles / ellipses) – the ones with a separate fill colour. */
     selectionFilledShapes(): Stroke[] {
-        return (this.selection?.strokes ?? []).filter(x => x.shape && x.shape !== 'line' && x.fill);
+        return (this.selection?.strokes ?? []).filter(x => this.isFilledArea(x));
     },
 
     /** Shared fill colour of the selected filled shapes (the outline colour when they have none); null = mixed / none. */
@@ -194,22 +195,6 @@ export const selectionEditMixin = defineMixin({
         const c = color.toLowerCase();
         const items = sel.strokes.filter(s => kind === 'highlighter' || !s.isHighlighter);
         this.commitAttrs(sel.page, items, () => ({ color: c }), 'color');
-    },
-
-    /** Shared opacity of the selected pen strokes (null = mixed / none). */
-    selectionAlpha(): number | null {
-        const s = (this.selection?.strokes ?? []).filter(x => !x.isHighlighter);
-        if (s.length === 0) return null;
-        const a = s[0].alpha ?? 1;
-        return s.every(x => Math.abs((x.alpha ?? 1) - a) < 0.001) ? a : null;
-    },
-
-    setSelectionAlpha(alpha: number) {
-        const sel = this.selection;
-        if (!sel) return;
-        const items = sel.strokes.filter(s => !s.isHighlighter);
-        this.commitAttrs(sel.page, items, () => ({ alpha: alpha >= 1 ? undefined : alpha }));
-        this.refreshToolbarUI?.();
     },
 
     setSelectionSize(index: number) {
@@ -440,6 +425,7 @@ export const selectionEditMixin = defineMixin({
         menu.addItem(i => i.setTitle('Cut').setIcon('scissors').onClick(() => this.copySelection(true)));
         menu.addItem(i => i.setTitle('Copy').setIcon('copy').onClick(() => this.copySelection(false)));
         menu.addItem(i => i.setTitle('Duplicate').setIcon('copy-plus').onClick(() => this.duplicateSelection()));
+        if (sel.strokes.length > 0 && !this.readOnly) menu.addItem(i => i.setTitle('Split along a line…').setIcon('split').onClick(() => this.startSplitMode()));
         menu.addSeparator();
         if (this.canGroupSelection()) menu.addItem(i => i.setTitle('Group').setIcon('group').onClick(() => this.groupSelection()));
         if (this.canUngroupSelection()) menu.addItem(i => i.setTitle('Ungroup').setIcon('ungroup').onClick(() => this.ungroupSelection()));

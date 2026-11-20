@@ -23,6 +23,7 @@ export const selectionMixin = defineMixin({
             this.deleteSelBtn.toggle(!!this.selection);
         }
         if (this.selMenuBtn) this.selMenuBtn.toggle(!!this.selection);
+        if (this.splitBtn) this.splitBtn.toggle(!!this.selection && this.selection.strokes.length > 0 && !this.readOnly);
         // With strokes selected the toolbar shows their colour and thickness (changes apply to the selection).
         if (this.currentTool === 'lasso' && this.refreshToolbarUI) this.refreshToolbarUI();
     },
@@ -139,6 +140,7 @@ export const selectionMixin = defineMixin({
     },
 
     clearSelection() {
+        this.cancelSplitMode();
         if (!this.selection) return;
         const page = this.selection.page;
         this.selection = null;
@@ -270,6 +272,9 @@ export const selectionMixin = defineMixin({
         const above = b.y - stem >= 8 / z;
         return {
             resize: { x: b.x + b.w, y: b.y + b.h },
+            // edge handles: stretch only the width (right edge) or only the height (bottom edge)
+            stretchX: { x: b.x + b.w, y: b.y + b.h / 2 },
+            stretchY: { x: b.x + b.w / 2, y: b.y + b.h },
             rotate: { x: b.x + b.w / 2, y: above ? b.y - stem : b.y + b.h + stem },
             rotateFrom: { x: b.x + b.w / 2, y: above ? b.y : b.y + b.h },
             hitRadius: 16 / z
@@ -320,6 +325,14 @@ export const selectionMixin = defineMixin({
         ctx.lineWidth = 2 / z;
         ctx.fillRect(h.resize.x - hs, h.resize.y - hs, hs * 2, hs * 2);
         ctx.strokeRect(h.resize.x - hs, h.resize.y - hs, hs * 2, hs * 2);
+
+        // Stretch handles (middle of the right and bottom edge): small bars along the edge
+        const long = 7 / z, short = 3.5 / z;
+        ctx.lineWidth = 1.5 / z;
+        ctx.fillRect(h.stretchX.x - short, h.stretchX.y - long, short * 2, long * 2);
+        ctx.strokeRect(h.stretchX.x - short, h.stretchX.y - long, short * 2, long * 2);
+        ctx.fillRect(h.stretchY.x - long, h.stretchY.y - short, long * 2, short * 2);
+        ctx.strokeRect(h.stretchY.x - long, h.stretchY.y - short, long * 2, short * 2);
     },
 
     pageIndexAt(clientX: number, clientY: number): number {

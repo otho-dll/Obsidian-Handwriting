@@ -19,6 +19,8 @@ export interface Stroke {
     fillColor?: string;   // fill colour of a filled shape (missing = the outline colour)
     arrow?: boolean;
     poly?: boolean;       // freehand stroke drawn as a polyline (pieces of cut shapes)
+    closed?: boolean;     // poly: closed polygon (a shape split in two or stretched after rotating) – may have fill,
+                          // fillColor, fillAlpha, noLine like the shapes
     rot?: number;         // rotation of a rectangle / ellipse / triangle around its centre (radians)
     g?: string;           // group: items with the same g are selected and moved together (format v3)
     lock?: boolean;       // locked: cannot be selected, moved or erased (format v3)
@@ -76,7 +78,7 @@ export type HistoryEntry =
     | { type: 'scale'; page: number; strokes: Stroke[]; images: ImageItem[]; ax: number; ay: number; k: number }
     | { type: 'rotate'; page: number; strokes: Stroke[]; images: ImageItem[]; cx: number; cy: number; angle: number }
     | { type: 'delete'; page: number; items: { stroke: Stroke; index: number }[]; imgItems: { image: ImageItem; index: number }[] }
-    | { type: 'replace'; page: number; before: Stroke[]; after: Stroke[] }
+    | { type: 'replace'; page: number; before: Stroke[]; after: Stroke[]; imgAttrs?: AttrChange[] }
     | { type: 'addImage'; page: number; image: ImageItem; index: number }
     | { type: 'transfer'; page: number; to: number; strokes: Stroke[]; images: ImageItem[]; dy: number; dx?: number }
     | { type: 'paste'; page: number; strokes: Stroke[]; images: ImageItem[] }

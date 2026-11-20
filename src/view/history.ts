@@ -99,6 +99,7 @@ export const historyMixin = defineMixin({
     },
 
     undo() {
+        this.endOrthoPath(false);   // a right-angle path in progress ends (its last segment may be undone now)
         const entry = this.undoStack.pop();
         if (!entry) return;
         this.selection = null;
@@ -122,6 +123,7 @@ export const historyMixin = defineMixin({
                 for (const item of entry.imgItems) images.splice(item.index, 0, item.image);
             } else if (entry.type === 'replace') {
                 page.strokes = [...entry.before];
+                if (entry.imgAttrs) this.applyAttrChanges(entry.imgAttrs, 'before');
             } else if (entry.type === 'addImage') {
                 const i = images.indexOf(entry.image);
                 if (i >= 0) images.splice(i, 1);
@@ -158,6 +160,7 @@ export const historyMixin = defineMixin({
     },
 
     redo() {
+        this.endOrthoPath(false);
         const entry = this.redoStack.pop();
         if (!entry) return;
         this.selection = null;
@@ -185,6 +188,7 @@ export const historyMixin = defineMixin({
                 }
             } else if (entry.type === 'replace') {
                 page.strokes = [...entry.after];
+                if (entry.imgAttrs) this.applyAttrChanges(entry.imgAttrs, 'after');
             } else if (entry.type === 'addImage') {
                 images.splice(Math.min(entry.index, images.length), 0, entry.image);
             } else if (entry.type === 'paste') {

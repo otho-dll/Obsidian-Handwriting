@@ -292,6 +292,11 @@ export class HandwritingSettingTab extends PluginSettingTab {
                     .setValue(st.twoPageAlone)
                     .onChange(async (v) => { st.twoPageAlone = v as HandwritingSettings['twoPageAlone']; await this.plugin.saveSettings(); this.plugin.refreshViews(); }));
 
+            new Setting(c)
+                .setName('Dim other pages')
+                .setDesc('Pages other than the current one are slightly darker, so the page you write on stands out. The current page keeps its accent frame either way.')
+                .addToggle(t => t.setValue(st.dimInactivePages).onChange(async (v) => { st.dimInactivePages = v; await this.plugin.saveSettings(); this.plugin.refreshViews(); }));
+
             new Setting(c).setName('Page navigation').setHeading().settingEl.addClass('hw-set-sub');
             new Setting(c)
                 .setName('Pages panel side')

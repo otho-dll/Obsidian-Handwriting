@@ -166,6 +166,36 @@ export const strokeDrawMixin = defineMixin({
         ctx.lineCap = 'round';
     },
 
+    /** Closed polygon (a split / stretched shape): optional fill like the shapes, outline unless `noLine`. */
+    drawClosedPoly(ctx: CanvasRenderingContext2D, stroke: Stroke) {
+        const pts = stroke.points;
+        if (pts.length < 2) return;
+        const w = Math.max(0.5, stroke.width);
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = stroke.color;
+        ctx.lineWidth = w;
+        ctx.lineJoin = 'miter';
+        ctx.miterLimit = 4;
+        const pattern = dashPattern(stroke.dash, w);
+        ctx.lineCap = pattern.length ? 'butt' : 'round';
+        ctx.setLineDash(pattern);
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+        ctx.closePath();
+        if (stroke.fill) {
+            const a = ctx.globalAlpha;
+            ctx.globalAlpha = a * Math.max(0, Math.min(1, stroke.fillAlpha ?? 1));
+            ctx.fillStyle = stroke.fillColor || stroke.color;
+            ctx.fill();
+            ctx.globalAlpha = a;
+        }
+        if (!(stroke.fill && stroke.noLine)) ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+    },
+
     // Width multiplier for pressure 0..1 (pressure 0.5 = base width).
     pressureFactor(p: number): number {
         const st = this.plugin.settings;
@@ -174,7 +204,7 @@ export const strokeDrawMixin = defineMixin({
     },
 
     strokeHasPressure(stroke: Stroke): boolean {
-        if (stroke.isHighlighter || stroke.shape) return false;
+        if (stroke.isHighlighter || stroke.shape || stroke.closed) return false;
         let v = this.pressureCache.get(stroke);
         if (v === undefined) {
             v = stroke.points.some(p => p.pressure !== 0.5);
@@ -384,6 +414,7 @@ export const strokeDrawMixin = defineMixin({
 
     drawSmoothStrokeInner(ctx: CanvasRenderingContext2D, stroke: Stroke) {
         if (stroke.shape) { this.drawShape(ctx, stroke); return; }
+        if (stroke.poly && stroke.closed) { this.drawClosedPoly(ctx, stroke); return; }
 
         ctx.globalCompositeOperation = 'source-over';
         ctx.strokeStyle = stroke.color;

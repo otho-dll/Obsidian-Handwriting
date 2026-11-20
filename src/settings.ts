@@ -56,6 +56,8 @@ export interface HandwritingSettings {
     twoPageMode: 'off' | 'auto' | 'always';
     /** Two-page view with an odd number of pages: the last page sits alone (1-2, 3-4, 5) or the first one (1 | 2-3 | 4-5). */
     twoPageAlone: 'last' | 'first';
+    /** Pages other than the current one are slightly dimmed (with 2+ pages). */
+    dimInactivePages: boolean;
     /** The pages panel button was added to the toolbar (one-time, 3.15). */
     pagesPanelIntro?: boolean;
 
@@ -132,8 +134,6 @@ export interface LastPosition { page: number; off: number; zoom: number; t: numb
 export interface ToolMemory {
     sizes: { pen: number; highlighter: number; eraser: number; shape: number };
     penColor: string;
-    /** Pen opacity (1 = opaque). */
-    penAlpha: number;
     highlighterColor: string;
     customPen: string[];
     customHigh: string[];
@@ -150,10 +150,12 @@ export interface ToolMemory {
     shapeArrow: boolean;
     /** Triangle tool: right triangle (false = isosceles). */
     shapeTriRight: boolean;
+    /** Line tool: right-angle path (KiCad-like wires – every lift of the pen makes a 90° corner). */
+    shapeOrtho: boolean;
 }
 
 export function defaultMemory(): ToolMemory {
-    return { sizes: { pen: 1, highlighter: 1, eraser: 1, shape: 1 }, penColor: '', penAlpha: 1, highlighterColor: '', customPen: [], customHigh: [], shapeColor: '', shapeFillColor: '', customShape: [], shapeType: 'rect', shapeDash: 'solid', shapeFill: 'none', shapeOutline: true, shapeArrow: false, shapeTriRight: false };
+    return { sizes: { pen: 1, highlighter: 1, eraser: 1, shape: 1 }, penColor: '', highlighterColor: '', customPen: [], customHigh: [], shapeColor: '', shapeFillColor: '', customShape: [], shapeType: 'rect', shapeDash: 'solid', shapeFill: 'none', shapeOutline: true, shapeArrow: false, shapeTriRight: false, shapeOrtho: false };
 }
 
 export const DEFAULT_PEN_SIZES = [0.5, 1, 2];
@@ -194,6 +196,7 @@ export const DEFAULT_SETTINGS: HandwritingSettings = {
     pagesPanelColumns: 2,
     twoPageMode: 'off',
     twoPageAlone: 'last',
+    dimInactivePages: true,
     defaultTemplate: 'dots',
     defaultPaper: '#ffffff',
     pdfScale: 3,

@@ -34,6 +34,8 @@ export default {
         license: 'https://github.com/otho-dll/Obsidian-Handwriting/blob/main/LICENSE',
         /** Opens the plugin page in Obsidian's community plugin browser. */
         obsidian: 'obsidian://show-plugin?id={{pluginId}}',
+        /** The plugin's page in the Obsidian community plugin directory (web). */
+        community: 'https://community.obsidian.md/plugins/handwritten-notebook',
         demo: 'demo/',
         /** Repository name for BRAT (beta installs). */
         brat: 'otho-dll/Obsidian-Handwriting',
@@ -50,6 +52,7 @@ export default {
             { label: 'Features', href: '#features', icon: 'grid' },
             { label: 'Install', href: '#install', icon: 'download' },
             { label: 'GitHub', href: '{{links.repo}}', icon: 'github' },
+            { label: 'Obsidian Community', href: '{{links.community}}', icon: 'puzzle' },
         ],
         meta: 'Free and open source (MIT) · Desktop, tablets and phones · v{{version}}',
     },
@@ -59,9 +62,9 @@ export default {
         title: 'Features',
         lead: 'Everything a paper notebook can do, and more.',
         items: [
-            { icon: 'pen', title: 'Pen, highlighter & eraser', text: 'Pressure ink with opacity, a flat highlighter, and an eraser that cuts strokes.' },
-            { icon: 'shapes', title: 'Shapes', text: 'Lines, arrows, rectangles, ellipses and triangles with dashes, fills and separate outline and fill colors.' },
-            { icon: 'lasso', title: 'Lasso selection', text: 'Move, scale, rotate, recolor, group and lock, even onto another page.' },
+            { icon: 'pen', title: 'Pen, highlighter & eraser', text: 'Pressure ink, a flat highlighter, and an eraser that cuts strokes.' },
+            { icon: 'shapes', title: 'Shapes', text: 'Lines, arrows, right-angle paths, rectangles, ellipses and triangles with dashes, fills and separate outline and fill colors.' },
+            { icon: 'lasso', title: 'Lasso selection', text: 'Move, scale, stretch, rotate, split, recolor, group and lock, even onto another page.' },
             { icon: 'pages', title: 'Pages panel', text: 'Thumbnails and sections: jump to, reorder, duplicate or restyle pages – or see two pages side by side.' },
             { icon: 'pagestyle', title: 'Page styles', text: 'Portrait, landscape or endless; dots, lines, grid, Cornell, music staff and more.' },
             { icon: 'image', title: 'Images & PDFs', text: 'Paste, crop and rotate images; import a PDF and write on it.' },

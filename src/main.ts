@@ -5,7 +5,7 @@ const ICON_NEW_NOTE = 'hw-handwritten-note';
 import { CalculatorModal, CalcState, newCalcState } from './math/calculator';
 import { VIEW_TYPE_HANDWRITING } from './constants';
 import { isTemplate, isHexColor } from './templates';
-import { Stroke, ImageItem, PageData, NoteData, BBox, PageView, HistoryEntry, Selection } from './types';
+import { Point, Stroke, ImageItem, PageData, NoteData, BBox, PageView, HistoryEntry, Selection } from './types';
 import { r2, newId, shrinkCanvas } from './utils';
 import { DEFAULT_QUICK_ACTIONS, QUICK_ACTIONS, TOOLBAR_ITEMS } from './quickActions';
 import { migrateNote, NOTE_FORMAT_VERSION } from './format';
@@ -31,6 +31,7 @@ import { calcPanelMixin, CalcPanelMethods } from './view/calcPanel';
 import { clipboardMixin, ClipboardMethods } from './view/clipboard';
 import { menusMixin, MenusMethods } from './view/menus';
 import { selectionEditMixin, SelectionEditMethods } from './view/selectionEdit';
+import { shapeOpsMixin, ShapeOpsMethods } from './view/shapeOps';
 import { versionsMixin, VersionsMethods } from './view/versions';
 import { positionMixin, PositionMethods } from './view/position';
 import { assetsMixin, AssetsMethods } from './view/assets';
@@ -291,6 +292,7 @@ export default class HandwritingPlugin extends Plugin {
         if (saved && !Array.isArray(saved.toolbarHidden) && !quick.includes('contents')) quick.push('contents');
         st.toolbarHidden = strings(st.toolbarHidden).filter((x, i, a) => TOOLBAR_ITEMS.some(t => t.id === x) && a.indexOf(x) === i);
         if (typeof st.debugLog !== 'boolean') st.debugLog = false;
+        if (typeof st.dimInactivePages !== 'boolean') st.dimInactivePages = true;
         // v3.16: "writing zoom" replaced by the zoom button (current zoom + favourites). The previously saved zoom
         // becomes the first favourite and the zoom button takes the place of the previous zoom buttons on the toolbar.
         const okZ = (z: unknown): z is number => typeof z === 'number' && z >= 0.4 && z <= 4;
@@ -350,7 +352,6 @@ export default class HandwritingPlugin extends Plugin {
             if (v === 0 || v === 1 || v === 2) mem.sizes[k] = v;
         }
         if (isHexColor(m.penColor)) mem.penColor = m.penColor.toLowerCase();
-        if (typeof m.penAlpha === 'number' && m.penAlpha >= 0.1 && m.penAlpha <= 1) mem.penAlpha = m.penAlpha;
         if (isHexColor(m.highlighterColor)) mem.highlighterColor = m.highlighterColor.toLowerCase();
         const cl = (a: unknown) => Array.isArray(a) ? a.filter(isHexColor).map(c => c.toLowerCase()).slice(0, 3) : [];
         mem.customPen = cl(m.customPen);
@@ -365,6 +366,7 @@ export default class HandwritingPlugin extends Plugin {
         mem.shapeOutline = m.shapeOutline !== false;
         mem.shapeArrow = m.shapeArrow === true;
         mem.shapeTriRight = m.shapeTriRight === true;
+        mem.shapeOrtho = m.shapeOrtho === true;
         return mem;
     }
 
@@ -485,10 +487,16 @@ export class HandwritingView extends TextFileView {
     shapeArrow = false;
     /** Triangle tool: right triangle (false = isosceles). */
     shapeTriRight = false;
+    /** Line tool: right-angle path (each lift of the pen = a corner). */
+    shapeOrtho = false;
+    /** Right-angle path being drawn with the line tool: the next segment starts at `end`, perpendicular to `dir`. */
+    orthoPath: { page: number; g: string; end: Point; dir: 'h' | 'v'; last: Stroke; arrow: boolean } | null = null;
+    orthoMarker: HTMLElement | null = null;
+    /** Selection menu → "Split along a line…": the next line drawn with the lasso splits the selection. */
+    splitMode = false;
 
     penColor = '#000000';
     /** Pen opacity (1 = opaque). */
-    penAlpha = 1;
     highlighterColor = '#facc15';
     customPen: string[] = [];
     customHigh: string[] = [];
@@ -517,7 +525,6 @@ export class HandwritingView extends TextFileView {
         const m = this.plugin.settings.memory;
         m.sizes = { ...this.sizeMem };
         m.penColor = this.penColor;
-        m.penAlpha = this.penAlpha;
         m.highlighterColor = this.highlighterColor;
         m.customPen = [...this.customPen];
         m.customHigh = [...this.customHigh];
@@ -530,6 +537,7 @@ export class HandwritingView extends TextFileView {
         m.shapeOutline = this.shapeLineOn;
         m.shapeArrow = this.shapeArrow;
         m.shapeTriRight = this.shapeTriRight;
+        m.shapeOrtho = this.shapeOrtho;
         const snap = JSON.stringify(m);
         if (snap === this.memSnap) return;   // unchanged – nothing to save
         this.memSnap = snap;
@@ -575,6 +583,7 @@ export class HandwritingView extends TextFileView {
     /** Last style change of the selection (consecutive colour changes are merged into one undo step). */
     lastAttrEntry: { entry: HistoryEntry; key: string; at: number } | null = null;
     selMenuBtn: HTMLButtonElement | null = null;
+    splitBtn: HTMLButtonElement | null = null;
 
     calcPanelEl: HTMLElement | null = null;
     calcBtn: HTMLElement | null = null;
@@ -775,7 +784,6 @@ export class HandwritingView extends TextFileView {
         });
         const mem = plugin.settings.memory;
         this.penColor = mem.penColor || plugin.settings.penPalette[0] || '#000000';
-        this.penAlpha = mem.penAlpha ?? 1;
         this.highlighterColor = mem.highlighterColor || plugin.settings.highlighterPalette[0] || '#facc15';
         this.sizeMem = { ...mem.sizes };
         this.customPen = [...mem.customPen];
@@ -789,6 +797,7 @@ export class HandwritingView extends TextFileView {
         this.shapeLineOn = mem.shapeOutline;
         this.shapeArrow = mem.shapeArrow;
         this.shapeTriRight = mem.shapeTriRight;
+        this.shapeOrtho = mem.shapeOrtho;
         this.memSnap = JSON.stringify({ ...mem, sizes: { ...mem.sizes } });
     }
     getViewType() { return VIEW_TYPE_HANDWRITING; }
@@ -1050,6 +1059,12 @@ export class HandwritingView extends TextFileView {
                 this.deleteSelection();
                 return;
             }
+            if (e.key === 'Escape' && (this.splitMode || this.orthoPath)) {
+                e.preventDefault();
+                this.cancelSplitMode();
+                this.endOrthoPath();
+                return;
+            }
             if (this.selection && e.key === 'Escape') {
                 e.preventDefault();
                 this.clearSelection();
@@ -1224,6 +1239,7 @@ export class HandwritingView extends TextFileView {
         this.buildPageIndicator();
         if (panelOpen) this.openPagesPanel();
         this.applyAllPageStyles();
+        this.updateCurrentPage();   // "dim other pages" may have changed
         this.renderQuickSlots();
         if (this.refreshToolbarUI) this.refreshToolbarUI();
         if (this.applyToolbarItems) this.applyToolbarItems();
@@ -1332,5 +1348,5 @@ export class HandwritingView extends TextFileView {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging -- the view's mixin methods (src/view/*.ts), added to the class right below
-export interface HandwritingView extends HistoryMethods, GeometryMethods, ImagesMethods, CanvasWindowMethods, ImageInsertMethods, PageToolsMethods, ThumbsMethods, CurrentPageMethods, PagesPanelMethods, ToolbarMethods, PdfIOMethods, StrokeDrawMethods, CalcPanelMethods, ClipboardMethods, MenusMethods, SelectionEditMethods, VersionsMethods, PositionMethods, AssetsMethods, SelectionMethods, ContextMenuMethods, NavigationMethods, InputMethods, PageSizeMethods, ContentsMethods, OledCareMethods, ZoomPanelMethods, TouchMethods, PrintMethods, InkLayerMethods, PerfOverlayMethods {}
-Object.assign(HandwritingView.prototype, historyMixin, geometryMixin, imagesMixin, canvasWindowMixin, imageInsertMixin, pageToolsMixin, thumbsMixin, currentPageMixin, pagesPanelMixin, toolbarMixin, pdfIOMixin, strokeDrawMixin, calcPanelMixin, clipboardMixin, menusMixin, selectionEditMixin, versionsMixin, positionMixin, assetsMixin, selectionMixin, contextMenuMixin, navigationMixin, inputMixin, pageSizeMixin, contentsMixin, oledCareMixin, zoomPanelMixin, touchMixin, printMixin, inkLayerMixin, perfOverlayMixin);
+export interface HandwritingView extends HistoryMethods, GeometryMethods, ImagesMethods, CanvasWindowMethods, ImageInsertMethods, PageToolsMethods, ThumbsMethods, CurrentPageMethods, PagesPanelMethods, ToolbarMethods, PdfIOMethods, StrokeDrawMethods, CalcPanelMethods, ClipboardMethods, MenusMethods, SelectionEditMethods, ShapeOpsMethods, VersionsMethods, PositionMethods, AssetsMethods, SelectionMethods, ContextMenuMethods, NavigationMethods, InputMethods, PageSizeMethods, ContentsMethods, OledCareMethods, ZoomPanelMethods, TouchMethods, PrintMethods, InkLayerMethods, PerfOverlayMethods {}
+Object.assign(HandwritingView.prototype, historyMixin, geometryMixin, imagesMixin, canvasWindowMixin, imageInsertMixin, pageToolsMixin, thumbsMixin, currentPageMixin, pagesPanelMixin, toolbarMixin, pdfIOMixin, strokeDrawMixin, calcPanelMixin, clipboardMixin, menusMixin, selectionEditMixin, shapeOpsMixin, versionsMixin, positionMixin, assetsMixin, selectionMixin, contextMenuMixin, navigationMixin, inputMixin, pageSizeMixin, contentsMixin, oledCareMixin, zoomPanelMixin, touchMixin, printMixin, inkLayerMixin, perfOverlayMixin);

@@ -1,6 +1,8 @@
 import { defineMixin } from './mixin';
 import { SIMPLIFY_EPSILON, ROTATE_STEP, LIGHT_FILL_ALPHA } from '../constants';
 import { Point, Stroke, Bounds, BBox } from '../types';
+import { newId } from '../utils';
+import type { StretchSnap } from './shapeOps';
 
 /** Writing with the pen / mouse: pen, highlighter, eraser, shapes and lasso on the page canvas. */
 export const inputMixin = defineMixin({
@@ -108,6 +110,13 @@ export const inputMixin = defineMixin({
             runDragFrame();
         };
         let scaleDrag: { sb: Bounds; total: number } | null = null;
+        // Edge handle: stretching in one direction only (x = right edge, y = bottom edge).
+        let stretchDrag: { sb: Bounds; axis: 'x' | 'y'; total: number; snap: StretchSnap } | null = null;
+        // "Split along a line…": the line being drawn over the selection.
+        let splitLine: { a: Point; b: Point } | null = null;
+        // Right-angle path (line tool): where the pen went down (a tap without moving ends the path).
+        let orthoDown: { x: number; y: number } | null = null;
+        let orthoNext: 'h' | 'v' | null = null;   // direction forced for a continuing segment
         let rotateDrag: { cx: number; cy: number; start: number; total: number } | null = null;
 
         // Vector eraser (it grows when you rub quickly)
@@ -211,6 +220,13 @@ export const inputMixin = defineMixin({
                 const lpos = getPointerPos(e);
                 const bounds = this.selection && this.selection.page === pageIndex ? this.getSelectionBounds() : null;
                 topCanvas.removeClass('hw-live-highlighter');
+                if (this.splitMode && bounds) {
+                    // The line that splits the selection (drawn like the lasso preview, as an SVG line).
+                    splitLine = { a: lpos, b: lpos };
+                    topCanvas.setPointerCapture(e.pointerId);
+                    return;
+                }
+                if (this.splitMode) this.cancelSplitMode();   // the selection is on another page
                 if (bounds) {
                     const h = this.getHandles(bounds);
                     if (Math.hypot(lpos.x - h.rotate.x, lpos.y - h.rotate.y) <= h.hitRadius) {
@@ -220,13 +236,17 @@ export const inputMixin = defineMixin({
                     } else if (Math.hypot(lpos.x - h.resize.x, lpos.y - h.resize.y) <= h.hitRadius) {
                         // Handle in the bottom-right corner: resize
                         scaleDrag = { sb: bounds, total: 1 };
+                    } else if (this.selection && (Math.hypot(lpos.x - h.stretchX.x, lpos.y - h.stretchX.y) <= h.hitRadius || Math.hypot(lpos.x - h.stretchY.x, lpos.y - h.stretchY.y) <= h.hitRadius)) {
+                        // Handle in the middle of the right / bottom edge: stretch only the width / height
+                        const axis = Math.hypot(lpos.x - h.stretchX.x, lpos.y - h.stretchX.y) <= Math.hypot(lpos.x - h.stretchY.x, lpos.y - h.stretchY.y) ? 'x' : 'y';
+                        stretchDrag = { sb: bounds, axis, total: 1, snap: this.stretchSnapshot(this.selection.strokes, this.selection.images) };
                     } else if (lpos.x >= bounds.x && lpos.x <= bounds.x + bounds.w && lpos.y >= bounds.y && lpos.y <= bounds.y + bounds.h) {
                         // Grabbing the selection: move
                         lassoDrag = { last: lpos, dx: 0, dy: 0 };
                     }
                 }
-                if (rotateDrag || scaleDrag || lassoDrag) this.beginDragLayer(pageIndex);
-                if (!rotateDrag && !scaleDrag && !lassoDrag) {
+                if (rotateDrag || scaleDrag || stretchDrag || lassoDrag) this.beginDragLayer(pageIndex);
+                if (!rotateDrag && !scaleDrag && !stretchDrag && !lassoDrag) {
                     if (this.selection) this.clearSelection();
                     lassoPath = [lpos];
                     lassoStart = lpos;
@@ -264,7 +284,6 @@ export const inputMixin = defineMixin({
                 isHighlighter: effectiveTool === 'highlighter'
             };
 
-            if (effectiveTool === 'pen' && this.penAlpha < 1) currentStroke.alpha = this.penAlpha;
             // Plain pen (not semi-transparent): live stroke on the low-latency ink layer.
             if (effectiveTool === 'pen' && currentStroke.alpha === undefined && this.inkCtx && this.beginInk(pageIndex, getRect())) {
                 inkOn = true;
@@ -282,6 +301,20 @@ export const inputMixin = defineMixin({
                 if (currentStroke.fill && this.shapeFill === 'light' && !this.shapeLineOn) currentStroke.noLine = true;
                 currentStroke.arrow = this.shapeArrow && this.shapeType === 'line';
                 if (this.shapeType === 'triangle' && this.shapeTriRight) currentStroke.right = true;
+                orthoDown = null;
+                orthoNext = null;
+                if (this.shapeType === 'line' && this.shapeOrtho) {
+                    // Right-angle path: the arrow goes on the last segment when the path ends.
+                    currentStroke.arrow = false;
+                    orthoDown = { x: e.clientX, y: e.clientY };
+                    const path = this.orthoPath;
+                    if (path && path.page !== pageIndex) this.endOrthoPath();
+                    if (this.orthoPath) {
+                        // The next segment starts at the end of the previous one, perpendicular to it.
+                        currentStroke.points = [{ ...this.orthoPath.end }];
+                        orthoNext = this.orthoPath.dir === 'h' ? 'v' : 'h';
+                    }
+                }
             }
 
             topCanvas.setPointerCapture(e.pointerId);
@@ -291,7 +324,7 @@ export const inputMixin = defineMixin({
             if (e.pointerType !== 'pen' && e.pointerType !== 'mouse') return;
 
             // Hover (no button pressed): show or hide the eraser circle.
-            if (!isDrawing && !eraseGesture && !lassoPath && !lassoDrag && !scaleDrag && !rotateDrag) {
+            if (!isDrawing && !eraseGesture && !lassoPath && !lassoDrag && !scaleDrag && !stretchDrag && !rotateDrag && !splitLine) {
                 const view = this.pageViews[pageIndex];
                 if (view && view.active && getEffectiveTool(e) === 'eraser') {
                     topCanvas.addClass('hw-no-cursor');
@@ -335,10 +368,19 @@ export const inputMixin = defineMixin({
                 return;
             }
 
-            if (lassoPath || lassoDrag || scaleDrag || rotateDrag) {
+            if (lassoPath || lassoDrag || scaleDrag || stretchDrag || rotateDrag || splitLine) {
                 e.preventDefault();
                 e.stopPropagation();
                 const lpos = getPointerPos(e);
+                if (splitLine) {
+                    const a0 = splitLine.a;
+                    splitLine.b = e.shiftKey ? this.constrainShape({ points: [a0], color: '', width: 1, isHighlighter: false, shape: 'line' }, lpos) : lpos;
+                    const el = ensureLassoSvg();
+                    lassoSvg!.classList.remove('is-hidden');
+                    el.classList.add('is-rect');
+                    el.setAttribute('d', `M${a0.x.toFixed(1)} ${a0.y.toFixed(1)}L${splitLine.b.x.toFixed(1)} ${splitLine.b.y.toFixed(1)}`);
+                    return;
+                }
                 if (lassoPath) {
                     if (lassoRect && lassoStart) {
                         const st0 = lassoStart;
@@ -380,6 +422,23 @@ export const inputMixin = defineMixin({
                         sd.total = target;
                         this.redrawDragFrame(pageIndex);
                     });
+                } else if (stretchDrag && this.selection) {
+                    const sd = stretchDrag;
+                    scheduleDrag(() => {
+                        const sel = this.selection;
+                        if (!sel) return;
+                        const sb = sd.sb;
+                        const target = sd.axis === 'x'
+                            ? Math.max(0.05, Math.min(20, (lpos.x - sb.x) / sb.w))
+                            : Math.max(0.05, Math.min(20, (lpos.y - sb.y) / sb.h));
+                        const inc = target / sd.total;
+                        if (inc === 1) return;
+                        const kx = sd.axis === 'x' ? inc : 1, ky = sd.axis === 'y' ? inc : 1;
+                        this.stretchItems(sel.strokes, sel.images, sb.x, sb.y, kx, ky);
+                        this.dragTransform(new DOMMatrix().translate(sb.x, sb.y).scale(kx, ky).translate(-sb.x, -sb.y));
+                        sd.total = target;
+                        this.redrawDragFrame(pageIndex);
+                    });
                 } else if (rotateDrag && this.selection) {
                     const rd = rotateDrag;
                     const shift = e.shiftKey;
@@ -406,7 +465,13 @@ export const inputMixin = defineMixin({
             // Shape: only the start and end point, with a live preview. Shift = proportions / 45° angles.
             if (currentStroke.shape) {
                 const pos = getPointerPos(e);
-                const end = e.shiftKey ? this.constrainShape(currentStroke, pos) : pos;
+                let end = e.shiftKey ? this.constrainShape(currentStroke, pos) : pos;
+                if (orthoDown) {
+                    // Right-angle path: only horizontal or vertical (a continuing segment: perpendicular to the last one).
+                    const p0 = currentStroke.points[0];
+                    const dir = orthoNext ?? (Math.abs(pos.x - p0.x) >= Math.abs(pos.y - p0.y) ? 'h' : 'v');
+                    end = dir === 'h' ? { x: pos.x, y: p0.y, pressure: pos.pressure } : { x: p0.x, y: pos.y, pressure: pos.pressure };
+                }
                 currentStroke.points = [currentStroke.points[0], end];
                 // Clear only the area of the previous and the new preview (not the whole canvas).
                 const p0 = currentStroke.points[0];
@@ -481,6 +546,17 @@ export const inputMixin = defineMixin({
                 return;
             }
 
+            if (splitLine) {
+                const ln = splitLine;
+                splitLine = null;
+                hideLasso();
+                if (lassoEl) lassoEl.classList.remove('is-rect');
+                this.cancelSplitMode();
+                if (Math.hypot(ln.b.x - ln.a.x, ln.b.y - ln.a.y) * this.currentZoom > 6) this.splitSelection(ln.a, ln.b);
+                else this.redrawOverlay(pageIndex);
+                if (topCanvas.hasPointerCapture(e.pointerId)) topCanvas.releasePointerCapture(e.pointerId);
+                return;
+            }
             if (lassoPath) {
                 const path = lassoPath;
                 lassoPath = null;
@@ -496,7 +572,7 @@ export const inputMixin = defineMixin({
                 if (topCanvas.hasPointerCapture(e.pointerId)) topCanvas.releasePointerCapture(e.pointerId);
                 return;
             }
-            if (lassoDrag || scaleDrag || rotateDrag) flushDrag();   // last move before finishing
+            if (lassoDrag || scaleDrag || stretchDrag || rotateDrag) flushDrag();   // last move before finishing
             if (lassoDrag) {
                 const drag = lassoDrag;
                 lassoDrag = null;
@@ -524,6 +600,14 @@ export const inputMixin = defineMixin({
                 if (topCanvas.hasPointerCapture(e.pointerId)) topCanvas.releasePointerCapture(e.pointerId);
                 return;
             }
+            if (stretchDrag) {
+                const drag = stretchDrag;
+                stretchDrag = null;
+                this.endDragLayer(pageIndex);
+                if (this.selection && Math.abs(drag.total - 1) > 0.001) this.commitStretch(pageIndex, drag.snap);
+                if (topCanvas.hasPointerCapture(e.pointerId)) topCanvas.releasePointerCapture(e.pointerId);
+                return;
+            }
             if (rotateDrag) {
                 const drag = rotateDrag;
                 rotateDrag = null;
@@ -540,6 +624,27 @@ export const inputMixin = defineMixin({
             isDrawing = false;
 
             if (currentStroke.shape) this.posLog('shape end', e.type, 'points', currentStroke.points.length);
+            // Right-angle path: a tap (no real movement) ends the path; otherwise the segment joins the path.
+            if (orthoDown && currentStroke.shape === 'line') {
+                const moved = Math.hypot(e.clientX - orthoDown.x, e.clientY - orthoDown.y);
+                const p0 = currentStroke.points[0], p1 = currentStroke.points[currentStroke.points.length - 1];
+                const segLen = Math.hypot(p1.x - p0.x, p1.y - p0.y) * this.currentZoom;
+                orthoDown = null;
+                if (moved < 6 || segLen < 4 || currentStroke.points.length < 2) {
+                    topCtx.clearRect(0, 0, this.pageW(pageIndex), this.pageH(pageIndex));
+                    this.redrawOverlay(pageIndex);
+                    currentStroke = null;
+                    this.endOrthoPath();
+                    if (topCanvas.hasPointerCapture(e.pointerId)) topCanvas.releasePointerCapture(e.pointerId);
+                    return;
+                }
+                const g = this.orthoPath?.g ?? newId();
+                currentStroke.g = g;
+                const dir: 'h' | 'v' = Math.abs(p1.x - p0.x) >= Math.abs(p1.y - p0.y) ? 'h' : 'v';
+                this.orthoPath = { page: pageIndex, g, end: { ...p1 }, dir, last: currentStroke, arrow: this.shapeArrow };
+                this.placeOrthoMarker();
+            }
+            orthoDown = null;
             // A shape without dragging (just a tap) is skipped.
             if (currentStroke.shape && currentStroke.points.length < 2) {
                 topCtx.clearRect(0, 0, this.pageW(pageIndex), this.pageH(pageIndex));

@@ -40,3 +40,31 @@ export const ICON_PDF_OUT = `<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a
 export const ICON_HISTORY = '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>';
 export const ICON_CONTENTS = '<path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/>';
 export const ICON_ZOOM_PEN = '<circle cx="10" cy="10" r="7"/><path d="m21 21-6-6"/><path d="M7.5 12.5 11.8 8.2a1 1 0 0 1 1.4 1.4L8.9 13.9 7 14.5z"/>';
+
+/** Shapes tool on the toolbar: one fixed icon (triangle, square, circle) – the chosen shape is in its options. */
+export const ICON_SHAPES = `<path d="M8.3 10a.7.7 0 0 1-.63-1.08L11.4 3a.7.7 0 0 1 1.2-.04L16.3 8.9a.7.7 0 0 1-.57 1.1Z"></path><rect x="3" y="14" width="7" height="7" rx="1"></rect><circle cx="17.5" cy="17.5" r="3.5"></circle>`;
+export const ICON_RIGHT_ANGLE_PATH = `<path d="M4 19h7V8h9"></path><circle cx="11" cy="19" r="1" fill="currentColor"></circle><circle cx="11" cy="8" r="1" fill="currentColor"></circle>`;
+export const ICON_SPLIT = `<rect x="4" y="4" width="16" height="16" rx="1"></rect><path d="M2 22 22 2" stroke-dasharray="3 2.5"></path>`;
+
+/** Fill option icons drawn in the current shape (rectangle, circle, isosceles / right triangle). */
+export function shapeFillIcons(shape: string, right: boolean): { none: string; solid: string; light: string; noLine: string } {
+    const el = (attrs: string) => shape === 'ellipse'
+        ? `<circle cx="12" cy="12" r="8" ${attrs}></circle>`
+        : shape === 'triangle'
+            ? `<path d="${right ? 'M5 4.5V19h14Z' : 'M12 4.5 20.5 19h-17Z'}" ${attrs}></path>`
+            : `<rect x="4" y="5" width="16" height="14" rx="1" ${attrs}></rect>`;
+    return {
+        none: el(''),
+        solid: el('fill="currentColor"'),
+        light: el('fill="currentColor" fill-opacity="0.3"'),
+        noLine: el('fill="currentColor" fill-opacity="0.35" stroke="none"'),
+    };
+}
+
+/** Thickness sample: a short wave (thin / medium / thick) in the colour of the CSS variable --dot. */
+export const WAVE_WIDTHS = [1.5, 3, 5];
+export function thicknessWaveSvg(i: number): string {
+    const d = 'M3 14 C 9 3, 17 19, 25 6';
+    const w = WAVE_WIDTHS[Math.max(0, Math.min(2, i))];
+    return `<svg class="hw-wave" viewBox="0 0 28 20" width="28" height="20"><path class="hw-wave-halo" d="${d}" stroke-width="${w + 2}" fill="none" stroke-linecap="round"></path><path class="hw-wave-ink" d="${d}" stroke-width="${w}" fill="none" stroke-linecap="round"></path></svg>`;
+}
