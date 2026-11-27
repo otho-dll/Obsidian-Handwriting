@@ -13,12 +13,15 @@ import { usesV4, isFormat, ENDLESS_MAX, pageWidth, pageHeight } from './pageForm
 import { VaultAdapter, writeDataMeta, moveDataFolder, trashDataFolder, isSafeRef, isSafeDataUrl } from './dataFolder';
 import { HandwritingSettings, LastPosition, ToolMemory, defaultMemory, DEFAULT_PEN_PALETTE, DEFAULT_HIGHLIGHTER_PALETTE, DEFAULT_SETTINGS, DEFAULT_PEN_SIZES, DEFAULT_HIGH_SIZES, DEFAULT_SHAPE_SIZES, SIZE_LIMITS, cleanSizes } from './settings';
 import { HandwritingSettingTab } from './settingTab';
+import { DebugLogModal } from './debugLog';
 import { saveConverterScript, copyConverterCommand } from './converter';
 import { historyMixin, HistoryMethods } from './view/history';
 import { geometryMixin, GeometryMethods } from './view/geometry';
 import { imagesMixin, ImagesMethods } from './view/images';
 import { canvasWindowMixin, CanvasWindowMethods } from './view/canvasWindow';
 import { imageInsertMixin, ImageInsertMethods } from './view/imageInsert';
+import { circuitInsertMixin, CircuitInsertMethods } from './view/circuitInsert';
+import type { CircuitSession } from './circuit/circuitModal';
 import { pageToolsMixin, PageToolsMethods } from './view/pageTools';
 import { thumbsMixin, ThumbsMethods } from './view/thumbs';
 import { currentPageMixin, CurrentPageMethods } from './view/currentPage';
@@ -62,12 +65,19 @@ export default class HandwritingPlugin extends Plugin {
     snapHashes: Map<string, string> = new Map();
     /** Plugin clipboard (cut / copied strokes and images). */
     clip: { strokes: Stroke[]; images: ImageItem[]; from?: string } | null = null;
+    /** Circuit editor state for this Obsidian session (kept when the dialog is closed). */
+    circuitSession: CircuitSession | null = null;
     /** Copied whole page ("Copy page" / "Paste page" in the page menu) – also between notes. */
     pageClip: { page: PageData; from?: string } | null = null;
     openCalculator() { new CalculatorModal(this.app, this.calcState).open(); }
 
     settings: HandwritingSettings = { ...DEFAULT_SETTINGS };
     lastPosTimer: number | null = null;
+
+    /** Debug log dialog (collected messages; on desktop also a button that opens the developer console). */
+    openDebugLog() {
+        new DebugLogModal(this.app, () => this.settings.debugLog).open();
+    }
 
     async onload() {
         // Custom "handwritten note" icon (sheet with a pen) – used in the file menu and commands.
@@ -79,6 +89,11 @@ export default class HandwritingPlugin extends Plugin {
         this.registerView(VIEW_TYPE_HANDWRITING, (leaf) => new HandwritingView(leaf, this));
         this.registerExtensions(["hnote"], VIEW_TYPE_HANDWRITING);
 
+        this.addCommand({
+            id: 'show-debug-log',
+            name: 'Show debug log',
+            callback: () => this.openDebugLog(),
+        });
         this.addCommand({
             id: 'open-calculator',
             name: 'Open calculator',
@@ -94,6 +109,16 @@ export default class HandwritingPlugin extends Plugin {
                 const v = this.app.workspace.getActiveViewOfType(HandwritingView);
                 if (!v) return false;
                 if (!checking) v.insertPlot();
+                return true;
+            },
+        });
+        this.addCommand({
+            id: 'insert-circuit',
+            name: 'Insert circuit into handwritten note',
+            checkCallback: (checking: boolean) => {
+                const v = this.app.workspace.getActiveViewOfType(HandwritingView);
+                if (!v) return false;
+                if (!checking) v.insertCircuit();
                 return true;
             },
         });
@@ -269,6 +294,11 @@ export default class HandwritingPlugin extends Plugin {
             st.pagesPanelIntro = true;
             if (Array.isArray(st.quickActions) && !st.quickActions.includes('pages')) st.quickActions = [...strings(st.quickActions), 'pages'];
         }
+        // 3.20: the circuit builder – put its button on the toolbar once.
+        if (!st.circuitIntro) {
+            st.circuitIntro = true;
+            if (Array.isArray(st.quickActions) && !st.quickActions.includes('circuit')) st.quickActions = [...strings(st.quickActions), 'circuit'];
+        }
         for (const k of ['minimapStyle', 'minimapSize', 'minimapThumbs', 'minimapLength']) delete st[k];
         if (typeof st.pdfExportFolder !== 'string') st.pdfExportFolder = '';
         if (typeof st.pdfLastFolder !== 'string') st.pdfLastFolder = '';
@@ -367,6 +397,7 @@ export default class HandwritingPlugin extends Plugin {
         mem.shapeArrow = m.shapeArrow === true;
         mem.shapeTriRight = m.shapeTriRight === true;
         mem.shapeOrtho = m.shapeOrtho === true;
+        mem.highlighterRound = m.highlighterRound === true;
         return mem;
     }
 
@@ -492,6 +523,8 @@ export class HandwritingView extends TextFileView {
     /** Right-angle path being drawn with the line tool: the next segment starts at `end`, perpendicular to `dir`. */
     orthoPath: { page: number; g: string; end: Point; dir: 'h' | 'v'; last: Stroke; arrow: boolean } | null = null;
     orthoMarker: HTMLElement | null = null;
+    /** Highlighter: round ends (marker) instead of flat ones. */
+    highlighterRound = false;
     /** Selection menu → "Split along a line…": the next line drawn with the lasso splits the selection. */
     splitMode = false;
 
@@ -538,6 +571,7 @@ export class HandwritingView extends TextFileView {
         m.shapeArrow = this.shapeArrow;
         m.shapeTriRight = this.shapeTriRight;
         m.shapeOrtho = this.shapeOrtho;
+        m.highlighterRound = this.highlighterRound;
         const snap = JSON.stringify(m);
         if (snap === this.memSnap) return;   // unchanged – nothing to save
         this.memSnap = snap;
@@ -592,6 +626,14 @@ export class HandwritingView extends TextFileView {
     activePageIndex = 0;
     redrawTimer: number | null = null;
     virtRaf: number | null = null;
+    /**
+     * A zoom gesture (pinch, Ctrl + wheel) is in progress: page canvases are redrawn only when needed and at most one
+     * per frame – the CSS-scaled old bitmap is shown meanwhile (full redraws every frame made fast zooming stutter).
+     */
+    zoomGesture = false;
+    /** After a zoom / pan settles, the pages are made sharp one per frame (the page in the middle first). */
+    settleQueue: number[] = [];
+    settleRaf: number | null = null;
     /** Pending once-per-frame view update (applyManualZoom -> afterViewChange). */
     viewRaf: number | null = null;
     /**
@@ -798,6 +840,7 @@ export class HandwritingView extends TextFileView {
         this.shapeArrow = mem.shapeArrow;
         this.shapeTriRight = mem.shapeTriRight;
         this.shapeOrtho = mem.shapeOrtho;
+        this.highlighterRound = mem.highlighterRound;
         this.memSnap = JSON.stringify({ ...mem, sizes: { ...mem.sizes } });
     }
     getViewType() { return VIEW_TYPE_HANDWRITING; }
@@ -869,7 +912,7 @@ export class HandwritingView extends TextFileView {
     strokeJson(s: Stroke): string {
         const pts = s.points, n = pts.length;
         const f = pts[0], l = pts[n - 1], m = pts[n >> 1], q = pts[n >> 2];
-        const fp = `${n}|${f?.x},${f?.y}|${l?.x},${l?.y}|${m?.x},${m?.y}|${q?.x},${q?.y}|${s.width}|${s.color}|${s.rot ?? ''}|${s.dash ?? ''}|${s.fill ? 1 : 0}|${s.fillColor ?? ''}|${s.fillAlpha ?? ''}|${s.noLine ? 1 : 0}|${s.arrow ? 1 : 0}|${s.shape ?? ''}|${s.right ? 1 : 0}|${s.isHighlighter ? 1 : 0}|${s.poly ? 1 : 0}|${s.g ?? ''}|${s.lock ? 1 : 0}|${s.alpha ?? ''}`;
+        const fp = `${n}|${f?.x},${f?.y}|${l?.x},${l?.y}|${m?.x},${m?.y}|${q?.x},${q?.y}|${s.width}|${s.color}|${s.rot ?? ''}|${s.dash ?? ''}|${s.fill ? 1 : 0}|${s.fillColor ?? ''}|${s.fillAlpha ?? ''}|${s.noLine ? 1 : 0}|${s.arrow ? 1 : 0}|${s.shape ?? ''}|${s.right ? 1 : 0}|${s.isHighlighter ? 1 : 0}|${s.poly ? 1 : 0}|${s.g ?? ''}|${s.lock ? 1 : 0}|${s.alpha ?? ''}|${s.round ? 1 : 0}`;
         const hit = this.serCache.get(s);
         if (hit && hit.fp === fp) return hit.json;
         // Pressure is saved (as 0-100) only for strokes in which it varies.
@@ -1172,6 +1215,7 @@ export class HandwritingView extends TextFileView {
         }
         if (this.redrawTimer !== null) window.clearTimeout(this.redrawTimer);
         if (this.virtRaf !== null) window.cancelAnimationFrame(this.virtRaf);
+        if (this.settleRaf !== null) { window.cancelAnimationFrame(this.settleRaf); this.settleRaf = null; }
         if (this.viewRaf !== null) { window.cancelAnimationFrame(this.viewRaf); this.viewRaf = null; }
         if (this.inkClearRaf) { window.cancelAnimationFrame(this.inkClearRaf); this.inkClearRaf = 0; }
         this.stopPerfOverlay();
@@ -1348,5 +1392,5 @@ export class HandwritingView extends TextFileView {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging -- the view's mixin methods (src/view/*.ts), added to the class right below
-export interface HandwritingView extends HistoryMethods, GeometryMethods, ImagesMethods, CanvasWindowMethods, ImageInsertMethods, PageToolsMethods, ThumbsMethods, CurrentPageMethods, PagesPanelMethods, ToolbarMethods, PdfIOMethods, StrokeDrawMethods, CalcPanelMethods, ClipboardMethods, MenusMethods, SelectionEditMethods, ShapeOpsMethods, VersionsMethods, PositionMethods, AssetsMethods, SelectionMethods, ContextMenuMethods, NavigationMethods, InputMethods, PageSizeMethods, ContentsMethods, OledCareMethods, ZoomPanelMethods, TouchMethods, PrintMethods, InkLayerMethods, PerfOverlayMethods {}
-Object.assign(HandwritingView.prototype, historyMixin, geometryMixin, imagesMixin, canvasWindowMixin, imageInsertMixin, pageToolsMixin, thumbsMixin, currentPageMixin, pagesPanelMixin, toolbarMixin, pdfIOMixin, strokeDrawMixin, calcPanelMixin, clipboardMixin, menusMixin, selectionEditMixin, shapeOpsMixin, versionsMixin, positionMixin, assetsMixin, selectionMixin, contextMenuMixin, navigationMixin, inputMixin, pageSizeMixin, contentsMixin, oledCareMixin, zoomPanelMixin, touchMixin, printMixin, inkLayerMixin, perfOverlayMixin);
+export interface HandwritingView extends HistoryMethods, GeometryMethods, ImagesMethods, CanvasWindowMethods, ImageInsertMethods, PageToolsMethods, ThumbsMethods, CurrentPageMethods, PagesPanelMethods, ToolbarMethods, PdfIOMethods, StrokeDrawMethods, CalcPanelMethods, ClipboardMethods, MenusMethods, SelectionEditMethods, ShapeOpsMethods, VersionsMethods, PositionMethods, AssetsMethods, SelectionMethods, ContextMenuMethods, CircuitInsertMethods, NavigationMethods, InputMethods, PageSizeMethods, ContentsMethods, OledCareMethods, ZoomPanelMethods, TouchMethods, PrintMethods, InkLayerMethods, PerfOverlayMethods {}
+Object.assign(HandwritingView.prototype, historyMixin, geometryMixin, imagesMixin, canvasWindowMixin, imageInsertMixin, pageToolsMixin, thumbsMixin, currentPageMixin, pagesPanelMixin, toolbarMixin, pdfIOMixin, strokeDrawMixin, calcPanelMixin, clipboardMixin, menusMixin, selectionEditMixin, shapeOpsMixin, versionsMixin, positionMixin, assetsMixin, selectionMixin, contextMenuMixin, circuitInsertMixin, navigationMixin, inputMixin, pageSizeMixin, contentsMixin, oledCareMixin, zoomPanelMixin, touchMixin, printMixin, inkLayerMixin, perfOverlayMixin);

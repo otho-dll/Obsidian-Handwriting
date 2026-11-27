@@ -14,8 +14,9 @@ const DEMO_SETTINGS = {
     pdfExportMode: 'note',       // Export PDF → download at once (Settings can switch back to "ask")
     zoomPresets: [],
     pagesPanelIntro: true,
+    circuitIntro: true,
     toolbarHidden: [],
-    quickActions: ['calculator', 'zoom', 'contents', 'pages'],
+    quickActions: ['calculator', 'zoom', 'contents', 'pages', 'circuit'],
 };
 
 interface DemoState { app: App; vault: Vault; plugin: HandwritingPlugin; leaf: WorkspaceLeaf; }

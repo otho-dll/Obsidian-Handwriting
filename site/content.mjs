@@ -9,7 +9,7 @@
 //  • Placeholders, filled in when the site is built:
 //      {{version}}  plugin version from manifest.json      {{pluginId}}  plugin id from manifest.json
 //      {{year}}     current year                           {{links.repo}}, {{links.issues}}, … any value below
-//  • Icons (features, buttons): pen, shapes, lasso, pages, pagestyle, image, plot, history, phone,
+//  • Icons (features, buttons): pen, shapes, lasso, pages, pagestyle, image, plot, circuit, history, phone,
 //    download, github, demo, bug, reset, file, pdf, settings, fullscreen, sparkles, grid, shield, lock, code.
 //  • Build and preview:  npm run site:dev   (http://localhost:8080)   ·   npm run site:build  (→ build/site/)
 // ============================================================================================================
@@ -20,7 +20,7 @@ export default {
         domain: 'handwriting.anulab.tech',
         /** Browser tab title (short – tabs are narrow) and search-engine description of the landing page. */
         title: 'Handwritten Notebook',
-        description: 'An Obsidian plugin for pen-first handwritten notes on A4 pages: pressure ink, highlighter, shapes, lasso, PDF import and export, calculator, function plots and version history. Try the live demo in your browser.',
+        description: 'An Obsidian plugin for pen-first handwritten notes, made with engineering students in mind: pressure ink, shapes, a circuit diagram builder, calculator, function plots, PDF import and export and version history. Try the live demo in your browser.',
         /** Project name (intro section, demo header). */
         name: 'Handwritten Notebook',
         /** Colour of the browser UI on phones. */
@@ -44,7 +44,7 @@ export default {
     /** Section 1 – the first screen. */
     hero: {
         /** What the plugin is, under the name. */
-        about: 'An Obsidian plugin for writing by hand on real pages highlighter, shapes, PDFs and a calculator, all saved as open JSON in your vault.',
+        about: 'An Obsidian plugin for writing by hand on real pages, made with engineering students in mind (and useful for everyone else): a circuit diagram builder, function plots, a scientific calculator, shapes and PDFs, all saved as open JSON in your vault.',
         /** The big button in the accent colour. */
         demo: { label: 'Try the live demo', href: '{{links.demo}}'},
         /** Smaller links in one row under it. */
@@ -60,14 +60,15 @@ export default {
     /** Section 2 – features and privacy. */
     features: {
         title: 'Features',
-        lead: 'Everything a paper notebook can do, and more.',
+        lead: 'Everything a paper notebook can do, plus the tools a lecture in engineering needs.',
         items: [
-            { icon: 'pen', title: 'Pen, highlighter & eraser', text: 'Pressure ink, a flat highlighter, and an eraser that cuts strokes.' },
+            { icon: 'pen', title: 'Pen, highlighter & eraser', text: 'Pressure ink, a highlighter with flat or round ends, and an eraser that cuts strokes.' },
             { icon: 'shapes', title: 'Shapes', text: 'Lines, arrows, right-angle paths, rectangles, ellipses and triangles with dashes, fills and separate outline and fill colors.' },
             { icon: 'lasso', title: 'Lasso selection', text: 'Move, scale, stretch, rotate, split, recolor, group and lock, even onto another page.' },
             { icon: 'pages', title: 'Pages panel', text: 'Thumbnails and sections: jump to, reorder, duplicate or restyle pages – or see two pages side by side.' },
             { icon: 'pagestyle', title: 'Page styles', text: 'Portrait, landscape or endless; dots, lines, grid, Cornell, music staff and more.' },
             { icon: 'image', title: 'Images & PDFs', text: 'Paste, crop and rotate images; import a PDF and write on it.' },
+            { icon: 'circuit', title: 'Circuit diagrams', text: 'Build a schematic in seconds with the pen – resistors, coils, capacitors, sources and meters – and it lands in your note as ordinary strokes you can erase and write on.' },
             { icon: 'plot', title: 'Calculator & plots', text: 'Scientific calculator with units and matrices; editable function plots.' },
             { icon: 'history', title: 'Export & history', text: 'PDF export with bookmarks, printing, and automatic version history.' },
             { icon: 'phone', title: 'Tablets & OLED care', text: 'Palm rejection, pinch zoom, pen button, dark paper and burn-in protection.' },

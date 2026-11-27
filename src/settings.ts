@@ -60,6 +60,7 @@ export interface HandwritingSettings {
     dimInactivePages: boolean;
     /** The pages panel button was added to the toolbar (one-time, 3.15). */
     pagesPanelIntro?: boolean;
+    circuitIntro?: boolean;
 
     /** Default page pattern and paper colour (for notes without their own settings). */
     defaultTemplate: PageTemplate;
@@ -152,10 +153,12 @@ export interface ToolMemory {
     shapeTriRight: boolean;
     /** Line tool: right-angle path (KiCad-like wires – every lift of the pen makes a 90° corner). */
     shapeOrtho: boolean;
+    /** Highlighter: round ends and corners like a felt-tip marker (false = flat, chisel-like ends). */
+    highlighterRound: boolean;
 }
 
 export function defaultMemory(): ToolMemory {
-    return { sizes: { pen: 1, highlighter: 1, eraser: 1, shape: 1 }, penColor: '', highlighterColor: '', customPen: [], customHigh: [], shapeColor: '', shapeFillColor: '', customShape: [], shapeType: 'rect', shapeDash: 'solid', shapeFill: 'none', shapeOutline: true, shapeArrow: false, shapeTriRight: false, shapeOrtho: false };
+    return { sizes: { pen: 1, highlighter: 1, eraser: 1, shape: 1 }, penColor: '', highlighterColor: '', customPen: [], customHigh: [], shapeColor: '', shapeFillColor: '', customShape: [], shapeType: 'rect', shapeDash: 'solid', shapeFill: 'none', shapeOutline: true, shapeArrow: false, shapeTriRight: false, shapeOrtho: false, highlighterRound: false };
 }
 
 export const DEFAULT_PEN_SIZES = [0.5, 1, 2];

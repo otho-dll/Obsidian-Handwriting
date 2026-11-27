@@ -31,6 +31,7 @@ export const ICON_DASH_DASHED = `<path d="M3 12h4"></path><path d="M10 12h4"></p
 export const ICON_DASH_DASHDOT = `<path d="M2 12h7"></path><path d="M12.5 12h.01"></path><path d="M16 12h6"></path>`;
 export const ICON_DASH_DOTTED = `<path d="M4 12h.01"></path><path d="M9 12h.01"></path><path d="M14 12h.01"></path><path d="M19 12h.01"></path>`;
 export const ICON_CALC = `<rect x="4" y="2" width="16" height="20" rx="2"></rect><path d="M8 6h8"></path><path d="M8 11h.01"></path><path d="M12 11h.01"></path><path d="M16 11h.01"></path><path d="M8 15h.01"></path><path d="M12 15h.01"></path><path d="M16 15h.01"></path><path d="M8 19h.01"></path><path d="M12 19h.01"></path><path d="M16 19h.01"></path>`;
+export const ICON_CIRCUIT = `<path d="M2 12h5"></path><path d="M17 12h5"></path><rect x="7" y="9" width="10" height="6" rx="1"></rect><path d="M4 12v6h16v-6"></path>`;
 export const ICON_PLOT = `<path d="M3 3v18h18"></path><path d="M7 15c2-8 4-8 6-3s4 3 5-5"></path>`;
 export const ICON_PAGE_STYLE = `<rect x="5" y="3" width="14" height="18" rx="2"></rect><path d="M8.5 8h7M8.5 12h7M8.5 16h4"></path>`;
 export const ICON_PAGES = `<path d="M6.5 3h6.5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H8.5L4.5 17V5a2 2 0 0 1 2-2z"></path><path d="M4.5 17h4v4"></path><path d="M17.5 4.5a1.5 1.5 0 0 1 1.5 1.5v12a1.5 1.5 0 0 1-1.5 1.5"></path><path d="M20.5 4.5a1.5 1.5 0 0 1 1.5 1.5v12a1.5 1.5 0 0 1-1.5 1.5"></path>`;

@@ -42,7 +42,9 @@ export const canvasWindowMixin = defineMixin({
     idealWindowSize(index: number): { w: number; h: number } {
         const z = this.currentZoom;
         const vw = this.scrollArea.clientWidth / z, vh = this.scrollArea.clientHeight / z;
-        return { w: Math.min(this.pageW(index), Math.max(60, vw * 1.35)), h: Math.min(this.pageH(index), Math.max(60, vh * 1.35)) };
+        // During a zoom gesture the window gets more room, so zooming out leaves it less often (fewer full redraws).
+        const k = this.zoomGesture ? 2 : 1.35;
+        return { w: Math.min(this.pageW(index), Math.max(60, vw * k)), h: Math.min(this.pageH(index), Math.max(60, vh * k)) };
     },
 
     fixedWindow(index: number, vis: BBox, size: { w: number; h: number }): Bounds {
@@ -229,10 +231,13 @@ export const canvasWindowMixin = defineMixin({
         }
     },
 
-    // Whether the canvas window has to be moved / changed (after scrolling, zooming or a resolution change).
-    ensureWindow(index: number, opts: { scale?: boolean; force?: boolean }) {
+    /**
+     * Whether the canvas window has to be moved / changed (after scrolling, zooming or a resolution change).
+     * canRedraw = false: a full redraw is not allowed now (zoom gesture, frame budget used up) - returns 'deferred'.
+     */
+    ensureWindow(index: number, opts: { scale?: boolean; force?: boolean; canRedraw?: boolean }): 'ok' | 'redrawn' | 'deferred' {
         const view = this.pageViews[index];
-        if (!view || !view.active) return;
+        if (!view || !view.active) return 'ok';
         let redo = !!opts.force;
         if (!redo && opts.scale && Math.abs(view.crisp - this.getCrispScale()) > 0.01) redo = true;
         if (!redo) {
@@ -245,23 +250,25 @@ export const canvasWindowMixin = defineMixin({
                     // redraw only when the view leaves the window; after it ends (opts.scale) – always.
                     const w = view.win;
                     const inside = vis.x0 >= w.x && vis.y0 >= w.y && vis.x1 <= w.x + w.w && vis.y1 <= w.y + w.h;
-                    if (!inside || opts.scale || w.w * w.h > 3 * ideal.w * ideal.h) redo = true;
+                    // (while zooming in, a window much larger than needed is fine until the gesture ends)
+                    if (!inside || opts.scale || (!this.zoomGesture && w.w * w.h > 3 * ideal.w * ideal.h)) redo = true;
                 } else {
                     const w = view.win;
                     const mx = (vis.x1 - vis.x0) * 0.08, my = (vis.y1 - vis.y0) * 0.08;
                     const needX = (vis.x0 < w.x + mx && w.x > 0.5) || (vis.x1 > w.x + w.w - mx && w.x + w.w < this.pageW(index) - 0.5);
                     const needY = (vis.y0 < w.y + my && w.y > 0.5) || (vis.y1 > w.y + w.h - my && w.y + w.h < this.pageH(index) - 0.5);
                     if (needX || needY) {
-                        if (this.shiftWindow(index, vis)) return;
+                        if (this.shiftWindow(index, vis)) return 'ok';
                         redo = true;
                     }
                 }
             }
         }
-        if (redo) {
-            this.sizeCanvases(index);
-            this.redrawPage(index, false);
-        }
+        if (!redo) return 'ok';
+        if (opts.canRedraw === false) return 'deferred';
+        this.sizeCanvases(index);
+        this.redrawPage(index, false);
+        return 'redrawn';
     },
 
     activatePage(index: number) {
@@ -304,20 +311,49 @@ export const canvasWindowMixin = defineMixin({
     },
 
     // Only pages near the view are "live", and their canvases cover only the visible part of the page.
-    updateVirtualization() {
+    /** activateOnly: only pages coming into view are activated (the caller updates the windows of the others). */
+    updateVirtualization(activateOnly = false) {
         if (!this.scrollArea || !this.pagesWrapper) return;
         const viewH = this.scrollArea.clientHeight;
         const z = this.currentZoom;
         const margin = viewH * (z > 2 ? 0.5 : 0.75);
         const tops = this.pageTops();   // no layout read per page (notes with hundreds of pages)
+        const gesture = this.zoomGesture;
+        // Zoom gesture: at most one full page redraw (or page activation) per frame, the page nearest the middle of the
+        // view first, and each page at most every 100 ms. The rest waits for a later frame.
+        let budget = gesture ? 1 : Infinity;
+        let deferred = false;
+        const now = performance.now();
+        const near: number[] = [];
         this.pageViews.forEach((view, i) => {
             const top = this.pagePositionY + (tops[i] ?? 0) * z;
             const bottom = top + this.pageH(i) * z;
-            const near = bottom > -margin && top < viewH + margin;
-            if (near && !view.active) this.activatePage(i);
-            else if (!near && view.active) this.deactivatePage(i);
-            else if (near && view.active) this.ensureWindow(i, {});
+            const isNear = bottom > -margin && top < viewH + margin;
+            if (!isNear && view.active) this.deactivatePage(i);
+            else if (isNear) near.push(i);
         });
+        if (gesture) {
+            const mid = viewH / 2;
+            const dist = (i: number) => {
+                const top = this.pagePositionY + (tops[i] ?? 0) * z, bottom = top + this.pageH(i) * z;
+                return mid < top ? top - mid : mid > bottom ? mid - bottom : 0;
+            };
+            near.sort((a, b) => dist(a) - dist(b));
+        }
+        for (const i of near) {
+            const view = this.pageViews[i];
+            if (!view.active) {
+                if (budget > 0) { this.activatePage(i); budget--; view.redrawAt = now; } else deferred = true;
+                continue;
+            }
+            if (activateOnly) continue;
+            const canRedraw = !gesture || (budget > 0 && now - (view.redrawAt ?? 0) >= 100);
+            const r = this.ensureWindow(i, { canRedraw });
+            if (r === 'redrawn') { budget--; view.redrawAt = now; }
+            else if (r === 'deferred') deferred = true;
+        }
+        // Pages left for later: try again in the next frame (only while the gesture lasts - it ends with a full update).
+        if (deferred && gesture) this.scheduleVirtualization();
     },
 
     // Redraw of one page (dragging a selection, eraser, undo/redo).
@@ -465,10 +501,30 @@ export const canvasWindowMixin = defineMixin({
     resizeAndRedrawAll(force = false) {
         // After a zoom / pan / resize settles: the 'auto' two-page view may switch the layout (never mid-gesture).
         this.relayoutIfNeeded();
-        this.pageViews.forEach((view, i) => {
-            if (!view.active) return;
-            this.ensureWindow(i, { scale: true, force });
-        });
+        if (this.settleRaf !== null) { window.cancelAnimationFrame(this.settleRaf); this.settleRaf = null; }
+        this.settleQueue = [];
+        // Pages that went "live" during the gesture but were not drawn yet.
+        this.updateVirtualization(true);
+        const active = this.pageViews.map((v, i) => v.active ? i : -1).filter(i => i >= 0);
+        if (force || active.length <= 1) {
+            for (const i of active) this.ensureWindow(i, { scale: true, force });
+            return;
+        }
+        // The page in the middle of the view right away, the others one per frame (redrawing all of them in one frame
+        // made a visible hitch after every zoom).
+        const center = this.pageIndexAtViewCenter();
+        const order = [...active].sort((a, b) => Math.abs(a - center) - Math.abs(b - center));
+        this.ensureWindow(order[0], { scale: true });
+        this.settleQueue = order.slice(1);
+        const step = () => {
+            this.settleRaf = null;
+            if (this.zoomGesture) { this.settleQueue = []; return; }   // a new gesture - it ends with its own update
+            const i = this.settleQueue.shift();
+            if (i === undefined) return;
+            this.ensureWindow(i, { scale: true });
+            if (this.settleQueue.length > 0) this.settleRaf = window.requestAnimationFrame(step);
+        };
+        if (this.settleQueue.length > 0) this.settleRaf = window.requestAnimationFrame(step);
     },
 
     drawPageStrokes(highCtx: CanvasRenderingContext2D | null, bottomCtx: CanvasRenderingContext2D, strokes: Stroke[], win?: Bounds, skip?: Set<Stroke> | null) {

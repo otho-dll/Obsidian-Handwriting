@@ -51,6 +51,7 @@ export const menusMixin = defineMixin({
                 { id: 'image', title: 'Insert image…', icon: 'image-plus', run: () => this.importImages() },
                 { id: 'screenshot', title: 'Screenshot (Snipping Tool)', icon: 'scissors', run: () => { void this.startSnip(); }, show: Platform.isWin },
                 { id: 'plot', title: 'Function plot…', icon: 'line-chart', run: () => this.insertPlot() },
+                { id: 'circuit', title: 'Circuit diagram…', icon: 'zap', run: () => this.insertCircuit() },
                 { id: 'calculator', title: 'Calculator', icon: 'calculator', run: () => this.toggleCalculator(), checked: !!this.calcPanelEl },
             ],
             [
@@ -128,6 +129,7 @@ export const menusMixin = defineMixin({
             case 'calculator': this.toggleCalculator(); break;
             case 'fit': this.fitToWidth(); break;
             case 'plot': this.insertPlot(); break;
+            case 'circuit': this.insertCircuit(); break;
             case 'image': this.importImages(); break;
             case 'pages': this.togglePagesPanel(); break;
             case 'pagestyle': this.openPageStylePop([this.pageIndexAtViewCenter()]); break;

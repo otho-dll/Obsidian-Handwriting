@@ -209,10 +209,23 @@ export const toolbarMixin = defineMixin({
         };
         const refreshShapes = eraseRow('Shapes', 'shapes', () => this.plugin.settings.shapeErase, (v) => { this.plugin.settings.shapeErase = v; });
         const refreshHl = eraseRow('Highlighter', 'the highlighter', () => this.plugin.settings.highlighterErase, (v) => { this.plugin.settings.highlighterErase = v; });
+        // Highlighter ends (only shown for the highlighter): flat like a chisel highlighter, or round like a marker.
+        const hlEndGroup = sizePop.createDiv({ cls: "hw-menu-group hw-erase-opts" });
+        hlEndGroup.createDiv({ cls: "hw-menu-title", text: "Highlighter ends" });
+        const hlEndSeg = hlEndGroup.createDiv({ cls: 'hw-erase-row' }).createDiv({ cls: 'hw-erase-seg' });
+        const hlEndBtns = ([[false, 'Flat', 'Flat ends and sharp corners, like a chisel-tip highlighter'], [true, 'Round', 'Round ends and corners, like a felt-tip marker']] as [boolean, string, string][]).map(([v, text, tip]) => {
+            const b = hlEndSeg.createEl('button', { text });
+            b.setAttribute('title', tip);
+            b.setAttribute('aria-label', `Highlighter ends: ${tip}`);
+            b.onclick = () => { this.highlighterRound = v; this.persistMemory(); refreshEraseGroup(); };
+            return [v, b] as const;
+        });
         const refreshEraseGroup = () => {
             eraseGroup.toggle(this.currentTool === 'eraser');
             refreshShapes();
             refreshHl();
+            hlEndGroup.toggle(this.currentTool === 'highlighter');
+            hlEndBtns.forEach(([v, b]) => b.toggleClass('active', this.highlighterRound === v));
         };
 
         const styleBtn = toolbar.createEl("button", { cls: "hw-tool-btn hw-style-btn" });
@@ -304,8 +317,8 @@ export const toolbarMixin = defineMixin({
         const extraRow = addGroup("Options");
         const arrowGroup = extraRow.parentElement!;
         const arrowBtn = addOpt(extraRow, ICON_ARROW, 'Arrow at the end', () => { this.shapeArrow = !this.shapeArrow; refreshShapeMenu(); });
-        // Right-angle path (like wires in KiCad): each lift of the pen makes a corner, the next segment is perpendicular.
-        const orthoBtn = addOpt(extraRow, ICON_RIGHT_ANGLE_PATH, 'Right-angle path: lift the pen for a corner, tap to finish', () => {
+        // Right-angle path (like wires in KiCad): each drag draws an L (two perpendicular segments), the next one continues.
+        const orthoBtn = addOpt(extraRow, ICON_RIGHT_ANGLE_PATH, 'Right-angle path: each drag draws an L that follows the pen, the next one continues from its end; tap to finish', () => {
             this.shapeOrtho = !this.shapeOrtho;
             this.endOrthoPath();
             refreshShapeMenu();
@@ -441,12 +454,12 @@ export const toolbarMixin = defineMixin({
             const st = this.plugin.settings;
             secColor.empty();
             if (fill !== null && noLine) {
-                this.renderPalette(secColor, st.penPalette, fill, 'shape', (c) => { setFill(c); updateStyleBtn(); });
+                this.renderPalette(secColor, st.penPalette, fill, 'shape', (c) => { setFill(c); updateStyleBtn(); updateSizeBtn(); });
                 return;
             }
             if (fill === null) {
                 this.shapeColorTarget = 'line';
-                this.renderPalette(secColor, st.penPalette, line, 'shape', (c) => { setLine(c); updateStyleBtn(); });
+                this.renderPalette(secColor, st.penPalette, line, 'shape', (c) => { setLine(c); updateStyleBtn(); updateSizeBtn(); });
                 return;
             }
             const seg = secColor.createDiv({ cls: 'hw-color-targets' });
@@ -485,6 +498,7 @@ export const toolbarMixin = defineMixin({
                 else { setLine(c); curLine = c; if (auto) curFill = c; }
                 paint(curLine, curFill, auto);
                 updateStyleBtn();
+                updateSizeBtn();
             });
         };
 
@@ -503,7 +517,7 @@ export const toolbarMixin = defineMixin({
                     filled && this.shapeFill === 'light' && !this.shapeLineOn);
             } else if (this.currentTool === 'highlighter') {
                 allSizeBtns.forEach(b => b.disabled = false);
-                this.renderPalette(secColor, st.highlighterPalette, this.highlighterColor, 'highlighter', (c) => { this.highlighterColor = c; this.persistMemory(); updateStyleBtn(); });
+                this.renderPalette(secColor, st.highlighterPalette, this.highlighterColor, 'highlighter', (c) => { this.highlighterColor = c; this.persistMemory(); updateStyleBtn(); updateSizeBtn(); });
             } else if (this.currentTool === 'eraser') {
                 allSizeBtns.forEach(b => b.disabled = false);
                 secColor.empty();
@@ -519,7 +533,7 @@ export const toolbarMixin = defineMixin({
                         (this.selection?.strokes ?? []).every(x => this.isFilledArea(x) && x.noLine));
                 } else if (kind) {
                     const pal = kind === 'highlighter' ? st.highlighterPalette : st.penPalette;
-                    this.renderPalette(secColor, pal, this.selectionColor() ?? '', kind, (c) => { this.setSelectionColor(c); updateStyleBtn(); });
+                    this.renderPalette(secColor, pal, this.selectionColor() ?? '', kind, (c) => { this.setSelectionColor(c); updateStyleBtn(); updateSizeBtn(); });
                 } else {
                     secColor.empty();
                 }
@@ -577,7 +591,7 @@ export const toolbarMixin = defineMixin({
         };
         label(penBtn, 'Pen (tap again: thickness)');
         label(eraserBtn, 'Eraser (tap again: size and what it erases)');
-        label(highBtn, 'Highlighter (tap again: thickness)');
+        label(highBtn, 'Highlighter (tap again: thickness and ends)');
         const toolBtnOf = (t: string): HTMLElement | null => ({ pen: penBtn, eraser: eraserBtn, highlighter: highBtn, lasso: lassoBtn, shape: shapeBtn, hand: handBtn } as Record<string, HTMLElement>)[t] ?? null;
         const openToolOptions = (anchor: HTMLElement) => {
             if (dockMode()) { showDock(); return; }
@@ -586,6 +600,7 @@ export const toolbarMixin = defineMixin({
             closeStylePop();
             sizePop.appendChild(thGroup);
             sizePop.appendChild(eraseGroup);
+            sizePop.appendChild(hlEndGroup);
             updateSharedUI();
             placeBelow(sizePop, anchor);
         };
@@ -648,6 +663,7 @@ export const toolbarMixin = defineMixin({
         const meta = new Map<HTMLElement, GroupMeta>([
             [thGroup, { name: 'Thickness', autoClose: true }],
             [eraseGroup, { name: 'Eraser erases', autoClose: false, icon: 'eraser' }],
+            [hlEndGroup, { name: 'Highlighter ends', autoClose: true }],
             [shapeThGroup, { name: 'Thickness', autoClose: true }],
             [shapeTypeGroup, { name: 'Shape', autoClose: true }],
             [dashGroup, { name: 'Line style', autoClose: true }],
@@ -750,7 +766,7 @@ export const toolbarMixin = defineMixin({
         };
         const restorePopups = () => {
             // back to the popups, in their original order
-            sizePop.append(thGroup, eraseGroup);
+            sizePop.append(thGroup, eraseGroup, hlEndGroup);
             shapeMenu.append(shapeThGroup, shapeTypeGroup, dashGroup, fillGroup, arrowGroup);
             selModePop.insertBefore(selGroup, selModePop.firstChild);
             secHistory.append(delBtn, spb, smb);   // the selection buttons back on the toolbar
@@ -798,7 +814,7 @@ export const toolbarMixin = defineMixin({
             let parts: HTMLElement[] = [];
             let drop: HTMLElement[][] = [];
             if (t === 'pen') { parts = [thGroup, styleInline]; drop = [[thGroup], [styleInline]]; }
-            else if (t === 'highlighter') { parts = [thGroup, styleInline]; drop = [[thGroup], [styleInline]]; }
+            else if (t === 'highlighter') { parts = [thGroup, hlEndGroup, styleInline]; drop = [[hlEndGroup], [thGroup], [styleInline]]; }
             else if (t === 'eraser') { parts = [thGroup, eraseGroup]; drop = [[eraseGroup], [thGroup]]; }
             else if (t === 'shape') {
                 parts = [shapeTypeGroup, shapeThGroup, dashGroup, fillGroup, arrowGroup, styleInline];
@@ -858,8 +874,6 @@ export const toolbarMixin = defineMixin({
             if (this.currentTool === 'lasso') this.setSelectionSize(i);
             else this.activeSizeIndex = i;
             updateThicknessUI();
-            // the eraser and the pen keep the panel open (more options there); otherwise it closes
-            if (this.currentTool === 'highlighter') closeSizePop();
         };
         btnSm.onclick = () => pickSize(0);
         btnMd.onclick = () => pickSize(1);

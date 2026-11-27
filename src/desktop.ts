@@ -32,16 +32,23 @@ interface ElectronShell {
     openExternal(url: string): Promise<void>;
     showItemInFolder(path: string): void;
 }
+interface ElectronWindow {
+    webContents?: { toggleDevTools?(): void; openDevTools?(): void };
+}
+interface ElectronRemote {
+    dialog?: ElectronDialog;
+    getCurrentWindow?(): ElectronWindow | null;
+}
 interface ElectronModule {
     clipboard?: ElectronClipboard;
     shell?: ElectronShell;
-    remote?: { dialog?: ElectronDialog };
+    remote?: ElectronRemote;
 }
 interface NodeModules {
     fs: NodeFs;
     path: NodePath;
     electron: ElectronModule;
-    '@electron/remote': { dialog?: ElectronDialog };
+    '@electron/remote': ElectronRemote;
 }
 
 /** A Node / Electron module, or null on phones and tablets (or when it can't be loaded). */
@@ -64,6 +71,28 @@ export function electronDialog(): ElectronDialog | null {
     try { dialog = nodeRequire('@electron/remote')?.dialog; } catch { /* not available */ }
     if (!dialog) { try { dialog = nodeRequire('electron')?.remote?.dialog; } catch { /* not available */ } }
     return dialog ?? null;
+}
+
+/** The Obsidian window's developer tools (desktop only; null when Electron doesn't expose them). */
+function devToolsHost(): { toggleDevTools?(): void; openDevTools?(): void } | null {
+    let remote: ElectronRemote | null | undefined = null;
+    try { remote = nodeRequire('@electron/remote'); } catch { /* not available */ }
+    if (!remote?.getCurrentWindow) { try { remote = nodeRequire('electron')?.remote; } catch { /* not available */ } }
+    try { return remote?.getCurrentWindow?.()?.webContents ?? null; } catch { return null; }
+}
+
+/** Whether the developer console can be opened from a button (desktop app, also in tablet mode without a keyboard). */
+export function canOpenDevTools(): boolean {
+    const wc = devToolsHost();
+    return !!(wc && (wc.toggleDevTools || wc.openDevTools));
+}
+
+/** Opens / closes the developer console – the same as Ctrl+Shift+I. */
+export function toggleDevTools(): boolean {
+    const wc = devToolsHost();
+    if (wc?.toggleDevTools) { wc.toggleDevTools(); return true; }
+    if (wc?.openDevTools) { wc.openDevTools(); return true; }
+    return false;
 }
 
 /** Opens a URL in the system (e.g. ms-screenclip: – the Windows snipping tool). */

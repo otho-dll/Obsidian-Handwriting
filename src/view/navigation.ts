@@ -67,10 +67,12 @@ export const navigationMixin = defineMixin({
                 this.pagePositionX = ox - (ox - this.pagePositionX) * factor;
                 this.pagePositionY = oy - (oy - this.pagePositionY) * factor;
                 this.currentZoom = newZoom;
+                this.zoomGesture = true;
                 this.applyManualZoom();
                 if (this.redrawTimer !== null) window.clearTimeout(this.redrawTimer);
                 this.redrawTimer = window.setTimeout(() => {
                     this.redrawTimer = null;
+                    this.zoomGesture = false;
                     this.resizeAndRedrawAll();
                 }, 150);
             } else if (e.shiftKey) {

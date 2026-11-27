@@ -292,7 +292,7 @@ export const strokeDrawMixin = defineMixin({
         const pts = stroke.points;
         ctx.strokeStyle = stroke.color;
         ctx.lineWidth = stroke.width;
-        ctx.lineCap = stroke.isHighlighter ? 'butt' : 'round';
+        ctx.lineCap = stroke.isHighlighter && !stroke.round ? 'butt' : 'round';
         ctx.lineJoin = 'round';
         ctx.setLineDash([]);
         ctx.beginPath();
@@ -421,20 +421,21 @@ export const strokeDrawMixin = defineMixin({
         ctx.fillStyle = stroke.color;
         ctx.lineWidth = stroke.width;
         // Highlighter: polyline with flat ends and sharp corners (a reversal when highlighting several lines has
-        // a square end, like a real highlighter – no rounding).
-        const polyline = !!stroke.poly || stroke.isHighlighter;
-        ctx.lineCap = stroke.isHighlighter ? 'butt' : 'round';
+        // a square end, like a real highlighter – no rounding). A round highlighter (marker) has round ends and corners.
+        const flatHl = stroke.isHighlighter && !stroke.round;
+        const polyline = !!stroke.poly || flatHl;
+        ctx.lineCap = flatHl ? 'butt' : 'round';
         ctx.lineJoin = polyline ? 'miter' : 'round';
         ctx.miterLimit = stroke.isHighlighter ? 2.2 : 4;
         ctx.setLineDash([]);
         const pattern = dashPattern(stroke.dash, stroke.width);
         if (pattern.length) { ctx.lineCap = 'butt'; ctx.setLineDash(pattern); }
 
-        // A single tap draws a dot (a square for the highlighter).
+        // A single tap draws a dot (a rectangle for the flat highlighter).
         if (stroke.points.length === 1) {
             const p = stroke.points[0];
             ctx.beginPath();
-            if (stroke.isHighlighter) ctx.rect(p.x - stroke.width / 4, p.y - stroke.width / 2, stroke.width / 2, stroke.width);
+            if (flatHl) ctx.rect(p.x - stroke.width / 4, p.y - stroke.width / 2, stroke.width / 2, stroke.width);
             else ctx.arc(p.x, p.y, stroke.width / 2, 0, Math.PI * 2);
             ctx.fill();
             return;

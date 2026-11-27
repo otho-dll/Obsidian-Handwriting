@@ -25,6 +25,7 @@ export interface Stroke {
     g?: string;           // group: items with the same g are selected and moved together (format v3)
     lock?: boolean;       // locked: cannot be selected, moved or erased (format v3)
     alpha?: number;       // pen opacity 0.1–1 (missing = 1, fully opaque)
+    round?: boolean;      // highlighter: round ends and corners like a marker (missing = flat ends)
 }
 export interface ImageItem {
     id: string;
@@ -65,6 +66,7 @@ export interface PageView {
     imgLayer: HTMLElement;
     imgEls: Map<string, HTMLImageElement>;
     active: boolean;                     // whether the canvases are "live" (page near the view)
+    redrawAt?: number;                   // when the canvas window was last fully redrawn during a zoom gesture
     scale: number;                       // current canvas resolution (pixels per logical unit)
     win: Bounds;                         // part of the page (logical coordinates) covered by the canvases
     highAllocated: boolean;              // whether the highlighter layer has its full size

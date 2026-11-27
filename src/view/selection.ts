@@ -2,6 +2,9 @@ import { defineMixin } from './mixin';
 import { Point, Stroke, ImageItem, Bounds } from '../types';
 import { rotatePointAbout } from '../utils';
 
+/** A resize handle of the selection frame. sx / sy: side (-1 left / top, 1 right / bottom, 0 middle of the edge). */
+export interface SelHandle { x: number; y: number; sx: -1 | 0 | 1; sy: -1 | 0 | 1; corner: boolean }
+
 /** Lasso: selecting, moving between pages, selection frame. */
 export const selectionMixin = defineMixin({
     // --- LASSO: selecting, moving, scaling, rotating, deleting ---
@@ -265,16 +268,33 @@ export const selectionMixin = defineMixin({
         return { x: minX - m, y: minY - m, w: maxX - minX + m * 2, h: maxY - minY + m * 2 };
     },
 
+    /** The resize handle under the point (corners first – on a small selection the handles overlap), or null. */
+    handleAt(b: Bounds, p: Point): SelHandle | null {
+        const h = this.getHandles(b);
+        let best: SelHandle | null = null, bestD = Infinity;
+        for (const c of h.handles) {
+            const d = Math.hypot(p.x - c.x, p.y - c.y) - (c.corner ? h.hitRadius * 0.25 : 0);
+            if (Math.hypot(p.x - c.x, p.y - c.y) <= h.hitRadius && d < bestD) { best = c; bestD = d; }
+        }
+        return best;
+    },
+
     // Positions of the selection handles (logical coordinates).
     getHandles(b: Bounds) {
         const z = Math.max(0.5, this.currentZoom);
-        const stem = 26 / z;
+        const stem = 30 / z;   // far enough from the edge handle where the stem starts
         const above = b.y - stem >= 8 / z;
+        // Resize handles on every corner (proportional) and in the middle of every edge (stretch in one direction).
+        // sx / sy: which side the handle is on (-1 left / top, 1 right / bottom, 0 middle).
+        const handles: SelHandle[] = [];
+        for (const sy of [-1, 0, 1] as const) {
+            for (const sx of [-1, 0, 1] as const) {
+                if (sx === 0 && sy === 0) continue;
+                handles.push({ x: b.x + b.w * (sx + 1) / 2, y: b.y + b.h * (sy + 1) / 2, sx, sy, corner: sx !== 0 && sy !== 0 });
+            }
+        }
         return {
-            resize: { x: b.x + b.w, y: b.y + b.h },
-            // edge handles: stretch only the width (right edge) or only the height (bottom edge)
-            stretchX: { x: b.x + b.w, y: b.y + b.h / 2 },
-            stretchY: { x: b.x + b.w / 2, y: b.y + b.h },
+            handles,
             rotate: { x: b.x + b.w / 2, y: above ? b.y - stem : b.y + b.h + stem },
             rotateFrom: { x: b.x + b.w / 2, y: above ? b.y : b.y + b.h },
             hitRadius: 16 / z
@@ -319,20 +339,23 @@ export const selectionMixin = defineMixin({
         ctx.lineWidth = 1.5 / z;
         ctx.stroke();
 
-        // Resize handle (bottom-right corner)
+        // Resize handles: squares on the corners, small bars along the edges (stretch handles)
         const hs = 6 / z;
-        ctx.fillStyle = '#ffffff';
-        ctx.lineWidth = 2 / z;
-        ctx.fillRect(h.resize.x - hs, h.resize.y - hs, hs * 2, hs * 2);
-        ctx.strokeRect(h.resize.x - hs, h.resize.y - hs, hs * 2, hs * 2);
-
-        // Stretch handles (middle of the right and bottom edge): small bars along the edge
         const long = 7 / z, short = 3.5 / z;
-        ctx.lineWidth = 1.5 / z;
-        ctx.fillRect(h.stretchX.x - short, h.stretchX.y - long, short * 2, long * 2);
-        ctx.strokeRect(h.stretchX.x - short, h.stretchX.y - long, short * 2, long * 2);
-        ctx.fillRect(h.stretchY.x - long, h.stretchY.y - short, long * 2, short * 2);
-        ctx.strokeRect(h.stretchY.x - long, h.stretchY.y - short, long * 2, short * 2);
+        ctx.fillStyle = '#ffffff';
+        for (const c of h.handles) {
+            if (c.corner) {
+                ctx.lineWidth = 2 / z;
+                ctx.fillRect(c.x - hs, c.y - hs, hs * 2, hs * 2);
+                ctx.strokeRect(c.x - hs, c.y - hs, hs * 2, hs * 2);
+            } else {
+                // the rotation stem leaves the middle of the top (or bottom) edge – that bar is drawn on top of it
+                const hw = c.sx !== 0 ? short : long, hh = c.sx !== 0 ? long : short;
+                ctx.lineWidth = 1.5 / z;
+                ctx.fillRect(c.x - hw, c.y - hh, hw * 2, hh * 2);
+                ctx.strokeRect(c.x - hw, c.y - hh, hw * 2, hh * 2);
+            }
+        }
     },
 
     pageIndexAt(clientX: number, clientY: number): number {

@@ -145,7 +145,11 @@ export const geometryMixin = defineMixin({
     eraseFromList(strokes: Stroke[], a: Point, b: Point, r: number, wholeHighlighterArg?: boolean, dirty?: BBox, skip?: { shapes?: boolean; highlighter?: boolean }): { list: Stroke[]; changed: boolean } {
         const wholeHighlighter = wholeHighlighterArg ?? (this.plugin.settings.highlighterErase === 'whole');
         let changed = false;
-        const out: Stroke[] = [];
+        // The new list is built only once something is hit (most eraser moves touch nothing – no copy of the page then).
+        let out: Stroke[] | null = null;
+        const keep = (st: Stroke) => { if (out) out.push(st); };
+        const begin = (i: number) => { if (!out) out = strokes.slice(0, i); };
+        const wholeShapes = this.plugin.settings.shapeErase === 'whole';
         const minAx = Math.min(a.x, b.x) - r, maxAx = Math.max(a.x, b.x) + r;
         const minAy = Math.min(a.y, b.y) - r, maxAy = Math.max(a.y, b.y) + r;
 
@@ -155,26 +159,26 @@ export const geometryMixin = defineMixin({
             dirty.x0 = Math.min(dirty.x0, bb.x0); dirty.y0 = Math.min(dirty.y0, bb.y0);
             dirty.x1 = Math.max(dirty.x1, bb.x1); dirty.y1 = Math.max(dirty.y1, bb.y1);
         };
-        for (const s0 of strokes) {
+        for (let idx = 0; idx < strokes.length; idx++) {
+            const s0 = strokes[idx];
             let s = s0;
-            if (s.isEraser || s.lock) { out.push(s); continue; }   // the eraser doesn't touch locked items
+            if (s.isEraser || s.lock) { keep(s); continue; }   // the eraser doesn't touch locked items
             // A piece of a partly erased shape (poly) still counts as a shape.
             const shapeLike = !!s.shape || !!s.poly;
-            if (skip && ((skip.shapes && shapeLike) || (skip.highlighter && s.isHighlighter))) { out.push(s); continue; }
+            if (skip && ((skip.shapes && shapeLike) || (skip.highlighter && s.isHighlighter))) { keep(s); continue; }
 
             // Quick rejection by bounding box (from the cache).
             const bb = this.getStrokeBBox(s);
-            if (bb.x0 > maxAx || bb.x1 < minAx || bb.y0 > maxAy || bb.y1 < minAy) { out.push(s); continue; }
+            if (bb.x0 > maxAx || bb.x1 < minAx || bb.y0 > maxAy || bb.y1 < minAy) { keep(s); continue; }
 
-            const wholeShapes = this.plugin.settings.shapeErase === 'whole';
             if (s.shape) {
                 const canCut = !wholeShapes && !(s.fill && s.shape !== 'line') && !s.arrow;
                 if (!canCut) {
-                    if (this.shapeHit(s, a, b, r)) { changed = true; mark(s0); continue; }
-                    out.push(s);
+                    if (this.shapeHit(s, a, b, r)) { begin(idx); changed = true; mark(s0); continue; }
+                    keep(s);
                     continue;
                 }
-                if (!this.shapeHit(s, a, b, r)) { out.push(s); continue; }
+                if (!this.shapeHit(s, a, b, r)) { keep(s); continue; }
                 // A shape is turned into a dense polyline and then erased like a normal stroke.
                 const outline = this.shapeOutline(s);
                 const closed = s.shape !== 'line';
@@ -191,8 +195,8 @@ export const geometryMixin = defineMixin({
             } else if (s.closed) {
                 // A filled polygon goes whole (like filled shapes); an outline is opened into a ring and cut like a piece.
                 if (s.fill || wholeShapes) {
-                    if (this.closedPolyHit(s, a, b, r)) { changed = true; mark(s0); continue; }
-                    out.push(s);
+                    if (this.closedPolyHit(s, a, b, r)) { begin(idx); changed = true; mark(s0); continue; }
+                    keep(s);
                     continue;
                 }
                 const ring = [...s.points, s.points[0]];
@@ -220,9 +224,9 @@ export const geometryMixin = defineMixin({
                 cut.push(c);
                 if (c) hit = true;
             }
-            if (!hit) { out.push(s0); continue; }
+            if (!hit) { keep(s0); continue; }
 
-            changed = true;
+            begin(idx); changed = true;
             // The highlighter disappears whole when the eraser touches it (plugin setting); same for shape pieces.
             if (s.isHighlighter && wholeHighlighter) { mark(s0); continue; }
             if (s0.poly && !s0.shape && wholeShapes) { mark(s0); continue; }
@@ -241,7 +245,7 @@ export const geometryMixin = defineMixin({
             }
             let run: Point[] = [];
             const flush = () => {
-                if (run.length >= 2) out.push({ ...s, points: run });
+                if (run.length >= 2) out!.push({ ...s, points: run });
                 run = [];
             };
             for (let i = 0; i < n; i++) {
@@ -251,7 +255,7 @@ export const geometryMixin = defineMixin({
             }
             flush();
         }
-        return { list: changed ? out : strokes, changed };
+        return { list: changed && out ? out : strokes, changed };
     },
 
     eraseAt(pageIndex: number, a: Point, b: Point, r: number, dirty?: BBox): boolean {

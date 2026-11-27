@@ -1,6 +1,6 @@
 {
   "name": "handwritten-notebook",
-  "version": "3.19.0",
+  "version": "3.20.0",
   "private": true,
   "description": "Obsidian plugin for handwritten notes on A4 pages.",
   "license": "MIT",
@@ -8,6 +8,7 @@
     "dev": "node scripts/esbuild.config.mjs --watch",
     "build": "node scripts/esbuild.config.mjs",
     "typecheck": "tsc -p src",
+    "test": "node scripts/test.mjs",
     "lint": "eslint .",
     "site:dev": "node scripts/build-site.mjs --serve",
     "site:build": "node scripts/build-site.mjs",

@@ -25,7 +25,7 @@ Options:
 
 ## What ends up in the PDF
 
-- Vector handwriting (with pressure-based width), highlighter, shapes, pen opacity.
+- Vector handwriting (with pressure-based width), highlighter (flat or round ends), shapes, pen opacity.
 - Images, plots and imported PDF pages from the note's hidden folder (`.Name.hnote-data/attachments`).
   If an image is missing, a grey rectangle takes its place and the script reports it.
 - The pattern and colour of every page, and its format: A4 portrait, A4 landscape or an "endless" page.
@@ -39,6 +39,7 @@ Pillow (`pip install pillow`) is optional. It speeds up large PNG images and can
 The format description (versions 1–4) is at the top of the script. In short: `.hnote` is JSON with a list of pages,
 and each page has strokes (points `[x, y]` or `[x, y, pressure]`), images and page settings.
 Coordinates are in logical units: A4 = 800 × 1131, Y axis pointing down.
+A highlighter stroke may have `"round": true` (round ends and corners, since 3.20.0); without it the ends are flat.
 
 ## For plugin developers
 

@@ -48,7 +48,7 @@ export const thumbsMixin = defineMixin({
         ctx.globalCompositeOperation = 'source-over';
         ctx.strokeStyle = st.color;
         ctx.lineWidth = Math.max(st.width, minW);
-        ctx.lineCap = st.isHighlighter ? 'butt' : 'round';
+        ctx.lineCap = st.isHighlighter && !st.round ? 'butt' : 'round';
         ctx.lineJoin = 'round';
         ctx.setLineDash([]);
         ctx.beginPath();

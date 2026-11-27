@@ -21,6 +21,7 @@ The .hnote file format (JSON) – in short (full description: src/format.ts, src
     "pages": [ {
         "strokes": [ { "points": [[x, y], [x, y, pressure 0-100], …], "color": "#000000", "width": 2,
                        "isHighlighter": false, "alpha": 0.5,                      # pen opacity
+                       "round": true (highlighter with round ends),
                        "shape": "line"|"rect"|"ellipse"|"triangle", "right": true (right triangle), "dash": "dashed"|"dotted"|"dashdot", "fill": true, "fillColor": "#2563eb", "fillAlpha": 0.25, "noLine": true,
                        "arrow": true, "rot": 0.3, "poly": true, "closed": true (poly: closed polygon, may have fill / fillColor / fillAlpha / noLine),
                        "isEraser": true (old – skipped) } ],
@@ -608,6 +609,7 @@ def draw_stroke(c, s, st):
     if not pts:
         return
     hl = bool(s.get('isHighlighter'))
+    flat_hl = hl and not s.get('round')    # round highlighter (marker): round ends and corners, smoothed like the pen
     alpha = s.get('alpha')
     use_alpha = isinstance(alpha, (int, float)) and alpha < 1 and not hl
     c.add('q')
@@ -626,7 +628,7 @@ def draw_stroke(c, s, st):
     c.color(col, stroke=True, fill=True)
     if len(pts) == 1:
         x, y, _ = pts[0]
-        if hl:
+        if flat_hl:
             c.add('%s %s %s %s re f' % (fmt(x - w / 4), fmt(y - w / 2), fmt(w / 2), fmt(w)))
         else:
             c.ops.extend(circle_ops(x, y, w / 2))
@@ -639,8 +641,8 @@ def draw_stroke(c, s, st):
         c.add('f')
         c.add('Q')
         return
-    poly = bool(s.get('poly')) or hl     # highlighter: polyline, flat ends and sharp corners
-    c.add('%s w %d J %d j %s M' % (fmt(w), 0 if hl else 1, 0 if poly else 1, '2.2' if hl else '4'))
+    poly = bool(s.get('poly')) or flat_hl     # flat highlighter: polyline, flat ends and sharp corners
+    c.add('%s w %d J %d j %s M' % (fmt(w), 0 if flat_hl else 1, 0 if poly else 1, '2.2' if hl else '4'))
     dash = dash_ops(s, w)
     c.add(dash if dash else '[] 0 d')
     c.add('%s %s m' % (fmt(pts[0][0]), fmt(pts[0][1])))

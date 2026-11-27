@@ -50,6 +50,7 @@ export const touchMixin = defineMixin({
             contacts.clear();
             cancelPress();
             one = null;
+            if (two && this.zoomGesture) { this.zoomGesture = false; this.resizeAndRedrawAll(); }
             two = null;
             samples = [];
         };
@@ -98,6 +99,7 @@ export const touchMixin = defineMixin({
                 two.mode = 'zoom';
             }
             if (two.mode === 'zoom') {
+                this.zoomGesture = true;
                 const z = Math.max(0.4, Math.min(4, two.z * d / two.d));
                 const k = z / two.z;
                 // the note point that was under the fingers' centre stays under it
@@ -183,6 +185,7 @@ export const touchMixin = defineMixin({
             if (two) {
                 // one of two fingers lifted: the other one keeps scrolling (no jump)
                 two = null;
+                this.zoomGesture = false;
                 const rest = Array.from(contacts.values())[0];
                 if (rest) { beginOne(rest); one!.px = rest.x; one!.py = rest.y; samples = []; }
                 this.resizeAndRedrawAll();

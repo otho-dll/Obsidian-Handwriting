@@ -109,18 +109,23 @@ export const inputMixin = defineMixin({
             if (dragRaf) { window.cancelAnimationFrame(dragRaf); dragRaf = 0; }
             runDragFrame();
         };
-        let scaleDrag: { sb: Bounds; total: number } | null = null;
-        // Edge handle: stretching in one direction only (x = right edge, y = bottom edge).
-        let stretchDrag: { sb: Bounds; axis: 'x' | 'y'; total: number; snap: StretchSnap } | null = null;
+        // Corner handle: proportional scaling around the opposite corner (ax, ay); sx / sy = the dragged corner's side.
+        let scaleDrag: { sb: Bounds; ax: number; ay: number; sx: number; sy: number; total: number } | null = null;
+        // Edge handle: stretching in one direction only, around the opposite edge (ax, ay); sign = the dragged edge's side.
+        let stretchDrag: { sb: Bounds; axis: 'x' | 'y'; ax: number; ay: number; sign: number; total: number; snap: StretchSnap } | null = null;
         // "Split along a line…": the line being drawn over the selection.
         let splitLine: { a: Point; b: Point } | null = null;
-        // Right-angle path (line tool): where the pen went down (a tap without moving ends the path).
+        // Right-angle path (line tool, like wires in KiCad): one drag draws an "L" – two perpendicular segments meeting
+        // at a corner, both following the pen. orthoDown: where the pen went down (a tap without moving ends the path).
         let orthoDown: { x: number; y: number } | null = null;
-        let orthoNext: 'h' | 'v' | null = null;   // direction forced for a continuing segment
+        let orthoPref: 'h' | 'v' | null = null;    // preferred first direction (continuing path: perpendicular to the last segment)
+        let orthoFirst: 'h' | 'v' | null = null;   // direction of the first segment of this L (decided after a few pixels)
+        let orthoSeg2: Stroke | null = null;       // second segment of the L (preview)
         let rotateDrag: { cx: number; cy: number; start: number; total: number } | null = null;
 
         // Vector eraser (it grows when you rub quickly)
-        let eraseGesture: { before: Stroke[]; last: Point; lastT: number; mult: number } | null = null;
+        // `pending`: eraser positions (with their radius) not erased yet – they are processed once per frame.
+        let eraseGesture: { before: Stroke[]; last: Point; lastT: number; mult: number; done: Point; pending: { p: Point; r: number }[] } | null = null;
         let eraseDirty = false;
         const freshRegion = (): BBox => ({ x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity });
         let eraseRegion: BBox = freshRegion();   // area to redraw after the eraser moves
@@ -165,6 +170,17 @@ export const inputMixin = defineMixin({
         // Circle showing the current eraser size.
         let hoverPos: Point | null = null;
         let hoverRaf = false;
+        // Mouse position for the selection-handle cursor (checked once per frame).
+        let handleHover: Point | null = null;
+        let handleRaf = false;
+        type HandleCursor = '' | 'rotate' | 'move' | 'nwse' | 'nesw' | 'ew' | 'ns';
+        let handleCursor: HandleCursor = '';
+        const setHandleCursor = (c: HandleCursor) => {
+            if (c === handleCursor) return;
+            if (handleCursor) topCanvas.removeClass(`hw-cur-${handleCursor}`);
+            if (c) topCanvas.addClass(`hw-cur-${c}`);
+            handleCursor = c;
+        };
         // The eraser circle is a DOM element (moved with a transform), not a drawing on the canvas: every change of a
         // large canvas costs as much as it has pixels, so moving the cursor over the canvas slowed erasing down.
         const cursorEl = this.pageViews[pageIndex].container.createDiv({ cls: 'hw-eraser-cursor' });
@@ -186,12 +202,45 @@ export const inputMixin = defineMixin({
         };
         const hideEraserCursor = () => { cursorEl.hide(); };
 
+        /**
+         * Erases along the positions collected since the last frame. Positions closer together than a fraction of the
+         * eraser radius are merged into one segment (each erase pass walks the strokes of the page, and the pen reports
+         * several positions per frame) – the erased area stays the same.
+         */
+        const flushErase = () => {
+            const g = eraseGesture;
+            if (!g || g.pending.length === 0) return;
+            const list = g.pending;
+            g.pending = [];
+            let from = g.done;
+            let maxR = 0;
+            const skipped: Point[] = [];
+            for (let i = 0; i < list.length; i++) {
+                const { p, r } = list[i];
+                maxR = Math.max(maxR, r);
+                const next = list[i + 1];
+                // Merge while all skipped points lie close to the straight segment from `from` to the next point.
+                if (next) {
+                    const tol = maxR * 0.25;
+                    if (this.distPointSeg(p, from, next.p) < tol && skipped.every(q => this.distPointSeg(q, from, next.p) < tol)) {
+                        skipped.push(p);
+                        continue;
+                    }
+                }
+                if (this.eraseAt(pageIndex, from, p, maxR, eraseRegion)) eraseDirty = true;
+                from = p;
+                maxR = 0;
+                skipped.length = 0;
+            }
+            g.done = from;
+        };
         const scheduleEraseRedraw = () => {
             if (rafPending) return;
             rafPending = true;
             window.requestAnimationFrame(() => {
                 rafPending = false;
                 if (!eraseGesture) return;
+                flushErase();
                 // Redraw only the area the eraser changed (not the whole page).
                 const reg = eraseRegion;
                 eraseRegion = freshRegion();
@@ -229,17 +278,22 @@ export const inputMixin = defineMixin({
                 if (this.splitMode) this.cancelSplitMode();   // the selection is on another page
                 if (bounds) {
                     const h = this.getHandles(bounds);
-                    if (Math.hypot(lpos.x - h.rotate.x, lpos.y - h.rotate.y) <= h.hitRadius) {
+                    const rotD = Math.hypot(lpos.x - h.rotate.x, lpos.y - h.rotate.y);
+                    const rh = this.handleAt(bounds, lpos);
+                    // The anchor is the opposite corner / edge – it stays in place.
+                    const ax = rh ? (rh.sx > 0 ? bounds.x : rh.sx < 0 ? bounds.x + bounds.w : bounds.x) : 0;
+                    const ay = rh ? (rh.sy > 0 ? bounds.y : rh.sy < 0 ? bounds.y + bounds.h : bounds.y) : 0;
+                    if (rotD <= h.hitRadius && (!rh || rotD <= Math.hypot(lpos.x - rh.x, lpos.y - rh.y))) {
                         // Rotation handle
                         const cx = bounds.x + bounds.w / 2, cy = bounds.y + bounds.h / 2;
                         rotateDrag = { cx, cy, start: Math.atan2(lpos.y - cy, lpos.x - cx), total: 0 };
-                    } else if (Math.hypot(lpos.x - h.resize.x, lpos.y - h.resize.y) <= h.hitRadius) {
-                        // Handle in the bottom-right corner: resize
-                        scaleDrag = { sb: bounds, total: 1 };
-                    } else if (this.selection && (Math.hypot(lpos.x - h.stretchX.x, lpos.y - h.stretchX.y) <= h.hitRadius || Math.hypot(lpos.x - h.stretchY.x, lpos.y - h.stretchY.y) <= h.hitRadius)) {
-                        // Handle in the middle of the right / bottom edge: stretch only the width / height
-                        const axis = Math.hypot(lpos.x - h.stretchX.x, lpos.y - h.stretchX.y) <= Math.hypot(lpos.x - h.stretchY.x, lpos.y - h.stretchY.y) ? 'x' : 'y';
-                        stretchDrag = { sb: bounds, axis, total: 1, snap: this.stretchSnapshot(this.selection.strokes, this.selection.images) };
+                    } else if (rh && rh.corner) {
+                        // Corner handle: resize keeping the proportions
+                        scaleDrag = { sb: bounds, ax, ay, sx: rh.sx, sy: rh.sy, total: 1 };
+                    } else if (rh && this.selection) {
+                        // Handle in the middle of an edge: stretch only the width / height
+                        const axis = rh.sx !== 0 ? 'x' : 'y';
+                        stretchDrag = { sb: bounds, axis, ax, ay, sign: axis === 'x' ? rh.sx : rh.sy, total: 1, snap: this.stretchSnapshot(this.selection.strokes, this.selection.images) };
                     } else if (lpos.x >= bounds.x && lpos.x <= bounds.x + bounds.w && lpos.y >= bounds.y && lpos.y <= bounds.y + bounds.h) {
                         // Grabbing the selection: move
                         lassoDrag = { last: lpos, dx: 0, dy: 0 };
@@ -259,7 +313,7 @@ export const inputMixin = defineMixin({
             if (effectiveTool === 'eraser') {
                 const epos = getPointerPos(e);
                 topCanvas.removeClass('hw-live-highlighter');
-                eraseGesture = { before: [...this.noteData.pages[pageIndex].strokes], last: epos, lastT: e.timeStamp, mult: 1 };
+                eraseGesture = { before: [...this.noteData.pages[pageIndex].strokes], last: epos, lastT: e.timeStamp, mult: 1, done: epos, pending: [] };
                 eraseDirty = false;
                 eraseRegion = freshRegion();
                 if (this.eraseAt(pageIndex, epos, epos, getActiveWidth('eraser') / 2, eraseRegion)) eraseDirty = true;
@@ -283,6 +337,7 @@ export const inputMixin = defineMixin({
                 width: getActiveWidth(effectiveTool),
                 isHighlighter: effectiveTool === 'highlighter'
             };
+            if (effectiveTool === 'highlighter' && this.highlighterRound) currentStroke.round = true;
 
             // Plain pen (not semi-transparent): live stroke on the low-latency ink layer.
             if (effectiveTool === 'pen' && currentStroke.alpha === undefined && this.inkCtx && this.beginInk(pageIndex, getRect())) {
@@ -302,7 +357,9 @@ export const inputMixin = defineMixin({
                 currentStroke.arrow = this.shapeArrow && this.shapeType === 'line';
                 if (this.shapeType === 'triangle' && this.shapeTriRight) currentStroke.right = true;
                 orthoDown = null;
-                orthoNext = null;
+                orthoPref = null;
+                orthoFirst = null;
+                orthoSeg2 = null;
                 if (this.shapeType === 'line' && this.shapeOrtho) {
                     // Right-angle path: the arrow goes on the last segment when the path ends.
                     currentStroke.arrow = false;
@@ -310,9 +367,9 @@ export const inputMixin = defineMixin({
                     const path = this.orthoPath;
                     if (path && path.page !== pageIndex) this.endOrthoPath();
                     if (this.orthoPath) {
-                        // The next segment starts at the end of the previous one, perpendicular to it.
+                        // The next L starts at the end of the previous one, by default perpendicular to its last segment.
                         currentStroke.points = [{ ...this.orthoPath.end }];
-                        orthoNext = this.orthoPath.dir === 'h' ? 'v' : 'h';
+                        orthoPref = this.orthoPath.dir === 'h' ? 'v' : 'h';
                     }
                 }
             }
@@ -328,6 +385,7 @@ export const inputMixin = defineMixin({
                 const view = this.pageViews[pageIndex];
                 if (view && view.active && getEffectiveTool(e) === 'eraser') {
                     topCanvas.addClass('hw-no-cursor');
+                    setHandleCursor('');   // no selection-handle cursor over the eraser circle
                     hoverPos = getPointerPos(e);
                     if (!hoverRaf) {
                         hoverRaf = true;
@@ -344,6 +402,27 @@ export const inputMixin = defineMixin({
                     hideEraserCursor();
                     topCanvas.removeClass('hw-no-cursor');
                 }
+                // Mouse over a selection handle: a resize / rotate cursor (once per frame).
+                if (e.pointerType === 'mouse') {
+                    handleHover = getPointerPos(e);
+                    if (!handleRaf) {
+                        handleRaf = true;
+                        window.requestAnimationFrame(() => {
+                            handleRaf = false;
+                            const p = handleHover;
+                            let cur: HandleCursor = '';
+                            const b = p && this.currentTool === 'lasso' && this.selection?.page === pageIndex ? this.getSelectionBounds() : null;
+                            if (p && b) {
+                                const h = this.getHandles(b);
+                                const rh = this.handleAt(b, p);
+                                if (Math.hypot(p.x - h.rotate.x, p.y - h.rotate.y) <= h.hitRadius && (!rh || Math.hypot(p.x - h.rotate.x, p.y - h.rotate.y) <= Math.hypot(p.x - rh.x, p.y - rh.y))) cur = 'rotate';
+                                else if (rh) cur = rh.corner ? (rh.sx * rh.sy > 0 ? 'nwse' : 'nesw') : (rh.sx !== 0 ? 'ew' : 'ns');
+                                else if (p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h) cur = 'move';
+                            }
+                            setHandleCursor(cur);
+                        });
+                    }
+                }
             }
 
             if (e.pointerType === 'pen' && e.pressure === 0) return;
@@ -352,18 +431,23 @@ export const inputMixin = defineMixin({
                 e.preventDefault();
                 e.stopPropagation();
                 const g = eraseGesture;
-                const epos = getPointerPos(e);
-                // The faster you rub, the bigger the eraser (up to 4×); it returns to normal size when you slow down.
-                const dt = e.timeStamp - g.lastT;
-                if (dt > 0) {
-                    const speed = (Math.hypot(epos.x - g.last.x, epos.y - g.last.y) * this.currentZoom) / dt;   // screen pixels per ms
-                    const target = 1 + Math.min(1, Math.max(0, (speed - 0.5) / 1.5)) * 3;
-                    g.mult += (target - g.mult) * (target > g.mult ? 0.35 : 0.06);
+                // All positions since the last event (the pen reports them more often than events) – the erased
+                // path follows a quick curve exactly; the erasing itself happens once per frame (flushErase).
+                const evs = typeof e.getCoalescedEvents === 'function' ? e.getCoalescedEvents() : [];
+                const baseR = getActiveWidth('eraser') / 2;
+                for (const ev of evs.length > 0 ? evs : [e]) {
+                    const epos = getPointerPos(ev);
+                    // The faster you rub, the bigger the eraser (up to 4×); it returns to normal size when you slow down.
+                    const dt = ev.timeStamp - g.lastT;
+                    if (dt > 0) {
+                        const speed = (Math.hypot(epos.x - g.last.x, epos.y - g.last.y) * this.currentZoom) / dt;   // screen pixels per ms
+                        const target = 1 + Math.min(1, Math.max(0, (speed - 0.5) / 1.5)) * 3;
+                        g.mult += (target - g.mult) * (target > g.mult ? 0.35 : 0.06);
+                        g.lastT = ev.timeStamp;
+                    }
+                    g.pending.push({ p: epos, r: baseR * g.mult });
+                    g.last = epos;
                 }
-                g.lastT = e.timeStamp;
-                const radius = (getActiveWidth('eraser') / 2) * g.mult;
-                if (this.eraseAt(pageIndex, g.last, epos, radius, eraseRegion)) eraseDirty = true;
-                g.last = epos;
                 scheduleEraseRedraw();
                 return;
             }
@@ -414,11 +498,11 @@ export const inputMixin = defineMixin({
                         const sel = this.selection;
                         if (!sel) return;
                         const sb = sd.sb;
-                        const target = Math.max(0.1, Math.min(10, Math.max((lpos.x - sb.x) / sb.w, (lpos.y - sb.y) / sb.h)));
+                        const target = Math.max(0.1, Math.min(10, Math.max(sd.sx * (lpos.x - sd.ax) / sb.w, sd.sy * (lpos.y - sd.ay) / sb.h)));
                         const inc = target / sd.total;
                         if (inc === 1) return;
-                        this.scaleItems(sel.strokes, sel.images, sb.x, sb.y, inc);
-                        this.dragTransform(new DOMMatrix().translate(sb.x, sb.y).scale(inc).translate(-sb.x, -sb.y));
+                        this.scaleItems(sel.strokes, sel.images, sd.ax, sd.ay, inc);
+                        this.dragTransform(new DOMMatrix().translate(sd.ax, sd.ay).scale(inc).translate(-sd.ax, -sd.ay));
                         sd.total = target;
                         this.redrawDragFrame(pageIndex);
                     });
@@ -429,13 +513,13 @@ export const inputMixin = defineMixin({
                         if (!sel) return;
                         const sb = sd.sb;
                         const target = sd.axis === 'x'
-                            ? Math.max(0.05, Math.min(20, (lpos.x - sb.x) / sb.w))
-                            : Math.max(0.05, Math.min(20, (lpos.y - sb.y) / sb.h));
+                            ? Math.max(0.05, Math.min(20, sd.sign * (lpos.x - sd.ax) / sb.w))
+                            : Math.max(0.05, Math.min(20, sd.sign * (lpos.y - sd.ay) / sb.h));
                         const inc = target / sd.total;
                         if (inc === 1) return;
                         const kx = sd.axis === 'x' ? inc : 1, ky = sd.axis === 'y' ? inc : 1;
-                        this.stretchItems(sel.strokes, sel.images, sb.x, sb.y, kx, ky);
-                        this.dragTransform(new DOMMatrix().translate(sb.x, sb.y).scale(kx, ky).translate(-sb.x, -sb.y));
+                        this.stretchItems(sel.strokes, sel.images, sd.ax, sd.ay, kx, ky);
+                        this.dragTransform(new DOMMatrix().translate(sd.ax, sd.ay).scale(kx, ky).translate(-sd.ax, -sd.ay));
                         sd.total = target;
                         this.redrawDragFrame(pageIndex);
                     });
@@ -465,13 +549,31 @@ export const inputMixin = defineMixin({
             // Shape: only the start and end point, with a live preview. Shift = proportions / 45° angles.
             if (currentStroke.shape) {
                 const pos = getPointerPos(e);
-                let end = e.shiftKey ? this.constrainShape(currentStroke, pos) : pos;
                 if (orthoDown) {
-                    // Right-angle path: only horizontal or vertical (a continuing segment: perpendicular to the last one).
+                    // Right-angle path: an L from the start to the pen – the first segment horizontal or vertical, the
+                    // second one perpendicular to it; moving the pen changes the length of both.
                     const p0 = currentStroke.points[0];
-                    const dir = orthoNext ?? (Math.abs(pos.x - p0.x) >= Math.abs(pos.y - p0.y) ? 'h' : 'v');
-                    end = dir === 'h' ? { x: pos.x, y: p0.y, pressure: pos.pressure } : { x: p0.x, y: pos.y, pressure: pos.pressure };
+                    const dx = Math.abs(pos.x - p0.x), dy = Math.abs(pos.y - p0.y);
+                    // The direction of the first segment follows the first movement; back near the start it can be
+                    // chosen again. A continuing path prefers a turn, unless the pen clearly goes the other way.
+                    if (Math.hypot(dx, dy) * this.currentZoom < 6) orthoFirst = null;
+                    else if (!orthoFirst) {
+                        const along = (d: 'h' | 'v') => d === 'h' ? dx : dy;
+                        orthoFirst = orthoPref && along(orthoPref) * 2 >= along(orthoPref === 'h' ? 'v' : 'h') ? orthoPref : (dx >= dy ? 'h' : 'v');
+                    }
+                    const first = orthoFirst ?? orthoPref ?? (dx >= dy ? 'h' : 'v');
+                    const corner = first === 'h' ? this.mkPoint(pos.x, p0.y) : this.mkPoint(p0.x, pos.y);
+                    currentStroke.points = [p0, corner];
+                    const seg2: Stroke = orthoSeg2 ?? { ...currentStroke };
+                    seg2.points = [corner, this.mkPoint(pos.x, pos.y)];
+                    orthoSeg2 = seg2;
+                    const pad = currentStroke.width + 2;
+                    clearLive({ x0: Math.min(p0.x, pos.x) - pad, y0: Math.min(p0.y, pos.y) - pad, x1: Math.max(p0.x, pos.x) + pad, y1: Math.max(p0.y, pos.y) + pad });
+                    this.drawShape(topCtx, currentStroke);
+                    this.drawShape(topCtx, seg2);
+                    return;
                 }
+                const end = e.shiftKey ? this.constrainShape(currentStroke, pos) : pos;
                 currentStroke.points = [currentStroke.points[0], end];
                 // Clear only the area of the previous and the new preview (not the whole canvas).
                 const p0 = currentStroke.points[0];
@@ -529,7 +631,13 @@ export const inputMixin = defineMixin({
 
             if (eraseGesture) {
                 const g = eraseGesture;
+                // The last positions (not erased yet) and their redraw – the page is up to date without a full redraw
+                // (a full redraw of a large canvas at high zoom made the end of every eraser stroke stutter).
+                flushErase();
                 eraseGesture = null;
+                const reg = eraseRegion;
+                eraseRegion = freshRegion();
+                if (reg.x1 >= reg.x0 && reg.y1 >= reg.y0) this.repaintRegion(pageIndex, { x: reg.x0 - 1, y: reg.y0 - 1, w: reg.x1 - reg.x0 + 2, h: reg.y1 - reg.y0 + 2 });
                 if (eraseDirty) {
                     eraseDirty = false;
                     this.pushHistoryAction({
@@ -539,7 +647,9 @@ export const inputMixin = defineMixin({
                         after: [...this.noteData.pages[pageIndex].strokes]
                     });
                     this.requestSave();
-                    this.redrawPage(pageIndex);
+                    this.markThumbDirty(pageIndex);
+                    // The selection frame (top layer) may include erased strokes.
+                    if (this.selection?.page === pageIndex) this.redrawOverlay(pageIndex);
                 }
                 drawEraserCursor(g.last, false);
                 if (topCanvas.hasPointerCapture(e.pointerId)) topCanvas.releasePointerCapture(e.pointerId);
@@ -594,7 +704,7 @@ export const inputMixin = defineMixin({
                 scaleDrag = null;
                 this.endDragLayer(pageIndex);
                 if (this.selection && Math.abs(drag.total - 1) > 0.001) {
-                    this.pushHistoryAction({ type: 'scale', page: pageIndex, strokes: [...this.selection.strokes], images: [...this.selection.images], ax: drag.sb.x, ay: drag.sb.y, k: drag.total });
+                    this.pushHistoryAction({ type: 'scale', page: pageIndex, strokes: [...this.selection.strokes], images: [...this.selection.images], ax: drag.ax, ay: drag.ay, k: drag.total });
                     this.requestSave();
                 }
                 if (topCanvas.hasPointerCapture(e.pointerId)) topCanvas.releasePointerCapture(e.pointerId);
@@ -624,25 +734,45 @@ export const inputMixin = defineMixin({
             isDrawing = false;
 
             if (currentStroke.shape) this.posLog('shape end', e.type, 'points', currentStroke.points.length);
-            // Right-angle path: a tap (no real movement) ends the path; otherwise the segment joins the path.
+            // Right-angle path: a tap (no real movement) ends the path; otherwise the L (one or two segments) joins it.
             if (orthoDown && currentStroke.shape === 'line') {
                 const moved = Math.hypot(e.clientX - orthoDown.x, e.clientY - orthoDown.y);
-                const p0 = currentStroke.points[0], p1 = currentStroke.points[currentStroke.points.length - 1];
-                const segLen = Math.hypot(p1.x - p0.x, p1.y - p0.y) * this.currentZoom;
+                const segs = [currentStroke, orthoSeg2].filter((s): s is Stroke => {
+                    if (!s || s.points.length < 2) return false;
+                    const a = s.points[0], b = s.points[s.points.length - 1];
+                    return Math.hypot(b.x - a.x, b.y - a.y) * this.currentZoom >= 4;   // a segment of ~zero length is dropped
+                });
                 orthoDown = null;
-                if (moved < 6 || segLen < 4 || currentStroke.points.length < 2) {
-                    topCtx.clearRect(0, 0, this.pageW(pageIndex), this.pageH(pageIndex));
+                orthoSeg2 = null;
+                orthoFirst = null;
+                topCtx.clearRect(0, 0, this.pageW(pageIndex), this.pageH(pageIndex));
+                currentStroke = null;
+                if (moved < 6 || segs.length === 0) {
                     this.redrawOverlay(pageIndex);
-                    currentStroke = null;
                     this.endOrthoPath();
                     if (topCanvas.hasPointerCapture(e.pointerId)) topCanvas.releasePointerCapture(e.pointerId);
                     return;
                 }
                 const g = this.orthoPath?.g ?? newId();
-                currentStroke.g = g;
-                const dir: 'h' | 'v' = Math.abs(p1.x - p0.x) >= Math.abs(p1.y - p0.y) ? 'h' : 'v';
-                this.orthoPath = { page: pageIndex, g, end: { ...p1 }, dir, last: currentStroke, arrow: this.shapeArrow };
+                const page = this.noteData.pages[pageIndex];
+                for (const s of segs) {
+                    s.g = g;
+                    page.strokes.push(s);
+                    this.drawSmoothStroke(bottomCtx, s);
+                }
+                // One undo step for the whole L.
+                if (segs.length === 1) this.pushHistory(pageIndex, segs[0]);
+                else this.pushHistoryAction({ type: 'paste', page: pageIndex, strokes: [...segs], images: [] });
+                const last = segs[segs.length - 1];
+                const a = last.points[0], b = last.points[last.points.length - 1];
+                const dir: 'h' | 'v' = Math.abs(b.x - a.x) >= Math.abs(b.y - a.y) ? 'h' : 'v';
+                this.orthoPath = { page: pageIndex, g, end: { ...b }, dir, last, arrow: this.shapeArrow };
                 this.placeOrthoMarker();
+                this.redrawOverlay(pageIndex);
+                this.markThumbDirty(pageIndex);
+                this.requestSave();
+                if (topCanvas.hasPointerCapture(e.pointerId)) topCanvas.releasePointerCapture(e.pointerId);
+                return;
             }
             orthoDown = null;
             // A shape without dragging (just a tap) is skipped.

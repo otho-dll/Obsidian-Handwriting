@@ -3,8 +3,8 @@
 <h1 align="center">Handwritten Notebook</h1>
 
 <p align="center">
-  Write by hand on real pages in Obsidian - pressure ink, shapes, PDFs and a calculator,<br>
-  in notes that stay readable even without Obsidian.
+  Write by hand on real pages in Obsidian - made with engineering students in mind (and useful for everyone else):<br>
+  a circuit diagram builder, function plots, a calculator, shapes and PDFs, in notes that stay readable even without Obsidian.
 </p>
 
 <p align="center">
@@ -23,12 +23,13 @@
 
 | Feature | |
 |---|---|
-| **Pen, highlighter, eraser** | Pressure ink, a flat highlighter, an eraser that cuts strokes |
-| **Shapes** | Lines, arrows, rectangles, ellipses, triangles (isosceles and right) - dashes, fills, separate outline and fill colours |
+| **Pen, highlighter, eraser** | Pressure ink, a highlighter with flat or round ends, an eraser that cuts strokes |
+| **Shapes** | Lines, arrows, right-angle paths, rectangles, ellipses, triangles (isosceles and right) - dashes, fills, separate outline and fill colours |
 | **Lasso selection** | Move, scale, stretch, rotate, split, recolour, group, lock - even onto another page |
 | **Pages panel** | Thumbnails grouped into sections; jump to, reorder, duplicate and restyle pages; two pages side by side |
 | **Page styles** | Portrait, landscape or one endless page; dots, lines, grid, Cornell, music staff and more |
 | **Images and PDFs** | Paste and crop images, import a PDF and write on it |
+| **Circuit diagrams** | Build a schematic with the pen in seconds (resistors, coils, capacitors, sources, meters, labels); it is inserted as ordinary strokes you can erase and write on |
 | **Calculator and plots** | Scientific calculator with units and matrices, editable function plots |
 | **Export and history** | PDF export with bookmarks, printing, automatic version history |
 | **Tablets and OLED** | Palm rejection, pinch zoom, pen side button, dark paper, burn-in protection |
@@ -61,7 +62,7 @@ Click a section to expand it.
 | Tool | |
 |---|---|
 | **Pen** | Pressure-sensitive ink, three thicknesses, colour palette. Jitter is smoothed, sharp corners stay sharp. |
-| **Highlighter** | Transparent marker with flat ends. Overlapping strokes don't get darker. |
+| **Highlighter** | Transparent marker with flat ends, or round ends like a felt-tip pen (tap the highlighter again: *Highlighter ends*). Overlapping strokes don't get darker. |
 | **Eraser** | Cuts strokes where you rub. Same size on screen at every zoom; rub quickly and it grows up to 4×. The pen's eraser end and side button work too. |
 | **Shapes** | Line (optionally an arrow or a right-angle path), rectangle, ellipse, triangle (isosceles or right). |
 | **Selection** | Freehand lasso or rectangle. |
@@ -80,17 +81,20 @@ For **shapes** and for the **highlighter** separately: *Off* (left alone), *Whol
 #### Shapes
 - Line styles: solid, dashed, dotted, dash-dot.
 - Fill: outline only, solid, light fill with outline, or light fill only (the icons show the chosen shape).
-- **Right-angle path** (line options): draw like wires in a schematic editor - every segment is horizontal or
-  vertical, lifting the pen makes a corner and the next segment continues from the end at 90°. Tap without moving
-  (or press Escape, or change the tool) to finish. The segments form one group.
+- **Right-angle path** (line options): draw like wires in a schematic editor - one drag draws an **L**: two
+  perpendicular segments meeting at a corner, and moving the pen changes the length of both. The first movement
+  decides whether the L starts horizontally or vertically (go back to the start to choose again). Lift the pen and
+  drag again to continue from the end (the next L starts with a turn). Tap without moving (or press Escape, or change
+  the tool) to finish. The segments form one group.
 - **Outline and fill colours** are separate: with a fill on, the *Outline* / *Fill* fields before the palette pick
   which one the palette changes. Right-click or long-press *Fill* to match the outline again.
 - Hold **Shift** for straight angles, squares and circles.
 
 #### Selection
 - **Draw around** strokes and images, or **tap** one (it is selected with its whole group).
-- **Drag** to move - also onto another page. **Corner handle:** scale. **Edge handles** (middle of the right / bottom
-  edge): stretch only the width / height. **Round handle:** rotate (Shift = 15° steps).
+- **Drag** to move - also onto another page. **Corner handles** (all four corners): scale, the opposite corner stays
+  in place. **Edge handles** (middle of every edge): stretch only the width / height, the opposite edge stays in place.
+  **Round handle:** rotate (Shift = 15° steps).
 - **Split** (the dashed-square button next to the trash while strokes are selected, or *Split along a line…* in the
   selection options): draw a line across the selection - strokes and shapes are cut along it
   (filled shapes into two filled parts) and each side becomes its own group, so you can recolour one half.
@@ -164,7 +168,7 @@ pages panel, appear in the **Contents** tab, are found by **Go to page…** and 
 ### Images, PDFs and maths
 
 <details>
-<summary>Images and screenshots, PDF import, calculator, function plots</summary>
+<summary>Images and screenshots, PDF import, calculator, function plots, circuit diagrams</summary>
 
 #### Images and screenshots
 - **Paste** (Ctrl+V), **drag and drop**, or **⋯ → Insert image…**.
@@ -183,6 +187,27 @@ derivatives, equation solving and a unit converter. Click a result to copy it.
 ⋯ menu or command. Functions, parametric and polar curves, or data points with a fitted curve. Options include
 *One period*, π-based ticks, a clean style without a grid and size presets. Plots are inserted as images and stay
 **editable** (right-click → *Edit plot*).
+
+#### Circuit diagrams
+Toolbar button **Circuit**, ⋯ menu or command. Build the skeleton of a schematic in seconds - everything works with a
+pen or a finger, no keyboard needed:
+
+- The editor starts with one square mesh. **Tap a branch** to get **+** buttons (before, between and after its
+  elements) and pick an element: resistor, inductor, capacitor, voltage and current sources, dependent sources,
+  ammeter, voltmeter. Faster: tap an element in *Elements* and then tap branches to place it there (tap it again to stop).
+- **Drag from a node or a wire** to draw a new branch (it snaps to the grid, and square or parallel to slanted
+  branches). *Parallel branch* adds one next to the selected branch.
+- Elements are numbered automatically (R1, R2…, C1…, L1…, E1…, I1…). Labels are optional: `U_1`, `I_{x}` for
+  subscripts, `ohm` → Ω, `uF` → μF, or tap the symbol buttons under the label (Ω μ k M m _ ² ° ·) - handy with an
+  on-screen keyboard. Source arrows: ↑ / ↓ (← / →) buttons, or tap the source again.
+- Right-click or press and hold a branch, element or node for a menu (e.g. *Delete branch*). Draw a lasso from empty
+  space to select several branches and move them with the blue ✥ handle.
+- **Insert circuit** puts it in the middle of the view, selected. It is made of **ordinary pen strokes** (your pen
+  colour, no background): erase any part of it, recolour it or write on it like your own handwriting. One undo removes
+  the whole circuit. The editor keeps your last circuit until Obsidian is closed.
+- The bar under the panels, next to *Cancel* and *Insert circuit*, has Undo, Redo, Start over, **?** (these tips) and **⚙**: size in
+  the note (small / standard / large), automatic numbering, junction dots, + on all branches and "ask for label after
+  insert". Lines use your current pen thickness.
 
 </details>
 
@@ -224,6 +249,9 @@ python3 hnote2pdf.py ".Lecture 1.hnote-data/history/20261019-212953_0f315cad_aut
 
 Options: `--no-pattern`, `--pressure 0.7` / `--no-pressure`, `--vault PATH`. The file format is described at the top
 of the script and in [`src/tools/README.md`](src/tools/README.md).
+
+After updating the plugin, save the script again from Settings so it knows the newest features (for example round
+highlighter ends since 3.20.0).
 
 </details>
 
@@ -268,7 +296,7 @@ Settings → **Toolbar** decides what is on the toolbar:
 - **Tool options** - popups (tap the active tool again) or a **dock**: a floating bar under the toolbar with the active
   tool's thickness, colours and options.
 - **Tools** - hand, eraser, highlighter, selection, shapes, undo / redo (the pen and the colours always stay).
-- **Shortcut buttons** - calculator, zoom, contents, plot, insert image, pages panel, page style, screenshot,
+- **Shortcut buttons** - calculator, zoom, contents, plot, circuit, insert image, pages panel, page style, screenshot,
   import / export PDF, print, version history, fit to width. Reorder (‹ ›), remove (×) or add from *Available*.
 
 Everything else is in the **⋯ menu** (nothing appears twice), together with quick switches for pen pressure and palm
@@ -303,7 +331,7 @@ rejection.
 | Version history | on / off, interval, retention, space limit per note |
 | Performance | canvas sharpness, low-latency ink |
 | OLED care | dark paper, fading toolbar, pixel shift, dim when idle |
-| Advanced | debug logging, performance overlay |
+| Advanced | debug logging (with a log viewer and a button for the developer console – no keyboard needed), performance overlay |
 
 #### Commands (Ctrl/Cmd + P)
 
@@ -312,6 +340,7 @@ rejection.
 | Create new handwritten note | |
 | Open calculator | |
 | Insert function plot into handwritten note | |
+| Insert circuit into handwritten note | |
 | Export current note to PDF / Print current note | |
 | Show version history / Save a version now | |
 | Go to page… / Set title of the current page | |
@@ -319,6 +348,7 @@ rejection.
 | Move images of the current note into its hidden folder | for notes created before the hidden folder existed |
 | Remove unused images from the current note's hidden folder | |
 | Save the PDF converter script / Copy terminal line to convert this note to PDF with Python | |
+| Show debug log | when *Debug logging* is on (Settings → Advanced) |
 
 </details>
 

@@ -1,4 +1,4 @@
-import { ICON_CALC, ICON_FIT, ICON_IMAGE, ICON_PLOT, ICON_PAGES, ICON_PDF_IN, ICON_PDF_OUT, ICON_PRINT, ICON_PAGE_STYLE, ICON_SNIP, ICON_HISTORY, ICON_CONTENTS } from './icons';
+import { ICON_CIRCUIT, ICON_CALC, ICON_FIT, ICON_IMAGE, ICON_PLOT, ICON_PAGES, ICON_PDF_IN, ICON_PDF_OUT, ICON_PRINT, ICON_PAGE_STYLE, ICON_SNIP, ICON_HISTORY, ICON_CONTENTS } from './icons';
 
 /** Actions that can be pinned as shortcuts on the toolbar (Settings → Toolbar shortcuts). */
 export const QUICK_ACTIONS: { id: string; label: string; icon: string }[] = [
@@ -7,6 +7,7 @@ export const QUICK_ACTIONS: { id: string; label: string; icon: string }[] = [
     { id: 'zoom', label: 'Zoom (shows the current zoom; fit, 100%, favourites)', icon: '' },
     { id: 'contents', label: 'Contents (page titles, in the pages panel)', icon: ICON_CONTENTS },
     { id: 'plot', label: 'Function plot', icon: ICON_PLOT },
+    { id: 'circuit', label: 'Circuit diagram', icon: ICON_CIRCUIT },
     { id: 'image', label: 'Insert image', icon: ICON_IMAGE },
     { id: 'pagestyle', label: 'Page style (size, pattern, paper)', icon: ICON_PAGE_STYLE },
     { id: 'pages', label: 'Pages panel (thumbnails, add / move / delete pages, page style)', icon: ICON_PAGES },
@@ -16,7 +17,7 @@ export const QUICK_ACTIONS: { id: string; label: string; icon: string }[] = [
     { id: 'print', label: 'Print', icon: ICON_PRINT },
     { id: 'history', label: 'Version history', icon: ICON_HISTORY },
 ];
-export const DEFAULT_QUICK_ACTIONS = ['calculator', 'zoom', 'contents', 'pages'];
+export const DEFAULT_QUICK_ACTIONS = ['calculator', 'zoom', 'contents', 'pages', 'circuit'];
 
 /** Fixed toolbar buttons that can be moved to the "More" menu (Settings → Toolbar). The pen always stays. */
 export const TOOLBAR_ITEMS: { id: string; label: string }[] = [

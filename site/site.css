@@ -12,6 +12,9 @@
     --site-glow-strong: rgba(79, 117, 82, 0.5);
     --site-success: #6fa874;
     --site-bg: #f4f6f3;
+    /* Dot paper, like the plugin's "Dots" page (5 mm step, same dot colour). */
+    --site-dot: rgba(71, 85, 105, 0.13);
+    --site-dots: radial-gradient(circle at center, var(--site-dot) 0.9px, transparent 1.3px) 0 0 / 20px 20px;
     --site-bg-alt: rgba(79, 117, 82, 0.06);
     --site-section-alt: #eaefe9;
     --site-surface: #ffffff;
@@ -36,6 +39,7 @@
         --site-glow: rgba(79, 117, 82, 0.4);
         --site-glow-strong: rgba(97, 140, 101, 0.6);
         --site-bg: #121512;
+        --site-dot: rgba(226, 232, 240, 0.08);
         --site-bg-alt: rgba(255, 255, 255, 0.04);
         --site-section-alt: #171b17;
         --site-surface: #1b201b;
@@ -54,7 +58,7 @@ html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 body {
     margin: 0; font-family: var(--site-font); font-size: 17px; line-height: 1.6;
-    color: var(--site-text); background: var(--site-bg); overflow-x: hidden;
+    color: var(--site-text); background: var(--site-dots), var(--site-bg); overflow-x: hidden;
 }
 a { color: var(--site-accent-text); text-underline-offset: 2px; }
 a:hover { color: var(--site-accent-strong); }
@@ -123,7 +127,7 @@ code { font-family: var(--site-mono); font-size: 0.88em; background: var(--site-
 
 /* ---- sections ---- */
 .section { padding: clamp(48px, 7vw, 92px) 0; }
-.section-alt { background: var(--site-section-alt); border-top: 1px solid var(--site-border); }
+.section-alt { background: var(--site-dots), var(--site-section-alt); border-top: 1px solid var(--site-border); }
 .section-title { display: flex; align-items: center; justify-content: center; gap: 12px; font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.2rem); margin-bottom: 0.3em; }
 .section-title .logo { filter: drop-shadow(0 0 6px var(--site-glow)); }
 .section-lead { text-align: center; color: var(--site-muted); font-size: 1.05rem; margin: 0 auto 2em; max-width: 640px; }
@@ -138,7 +142,18 @@ code { font-family: var(--site-mono); font-size: 0.88em; background: var(--site-
 .icon-box svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
 /* features: compact cards, icon beside the text */
-.feature-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 14px; }
+.feature-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr; gap: 14px; }
+/* 2 / 3 columns on a 6-track grid, so a lone card in the last row can sit in the middle */
+@media (min-width: 680px) {
+    .feature-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    .feature { grid-column: span 3; }
+    .feature:last-child:nth-child(2n+1) { grid-column: 2 / span 4; }
+}
+@media (min-width: 1000px) {
+    .feature, .feature:last-child:nth-child(2n+1) { grid-column: span 2; }
+    .feature:last-child:nth-child(3n+1) { grid-column: 3 / span 2; }
+    .feature:nth-last-child(2):nth-child(3n+1) { grid-column: 2 / span 2; }
+}
 .feature { display: flex; gap: 14px; align-items: flex-start; }
 .feature h3 { margin-bottom: 0.2em; }
 

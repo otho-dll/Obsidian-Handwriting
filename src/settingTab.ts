@@ -1,5 +1,6 @@
 import { App, Notice, Platform, PluginSettingTab, Setting } from 'obsidian';
 import { canUseDisk, pickDiskFolder } from './disk';
+import { canOpenDevTools, toggleDevTools } from './desktop';
 import { PageTemplate, PAGE_TEMPLATES } from './templates';
 import { QUICK_ACTIONS, TOOLBAR_ITEMS } from './quickActions';
 import { setSvg, appendSvg } from './svg';
@@ -626,10 +627,25 @@ export class HandwritingSettingTab extends PluginSettingTab {
         }
         {
             const c = section('Advanced', false);
+            const logDesc = createFragment(f => {
+                f.appendText('Debug logging records what the plugin is doing behind the scenes – remembering your place in a note, page thumbnails, pen and shape events, the tool dock. ');
+                f.appendText('It changes nothing in your notes and nothing is sent anywhere: the messages stay on this device, in memory, until Obsidian is closed. ');
+                f.appendText('Turn it on only when reporting a problem: reproduce the problem, then open the log with the button below (or the command "Show debug log") and copy it into the report. ');
+                f.appendText('On a computer with a keyboard you can also see the messages in the developer console (Ctrl+Shift+I, log level "Verbose").');
+            });
+            const showLog = new Setting(createDiv())
+                .setName('Debug log')
+                .setDesc(canOpenDevTools()
+                    ? 'View or copy the collected messages, or open the developer console – no keyboard needed (tablet mode).'
+                    : 'View or copy the collected messages.')
+                .addButton(b => b.setButtonText('Show debug log').onClick(() => this.plugin.openDebugLog()));
+            if (canOpenDevTools()) showLog.addButton(b => b.setButtonText('Open developer console').onClick(() => { if (!toggleDevTools()) new Notice('The developer console is not available here.'); }));
             new Setting(c)
                 .setName('Debug logging')
-                .setDesc('Writes diagnostic messages (position memory, page thumbnails) to the developer console (Ctrl+Shift+I, log level "Verbose"). Only needed when reporting a problem.')
-                .addToggle(t => t.setValue(st.debugLog).onChange(async (v) => { st.debugLog = v; await this.plugin.saveSettings(); }));
+                .setDesc(logDesc)
+                .addToggle(t => t.setValue(st.debugLog).onChange(async (v) => { st.debugLog = v; showLog.settingEl.toggle(v); await this.plugin.saveSettings(); }));
+            c.appendChild(showLog.settingEl);
+            showLog.settingEl.toggle(st.debugLog);
             new Setting(c)
                 .setName('Performance overlay')
                 .setDesc('Shows frame rate, slow frames, long tasks, zoom and canvas size in the corner of the note. Useful for finding out what makes writing or scrolling lag.')
