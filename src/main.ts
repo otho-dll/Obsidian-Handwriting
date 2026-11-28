@@ -16,7 +16,6 @@ import { HandwritingSettingTab } from './settingTab';
 import { DebugLogModal } from './debugLog';
 import { saveConverterScript, copyConverterCommand } from './converter';
 import { detectSeries, schemeMatcher, seriesName } from './noteNaming';
-import { buzz, setHapticsLevel } from './haptics';
 import { historyMixin, HistoryMethods } from './view/history';
 import { geometryMixin, GeometryMethods } from './view/geometry';
 import { imagesMixin, ImagesMethods } from './view/images';
@@ -92,7 +91,6 @@ export default class HandwritingPlugin extends Plugin {
         addIcon('hw-pages', `<g transform="scale(4.1667)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON_PAGES}</g>`);
         addIcon(ICON_NEW_NOTE, '<g fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"><path d="M58 10H24a8 8 0 0 0-8 8v64a8 8 0 0 0 8 8h22"/><path d="M58 10l22 22v10"/><path d="M58 10v22h22"/><path d="M80 52l10 10-28 28H52V80z"/><path d="M28 64c6-8 10-8 13 0s7 8 11 0"/></g>');
         await this.loadSettings();
-        setHapticsLevel(this.settings.haptics);
         this.addSettingTab(new HandwritingSettingTab(this.app, this));
         this.registerView(VIEW_TYPE_HANDWRITING, (leaf) => new HandwritingView(leaf, this));
         this.registerExtensions(["hnote"], VIEW_TYPE_HANDWRITING);
@@ -323,7 +321,7 @@ export default class HandwritingPlugin extends Plugin {
         if (!oneOf(st.penButtonAction, ['none', 'snip', 'menu', 'undo', 'redo', 'swap', 'hold', 'radial'])) st.penButtonAction = DEFAULT_SETTINGS.penButtonAction;
         if (!oneOf(st.penHoldTool, ['pen', 'lasso', 'eraser', 'highlighter'])) st.penHoldTool = 'eraser';
         if (typeof st.fingerTapUndo !== 'boolean') st.fingerTapUndo = false;
-        if (!oneOf(st.haptics, ['off', 'light', 'strong'])) st.haptics = 'off';
+        delete st.haptics;   // vibration was tried in development and removed
         // the ribbon style (tried in development) became the panels style
         if (st.menuStyle === 'ribbon') st.menuStyle = 'panels';
         if (!oneOf(st.menuStyle, ['classic', 'panels'])) st.menuStyle = 'classic';
@@ -1248,7 +1246,7 @@ export class HandwritingView extends TextFileView {
             const barrelDown = e.type === 'pointerdown' && (e.button === 2 || (e.buttons & 2) !== 0);
             if (this.plugin.settings.penButtonAction === 'hold') {
                 // Held side button: this stroke is drawn with the hold tool (the event goes on to the page as usual).
-                if (barrelDown) { this.tempTool = this.plugin.settings.penHoldTool; buzz('snap'); }
+                if (barrelDown) this.tempTool = this.plugin.settings.penHoldTool;
             } else if (barrelDown || (e.type === 'pointermove' && e.button === 2)) {
                 // Pen side button: don't draw, run the configured action instead.
                 e.preventDefault();

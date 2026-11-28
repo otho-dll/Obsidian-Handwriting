@@ -347,8 +347,6 @@ Like the classic menu, the panels leave out whatever is already on the toolbar.
   - Also: page menu, undo, redo, Snipping Tool (Windows, the default there) or nothing. Holding the pen still on the
     screen (Windows press-and-hold) does not trigger it.
 - **Tap with two fingers to undo** (three fingers: redo). Off by default; ignored while the pen is near the screen.
-- **Vibration** (Android only): a short buzz of the device when a line snaps to an angle, a selection is made, the pen
-  button switches the tool or a wire snaps in the circuit editor. The pen itself can't vibrate from a plugin.
 - **Mouse:** middle-button drag and a hold-a-key drag (default Space) move the page.
 
 #### OLED care

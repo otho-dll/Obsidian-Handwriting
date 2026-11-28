@@ -1,7 +1,6 @@
 import { defineMixin } from './mixin';
 import { Menu, Notice, Platform } from 'obsidian';
 import { MENU_LAYOUT, QUICK_ACTIONS, quickAction } from '../quickActions';
-import { hapticsAvailable, setHapticsLevel } from '../haptics';
 
 export const menusMixin = defineMixin({
     /** Shows a menu right below the toolbar (not over it), aligned to the button. */
@@ -59,7 +58,6 @@ export const menusMixin = defineMixin({
         if (any) menu.addSeparator();
         menu.addItem(i => i.setTitle('Pen pressure').setIcon('pen-tool').setChecked(st.pressureEnabled).onClick(() => change(() => { st.pressureEnabled = !st.pressureEnabled; })));
         menu.addItem(i => i.setTitle('Palm rejection').setIcon('hand').setChecked(st.palmRejection !== 'off').onClick(() => change(() => { st.palmRejection = st.palmRejection === 'off' ? 'auto' : 'off'; })));
-        if (hapticsAvailable()) menu.addItem(i => i.setTitle('Vibration').setIcon('vibrate').setChecked(st.haptics !== 'off').onClick(() => change(() => { st.haptics = st.haptics === 'off' ? 'light' : 'off'; setHapticsLevel(st.haptics); })));
         menu.addItem(i => i.setTitle('Settings').setIcon('settings').onClick(() => this.openPluginSettings()));
         menu.onHide(() => this.moreMenuHidden?.());
         this.showMenuBelow(menu, anchorEl);

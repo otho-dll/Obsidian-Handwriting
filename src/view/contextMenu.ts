@@ -1,7 +1,6 @@
 import { defineMixin } from './mixin';
 import { Menu, Notice, Platform } from 'obsidian';
 import { Stroke, ImageItem } from '../types';
-import { buzz } from '../haptics';
 
 /** Page context menu (right click, long press, pen button). */
 export const contextMenuMixin = defineMixin({
@@ -47,7 +46,6 @@ export const contextMenuMixin = defineMixin({
         const to = this.prevTool && this.prevTool !== cur ? this.prevTool : cur !== 'pen' ? 'pen' : null;
         if (!to) { new Notice('Pick another tool once – the pen button then switches between the two.', 2500); return; }
         this.setTool?.(to);
-        buzz('snap');
     },
 
     // Menu after a right click or a long finger press.
