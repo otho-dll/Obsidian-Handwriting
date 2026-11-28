@@ -1,6 +1,7 @@
 import { defineMixin } from './mixin';
 import { Menu, Notice, Platform } from 'obsidian';
-import { QUICK_ACTIONS } from '../quickActions';
+import { MENU_LAYOUT, QUICK_ACTIONS, quickAction } from '../quickActions';
+import { hapticsAvailable, setHapticsLevel } from '../haptics';
 
 export const menusMixin = defineMixin({
     /** Shows a menu right below the toolbar (not over it), aligned to the button. */
@@ -15,7 +16,7 @@ export const menusMixin = defineMixin({
         else menu.showAtPosition({ x: Math.max(8, r.left), y });
     },
 
-    /** "More" menu: flat, no submenus. */
+    /** "More" menu (menu style 'classic'): flat, no submenus. */
     showMoreMenu(anchorEl: HTMLElement) {
         const st = this.plugin.settings;
         const change = (apply: () => void) => { apply(); void this.plugin.saveSettings(); this.plugin.refreshViews(); };
@@ -45,38 +46,20 @@ export const menusMixin = defineMixin({
 
         // Extra actions: the menu only has what is NOT on the toolbar as a shortcut (Settings → Toolbar).
         const onBar = new Set(st.quickActions);
-        type Item = { id: string; title: string; icon: string; run: () => void; checked?: boolean; show?: boolean };
-        const groups: Item[][] = [
-            [
-                { id: 'image', title: 'Insert image…', icon: 'image-plus', run: () => this.importImages() },
-                { id: 'screenshot', title: 'Screenshot (Snipping Tool)', icon: 'scissors', run: () => { void this.startSnip(); }, show: Platform.isWin },
-                { id: 'plot', title: 'Function plot…', icon: 'line-chart', run: () => this.insertPlot() },
-                { id: 'circuit', title: 'Circuit diagram…', icon: 'zap', run: () => this.insertCircuit() },
-                { id: 'calculator', title: 'Calculator', icon: 'calculator', run: () => this.toggleCalculator(), checked: !!this.calcPanelEl },
-            ],
-            [
-                { id: 'zoom', title: `Zoom (${Math.round(this.currentZoom * 100)}%)…`, icon: 'zoom-in', run: () => window.setTimeout(() => this.toggleZoomPanel(anchorEl), 30) },
-                { id: 'contents', title: 'Contents…', icon: 'list', run: () => window.setTimeout(() => this.toggleContentsPanel(anchorEl), 30) },
-                { id: 'pages', title: 'Pages panel', icon: 'hw-pages', run: () => this.togglePagesPanel(), checked: !!this.pagesPanelEl },
-                { id: 'pagestyle', title: 'Page style…', icon: 'paintbrush', run: () => this.openPageStylePop([this.pageIndexAtViewCenter()]) },
-            ],
-            [
-                { id: 'importpdf', title: 'Import PDF…', icon: 'file-input', run: () => this.importPDF() },
-                { id: 'exportpdf', title: 'Export to PDF', icon: 'file-output', run: () => { void this.exportToPDF(); } },
-                { id: 'print', title: 'Print…', icon: 'printer', run: () => { void this.printNote(); } },
-                { id: 'history', title: 'Version history…', icon: 'history', run: () => this.openVersionHistory() },
-            ],
-        ];
-        for (const g of groups) {
-            const items = g.filter(it => it.show !== false && !onBar.has(it.id));
+        for (const g of MENU_LAYOUT.classic) {
+            const items = this.actionItems(g.filter(id => !onBar.has(id)), () => anchorEl);
             if (items.length === 0) continue;
             if (any) menu.addSeparator();
             any = true;
-            for (const it of items) menu.addItem(i => { i.setTitle(it.title).setIcon(it.icon).onClick(it.run); if (it.checked) i.setChecked(true); });
+            for (const it of items) menu.addItem(i => {
+                i.setTitle(it.title).setIcon(quickAction(it.id ?? '')?.menuIcon ?? 'circle').onClick(it.run);
+                if (it.checked) i.setChecked(true);
+            });
         }
         if (any) menu.addSeparator();
         menu.addItem(i => i.setTitle('Pen pressure').setIcon('pen-tool').setChecked(st.pressureEnabled).onClick(() => change(() => { st.pressureEnabled = !st.pressureEnabled; })));
         menu.addItem(i => i.setTitle('Palm rejection').setIcon('hand').setChecked(st.palmRejection !== 'off').onClick(() => change(() => { st.palmRejection = st.palmRejection === 'off' ? 'auto' : 'off'; })));
+        if (hapticsAvailable()) menu.addItem(i => i.setTitle('Vibration').setIcon('vibrate').setChecked(st.haptics !== 'off').onClick(() => change(() => { st.haptics = st.haptics === 'off' ? 'light' : 'off'; setHapticsLevel(st.haptics); })));
         menu.addItem(i => i.setTitle('Settings').setIcon('settings').onClick(() => this.openPluginSettings()));
         menu.onHide(() => this.moreMenuHidden?.());
         this.showMenuBelow(menu, anchorEl);

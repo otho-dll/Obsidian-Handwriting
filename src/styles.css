@@ -1273,8 +1273,47 @@ canvas.hw-cur-ns { cursor: ns-resize; }
 .hw-radial { position: absolute; border-radius: 50%; background: color-mix(in srgb, var(--background-primary) 88%, transparent); border: 1px solid var(--background-modifier-border); box-shadow: var(--shadow-l); }
 .hw-radial::after { content: ''; position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: var(--text-faint); }
 .hw-radial-item.hw-radial-item { position: absolute; transform: translate(-50%, -50%); padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; box-shadow: none; touch-action: none; }
-.hw-radial-out { width: 44px; height: 44px; background: var(--background-secondary); color: var(--text-normal); }
-.hw-radial-in { width: 24px; height: 24px; background: var(--hw-radial-color, #000); border: 2px solid var(--background-primary); }
+.hw-radial-item.hw-radial-out { width: 44px; height: 44px; min-height: 0; background: var(--background-secondary); color: var(--text-normal); }
+.hw-radial-item.hw-radial-in { width: 24px; height: 24px; min-height: 0; min-width: 0; background: var(--hw-radial-color, #000); border: 2px solid var(--background-primary); }
 .hw-radial-out.is-active { background: var(--interactive-accent); color: var(--text-on-accent); }
 .hw-radial-in.is-active { outline: 2px solid var(--interactive-accent); outline-offset: 1px; }
 .hw-radial-item.is-hot, .hw-radial-item:hover { outline: 3px solid var(--interactive-accent); outline-offset: 1px; }
+
+/* --- Menu styles (Settings → Toolbar → Menu style): action panels and the ribbon --- */
+.hw-action-pop { max-width: min(420px, calc(100vw - 16px)); max-height: calc(100vh - 16px); overflow-y: auto; gap: 8px; }
+.hw-action-pop .hw-menu-title { margin: 4px 0 0; }
+.hw-action-pop.is-sheet { left: 0; right: 0; bottom: 0; top: auto; width: auto; max-width: none; max-height: 70vh; border-radius: 14px 14px 0 0; padding: 12px 14px calc(12px + env(safe-area-inset-bottom)); }
+.hw-actions { display: grid; gap: 6px; }
+.hw-actions-tiles { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); min-width: 280px; }
+.hw-action-pop.is-sheet .hw-actions-tiles { min-width: 0; }
+.hw-actions-list { grid-template-columns: 1fr; gap: 2px; }
+.hw-actions-row { display: flex; gap: 4px; }
+.hw-action.hw-action { display: flex; align-items: center; gap: 6px; height: auto; padding: 6px 8px; box-shadow: none; border: 1px solid transparent; background: transparent; color: var(--text-normal); white-space: nowrap; }
+.hw-action:hover { background: var(--background-modifier-hover); }
+.hw-action:disabled { opacity: 0.4; }
+.hw-action-icon { display: inline-flex; flex: 0 0 auto; }
+.hw-action-icon svg { width: 20px; height: 20px; }
+/* tiles: large icon above the label */
+.hw-actions-tiles .hw-action.hw-action { flex-direction: column; justify-content: center; min-height: 64px; padding: 8px 4px; white-space: normal; text-align: center; border-color: var(--background-modifier-border); border-radius: 10px; }
+.hw-actions-tiles .hw-action-icon svg { width: 24px; height: 24px; }
+.hw-actions-tiles .hw-action-label { font-size: 0.8em; line-height: 1.15; }
+.hw-action-pop.is-sheet .hw-actions-tiles .hw-action.hw-action { min-height: 72px; }
+.hw-actions .hw-action.is-checked:not([aria-pressed]) { background: var(--interactive-accent); color: var(--text-on-accent); }
+/* list: switches with a check box at the end */
+.hw-actions-list .hw-action.hw-action { justify-content: flex-start; }
+.hw-actions-list .hw-action-label { flex: 1 1 auto; text-align: left; }
+.hw-action-check { width: 16px; height: 16px; border: 1.5px solid var(--text-muted); border-radius: 4px; flex: 0 0 auto; }
+.hw-action.is-checked .hw-action-check { background: var(--interactive-accent); border-color: var(--interactive-accent); box-shadow: inset 0 0 0 2px var(--background-primary); }
+.hw-action-foot { display: flex; justify-content: flex-end; border-top: 1px solid var(--background-modifier-border); padding-top: 6px; }
+.hw-action-settings.hw-action-settings { display: flex; align-items: center; gap: 6px; box-shadow: none; }
+.hw-tool-btn.is-open { background: var(--background-modifier-hover); }
+
+/* ribbon: tabs above the toolbar; a tab other than Draw replaces the toolbar's content with its row */
+.hw-ribbon-tabs { display: flex; gap: 2px; padding: 2px 10px 0; background: var(--background-primary); flex-shrink: 0; overflow-x: auto; scrollbar-width: none; }
+.hw-ribbon-tabs.hw-hidden-item { display: none; }
+.hw-ribbon-tab.hw-ribbon-tab { height: 26px; padding: 0 12px; font-size: 0.85em; background: transparent; box-shadow: none; border: none; border-bottom: 2px solid transparent; border-radius: 0; color: var(--text-muted); }
+.hw-ribbon-tab.is-active { color: var(--text-normal); border-bottom-color: var(--interactive-accent); font-weight: 600; }
+.hw-ribbon-row { display: none; }
+.hw-toolbar.hw-ribbon-alt > :not(.hw-ribbon-row) { display: none !important; }
+.hw-toolbar.hw-ribbon-alt > .hw-ribbon-row { display: flex; align-items: center; min-height: 36px; }
+.hw-ribbon-row .hw-actions-row .hw-action.is-checked[aria-pressed] .hw-action-check { display: inline-block; }

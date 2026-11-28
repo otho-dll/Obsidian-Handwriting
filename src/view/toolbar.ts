@@ -1,6 +1,6 @@
 import { defineMixin } from './mixin';
 import { Menu, setIcon } from 'obsidian';
-import { ICON_PEN, ICON_ERASER, ICON_HIGHLIGHTER, ICON_UNDO, ICON_REDO, ICON_TRASH, ICON_SELECT_RECT, ICON_MORE, ICON_SHAPE_LINE, ICON_SHAPE_RECT, ICON_SHAPE_ELLIPSE, ICON_SHAPE_TRIANGLE, ICON_TRI_ISO, ICON_TRI_RIGHT, ICON_FILL, ICON_FILL_NONE, ICON_FILL_LIGHT, ICON_NO_OUTLINE, ICON_LASSO_LOOP, ICON_ARROW, ICON_DASH_SOLID, ICON_DASH_DASHED, ICON_DASH_DOTTED, ICON_DASH_DASHDOT, ICON_SHAPES, ICON_RIGHT_ANGLE_PATH, ICON_SPLIT, shapeFillIcons, thicknessWaveSvg } from '../icons';
+import { ICON_PEN, ICON_ERASER, ICON_HIGHLIGHTER, ICON_UNDO, ICON_REDO, ICON_TRASH, ICON_SELECT_RECT, ICON_MORE, ICON_INSERT, ICON_SHAPE_LINE, ICON_SHAPE_RECT, ICON_SHAPE_ELLIPSE, ICON_SHAPE_TRIANGLE, ICON_TRI_ISO, ICON_TRI_RIGHT, ICON_FILL, ICON_FILL_NONE, ICON_FILL_LIGHT, ICON_NO_OUTLINE, ICON_LASSO_LOOP, ICON_ARROW, ICON_DASH_SOLID, ICON_DASH_DASHED, ICON_DASH_DOTTED, ICON_DASH_DASHDOT, ICON_SHAPES, ICON_RIGHT_ANGLE_PATH, ICON_SPLIT, shapeFillIcons, thicknessWaveSvg } from '../icons';
 import { Stroke } from '../types';
 import { setSvg, appendSvg } from '../svg';
 
@@ -239,8 +239,13 @@ export const toolbarMixin = defineMixin({
         const secView = toolbar.createDiv({ cls: "hw-tool-section" });
         this.quickHost = secView.createDiv({ cls: 'hw-quick-slots' });
         this.renderQuickSlots();
+        const insertBtn = this.createToolBtn(secView, ICON_INSERT);
+        label(insertBtn, 'Insert (image, plot, circuit, PDF…)');
+        insertBtn.onclick = () => this.toggleInsertPanel(insertBtn);
+        this.insertBtn = insertBtn;
         const moreBtn = this.createToolBtn(secView, ICON_MORE);
         label(moreBtn, 'More');
+        this.moreBtn = moreBtn;
 
         // --- Popup panels (attached to <body> so the scrolling toolbar doesn't clip them) ---
         const placeBelow = (menu: HTMLElement, anchor: HTMLElement) => {
@@ -405,6 +410,7 @@ export const toolbarMixin = defineMixin({
         let moreOpen = false, moreWasOpen = false, moreHiddenAt = 0;
         moreBtn.addEventListener('pointerdown', () => { moreWasOpen = moreOpen; }, true);
         moreBtn.onclick = () => {
+            if (this.plugin.settings.menuStyle === 'panels') { closeShapeMenu(); closeStylePop(); this.toggleMorePanel(moreBtn); return; }
             // Tapping the button again while the menu is open only closes it (the menu closes itself on pointerdown).
             if (moreWasOpen || Date.now() - moreHiddenAt < 350) { moreWasOpen = false; return; }
             closeShapeMenu();
@@ -963,6 +969,8 @@ export const toolbarMixin = defineMixin({
         window.setTimeout(() => { updateFade(); syncArrows(); }, 50);
 
         void styleDivider;
+        this.buildRibbon(container, toolbar);
+        this.applyMenuStyle();
         updateSharedUI();
         this.layoutToolbar();
     },

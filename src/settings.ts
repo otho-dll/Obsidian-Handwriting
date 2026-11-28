@@ -40,6 +40,11 @@ export interface HandwritingSettings {
     handToolIntro?: boolean;
     /** Options of the active tool: popups (tap the tool again) or a floating dock under the toolbar. */
     toolOptionsLayout: 'popup' | 'dock';
+    /**
+     * Where the actions that are not on the toolbar live: 'classic' = one ⋯ menu; 'panels' = a "+ Insert" panel and
+     * ⋯ as a panel with sections; 'ribbon' = tabs above the toolbar (Draw / Insert / View / File / Pen), no ⋯.
+     */
+    menuStyle: 'classic' | 'panels' | 'ribbon';
 
     /** Thin / medium / thick widths (page pixels) of the pen, the highlighter and shapes. */
     penSizes: number[];
@@ -205,6 +210,7 @@ export const DEFAULT_SETTINGS: HandwritingSettings = {
     middleMousePan: true,
     panKey: 'Space',
     toolOptionsLayout: 'popup',
+    menuStyle: 'classic',
     penPalette: [...DEFAULT_PEN_PALETTE],
     highlighterPalette: [...DEFAULT_HIGHLIGHTER_PALETTE],
     pagesPanelSide: 'right',

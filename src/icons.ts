@@ -11,6 +11,7 @@ export const ICON_TRASH = `<path d="M3 6h18"></path><path d="M8 6V4h8v2"></path>
 export const ICON_SELECT_RECT = `<rect x="4" y="4" width="16" height="16" rx="1" stroke-dasharray="3 3"></rect>`;
 export const ICON_SNIP = `<circle cx="6" cy="6" r="3"></circle><path d="M8.12 8.12 12 12"></path><path d="M20 4 8.12 15.88"></path><circle cx="6" cy="18" r="3"></circle><path d="M14.8 14.8 20 20"></path>`;
 export const ICON_FIT = `<path d="M8 3H5a2 2 0 0 0-2 2v3"></path><path d="M21 8V5a2 2 0 0 0-2-2h-3"></path><path d="M3 16v3a2 2 0 0 0 2 2h3"></path><path d="M16 21h3a2 2 0 0 0 2-2v-3"></path><path d="M9 12h6"></path><path d="m11 10-2 2 2 2"></path><path d="m13 10 2 2-2 2"></path>`;
+export const ICON_INSERT = `<rect x="3" y="3" width="18" height="18" rx="3"></rect><path d="M12 8v8"></path><path d="M8 12h8"></path>`;
 export const ICON_MORE = `<circle cx="5" cy="12" r="1.2" fill="currentColor"></circle><circle cx="12" cy="12" r="1.2" fill="currentColor"></circle><circle cx="19" cy="12" r="1.2" fill="currentColor"></circle>`;
 export const ICON_IMAGE = `<rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"></path>`;
 

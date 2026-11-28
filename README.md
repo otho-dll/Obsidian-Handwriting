@@ -306,6 +306,14 @@ Settings → **Toolbar** decides what is on the toolbar:
 Everything else is in the **⋯ menu** (nothing appears twice), together with quick switches for pen pressure and palm
 rejection.
 
+**Menu style** (Settings → Toolbar) decides how that menu looks:
+- **Classic menu** (default): one ⋯ list.
+- **Insert button and panels**: a **+** button with large tiles for everything you can insert (image, screenshot, plot,
+  circuit, PDF, calculator), and ⋯ as a panel with *View*, *File* and *Pen* sections. In a narrow window both open as a
+  sheet at the bottom.
+- **Ribbon with tabs**: tabs above the toolbar - *Draw* (the toolbar), *Insert*, *View*, *File*, *Pen* - with labelled
+  buttons and no ⋯. After an action the ribbon goes back to *Draw*.
+
 #### Pen and touch
 - **Pen pressure** on / off and strength.
 - **Thickness:** the widths behind the thin / medium / thick buttons, for the pen, the highlighter and shapes.
@@ -340,7 +348,7 @@ rejection.
 | Pen and touch | pressure, thickness values, palm rejection, pinch zoom, long-press menu, two-finger tap to undo, mouse panning, pen side button (switch / hold / radial menu …), eraser on shapes / highlighter, selection mode |
 | Colors | five quick colours for the pen and for the highlighter |
 | Pages and view | default pattern and paper, favourite zooms, zoom when opening, two pages side by side (and which page is alone), dim other pages, pages panel side and columns |
-| Toolbar | tool options (popups / dock), tools and shortcut buttons |
+| Toolbar | tool options (popups / dock), menu style (classic / panels / ribbon), tools and shortcut buttons |
 | Files and export | where images are stored, the Python converter, new-note naming (and continuing numbered names), PDF location and resolution |
 | Version history | on / off, interval, retention, space limit per note |
 | Performance | canvas sharpness, low-latency ink |
