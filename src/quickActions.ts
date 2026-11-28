@@ -1,4 +1,4 @@
-import { ICON_CIRCUIT, ICON_CALC, ICON_FIT, ICON_IMAGE, ICON_PLOT, ICON_PAGES, ICON_PDF_IN, ICON_PDF_OUT, ICON_PRINT, ICON_PAGE_STYLE, ICON_SNIP, ICON_HISTORY, ICON_CONTENTS, ICON_ZOOM_PEN } from './icons';
+import { ICON_SOLID, ICON_CIRCUIT, ICON_CALC, ICON_FIT, ICON_IMAGE, ICON_PLOT, ICON_PAGES, ICON_PDF_IN, ICON_PDF_OUT, ICON_PRINT, ICON_PAGE_STYLE, ICON_SNIP, ICON_HISTORY, ICON_CONTENTS, ICON_ZOOM_PEN } from './icons';
 
 /**
  * Every action of the toolbar shortcuts and the menus (one list for all three menu styles).
@@ -14,6 +14,7 @@ export const QUICK_ACTIONS: QuickAction[] = [
     { id: 'contents', label: 'Contents (page titles, in the pages panel)', title: 'Contents…', icon: ICON_CONTENTS, menuIcon: 'list' },
     { id: 'plot', label: 'Function plot', title: 'Function plot…', icon: ICON_PLOT, menuIcon: 'line-chart' },
     { id: 'circuit', label: 'Circuit diagram', title: 'Circuit diagram…', icon: ICON_CIRCUIT, menuIcon: 'zap' },
+    { id: 'solid', label: '3D solid (cube, cylinder, cone, sphere…)', title: '3D solid…', icon: ICON_SOLID, menuIcon: 'box' },
     { id: 'image', label: 'Insert image', title: 'Insert image…', icon: ICON_IMAGE, menuIcon: 'image-plus' },
     { id: 'pagestyle', label: 'Page style (size, pattern, paper)', title: 'Page style…', icon: ICON_PAGE_STYLE, menuIcon: 'paintbrush' },
     { id: 'pages', label: 'Pages panel (thumbnails, add / move / delete pages, page style)', title: 'Pages panel', icon: ICON_PAGES, menuIcon: 'hw-pages' },
@@ -31,12 +32,12 @@ export const quickAction = (id: string) => QUICK_ACTIONS.find(a => a.id === id);
 export const MENU_LAYOUT = {
     /** The classic ⋯ menu: three groups divided by lines (only what is not on the toolbar). */
     classic: [
-        ['image', 'screenshot', 'plot', 'circuit', 'calculator'],
+        ['image', 'screenshot', 'plot', 'circuit', 'solid', 'calculator'],
         ['zoom', 'contents', 'pages', 'pagestyle'],
         ['importpdf', 'exportpdf', 'print', 'history'],
     ],
     /** "+ Insert" panel / Insert tab: everything that puts something into the note. */
-    insert: ['image', 'screenshot', 'plot', 'circuit', 'importpdf', 'calculator'],
+    insert: ['image', 'screenshot', 'plot', 'circuit', 'solid', 'importpdf', 'calculator'],
     view: ['zoom', 'fit', 'contents', 'pages', 'pagestyle'],
     file: ['exportpdf', 'print', 'history'],
 };

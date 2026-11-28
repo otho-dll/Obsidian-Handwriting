@@ -113,6 +113,7 @@ export const menusMixin = defineMixin({
             case 'fit': this.fitToWidth(); break;
             case 'plot': this.insertPlot(); break;
             case 'circuit': this.insertCircuit(); break;
+            case 'solid': this.insertSolid(); break;
             case 'image': this.importImages(); break;
             case 'pages': this.togglePagesPanel(); break;
             case 'pagestyle': this.openPageStylePop([this.pageIndexAtViewCenter()]); break;

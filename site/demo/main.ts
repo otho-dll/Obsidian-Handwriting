@@ -16,7 +16,7 @@ const DEMO_SETTINGS = {
     pagesPanelIntro: true,
     circuitIntro: true,
     toolbarHidden: [],
-    quickActions: ['calculator', 'zoom', 'contents', 'pages', 'circuit'],
+    quickActions: ['calculator', 'zoom', 'contents', 'pages', 'circuit', 'solid'],
 };
 
 interface DemoState { app: App; vault: Vault; plugin: HandwritingPlugin; leaf: WorkspaceLeaf; }

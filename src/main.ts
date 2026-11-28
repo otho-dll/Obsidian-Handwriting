@@ -24,6 +24,8 @@ import { canvasWindowMixin, CanvasWindowMethods } from './view/canvasWindow';
 import { imageInsertMixin, ImageInsertMethods } from './view/imageInsert';
 import { circuitInsertMixin, CircuitInsertMethods } from './view/circuitInsert';
 import type { CircuitSession } from './circuit/circuitModal';
+import { solidInsertMixin, SolidInsertMethods } from './view/solidInsert';
+import type { SolidSession } from './solid/solidModal';
 import { pageToolsMixin, PageToolsMethods } from './view/pageTools';
 import { thumbsMixin, ThumbsMethods } from './view/thumbs';
 import { currentPageMixin, CurrentPageMethods } from './view/currentPage';
@@ -72,6 +74,7 @@ export default class HandwritingPlugin extends Plugin {
     clip: { strokes: Stroke[]; images: ImageItem[]; from?: string } | null = null;
     /** Circuit editor state for this Obsidian session (kept when the dialog is closed). */
     circuitSession: CircuitSession | null = null;
+    solidSession: SolidSession | null = null;
     /** Copied whole page ("Copy page" / "Paste page" in the page menu) – also between notes. */
     pageClip: { page: PageData; from?: string } | null = null;
     openCalculator() { new CalculatorModal(this.app, this.calcState).open(); }
@@ -125,6 +128,16 @@ export default class HandwritingPlugin extends Plugin {
                 const v = this.app.workspace.getActiveViewOfType(HandwritingView);
                 if (!v) return false;
                 if (!checking) v.insertCircuit();
+                return true;
+            },
+        });
+        this.addCommand({
+            id: 'insert-solid',
+            name: 'Insert 3D solid into handwritten note',
+            checkCallback: (checking: boolean) => {
+                const v = this.app.workspace.getActiveViewOfType(HandwritingView);
+                if (!v) return false;
+                if (!checking) v.insertSolid();
                 return true;
             },
         });
@@ -1467,5 +1480,5 @@ export class HandwritingView extends TextFileView {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging -- the view's mixin methods (src/view/*.ts), added to the class right below
-export interface HandwritingView extends HistoryMethods, GeometryMethods, ImagesMethods, CanvasWindowMethods, ImageInsertMethods, PageToolsMethods, ThumbsMethods, CurrentPageMethods, PagesPanelMethods, ToolbarMethods, PdfIOMethods, StrokeDrawMethods, CalcPanelMethods, ClipboardMethods, MenusMethods, SelectionEditMethods, ShapeOpsMethods, VersionsMethods, PositionMethods, AssetsMethods, SelectionMethods, ContextMenuMethods, CircuitInsertMethods, NavigationMethods, InputMethods, PageSizeMethods, ContentsMethods, OledCareMethods, ZoomPanelMethods, TouchMethods, PrintMethods, InkLayerMethods, PerfOverlayMethods, RadialMenuMethods, ActionPanelsMethods, RibbonMethods {}
-Object.assign(HandwritingView.prototype, historyMixin, geometryMixin, imagesMixin, canvasWindowMixin, imageInsertMixin, pageToolsMixin, thumbsMixin, currentPageMixin, pagesPanelMixin, toolbarMixin, pdfIOMixin, strokeDrawMixin, calcPanelMixin, clipboardMixin, menusMixin, selectionEditMixin, shapeOpsMixin, versionsMixin, positionMixin, assetsMixin, selectionMixin, contextMenuMixin, circuitInsertMixin, navigationMixin, inputMixin, pageSizeMixin, contentsMixin, oledCareMixin, zoomPanelMixin, touchMixin, printMixin, inkLayerMixin, perfOverlayMixin, radialMenuMixin, actionPanelsMixin, ribbonMixin);
+export interface HandwritingView extends HistoryMethods, GeometryMethods, ImagesMethods, CanvasWindowMethods, ImageInsertMethods, PageToolsMethods, ThumbsMethods, CurrentPageMethods, PagesPanelMethods, ToolbarMethods, PdfIOMethods, StrokeDrawMethods, CalcPanelMethods, ClipboardMethods, MenusMethods, SelectionEditMethods, ShapeOpsMethods, VersionsMethods, PositionMethods, AssetsMethods, SelectionMethods, ContextMenuMethods, CircuitInsertMethods, NavigationMethods, InputMethods, PageSizeMethods, ContentsMethods, OledCareMethods, ZoomPanelMethods, TouchMethods, PrintMethods, InkLayerMethods, PerfOverlayMethods, RadialMenuMethods, ActionPanelsMethods, RibbonMethods, SolidInsertMethods {}
+Object.assign(HandwritingView.prototype, historyMixin, geometryMixin, imagesMixin, canvasWindowMixin, imageInsertMixin, pageToolsMixin, thumbsMixin, currentPageMixin, pagesPanelMixin, toolbarMixin, pdfIOMixin, strokeDrawMixin, calcPanelMixin, clipboardMixin, menusMixin, selectionEditMixin, shapeOpsMixin, versionsMixin, positionMixin, assetsMixin, selectionMixin, contextMenuMixin, circuitInsertMixin, navigationMixin, inputMixin, pageSizeMixin, contentsMixin, oledCareMixin, zoomPanelMixin, touchMixin, printMixin, inkLayerMixin, perfOverlayMixin, radialMenuMixin, actionPanelsMixin, ribbonMixin, solidInsertMixin);

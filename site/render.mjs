@@ -13,6 +13,7 @@ export const ICONS = {
     pagestyle: '<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M8.5 7h7M8.5 11h7M8.5 15h4"/>',
     image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>',
     plot: '<path d="M3 3v18h18"/><path d="M7 15c2-8 4-8 6-3s4 3 5-5"/>',
+    solid: '<path d="M12 2.8 4 7.2v9.6l8 4.4 8-4.4V7.2z"/><path d="M4 7.2 12 11.6l8-4.4"/><path d="M12 11.6v9.6"/>',
     circuit: '<path d="M2 12h5M17 12h5"/><rect x="7" y="9" width="10" height="6" rx="1"/><path d="M4 12v6h16v-6"/><circle cx="4" cy="18" r="1"/><circle cx="20" cy="18" r="1"/>',
     history: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
     phone: '<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M11 18h2"/>',

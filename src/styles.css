@@ -1317,3 +1317,25 @@ canvas.hw-cur-ns { cursor: ns-resize; }
 .hw-toolbar.hw-ribbon-alt > :not(.hw-ribbon-row) { display: none !important; }
 .hw-toolbar.hw-ribbon-alt > .hw-ribbon-row { display: flex; align-items: center; min-height: 36px; }
 .hw-ribbon-row .hw-actions-row .hw-action.is-checked[aria-pressed] .hw-action-check { display: inline-block; }
+
+/* --- Insert solid (shares the layout of the circuit editor: hw-circuit-*) --- */
+.hw-solid-sheet { display: flex; }
+.hw-solid-board.hw-solid-board { cursor: grab; }
+.hw-solid-board:active { cursor: grabbing; }
+.hw-solid-hint { position: absolute; right: 8px; bottom: 6px; font-size: 0.75em; color: #8a929b; pointer-events: none; }
+.hw-solid-palette { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); }
+.hw-solid-palette .hw-circuit-pal svg { width: 40px; height: 34px; }
+.hw-solid-dims, .hw-solid-viewopts { display: flex; flex-direction: column; gap: 4px; }
+.hw-solid-viewopts:empty { display: none; }
+.hw-solid-dim { display: flex; align-items: center; gap: 8px; }
+.hw-solid-dim-label { flex: 0 0 110px; color: var(--text-muted); font-size: 0.85em; }
+.hw-solid-dim input[type=range] { flex: 1 1 0; min-width: 0; }
+.hw-solid-dim input[type=number] { flex: 0 0 64px; width: 64px; }
+.hw-solid-seg { display: flex; flex-wrap: wrap; gap: 4px; }
+.hw-solid-seg button { flex: 1 0 auto; padding: 0 10px; }
+.hw-solid-seg button.is-active { background: var(--interactive-accent); color: var(--text-on-accent); }
+.hw-solid-check { display: flex; align-items: center; gap: 6px; font-size: 0.9em; }
+@media (max-width: 899px), (orientation: portrait) {
+    .hw-solid-palette { grid-auto-columns: minmax(64px, 1fr); }
+    .hw-solid-dim-label { flex-basis: 90px; }
+}

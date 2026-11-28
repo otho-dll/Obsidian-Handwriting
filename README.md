@@ -30,6 +30,7 @@
 | **Page styles** | Portrait, landscape or one endless page; dots, lines, grid, Cornell, music staff and more |
 | **Images and PDFs** | Paste and crop images, import a PDF and write on it |
 | **Circuit diagrams** | Build a schematic with the pen in seconds (resistors, coils, capacitors, sources, meters, labels); it is inserted as ordinary strokes you can erase and write on |
+| **3D solids** | Cube, cuboid, cylinder, tube, cone, sphere, torus, prisms, pyramids… in isometric, dimetric, oblique, perspective or three views, with dashed hidden edges and centre lines |
 | **Calculator and plots** | Scientific calculator with units and matrices, editable function plots |
 | **Export and history** | PDF export with bookmarks, printing, automatic version history |
 | **Tablets and OLED** | Palm rejection, pinch zoom, pen side button, dark paper, burn-in protection |
@@ -170,7 +171,7 @@ pages panel, appear in the **Contents** tab, are found by **Go to page…** and 
 ### Images, PDFs and maths
 
 <details>
-<summary>Images and screenshots, PDF import, calculator, function plots, circuit diagrams</summary>
+<summary>Images and screenshots, PDF import, calculator, function plots, circuit diagrams, 3D solids</summary>
 
 #### Images and screenshots
 - **Paste** (Ctrl+V), **drag and drop**, or **⋯ → Insert image…**.
@@ -212,6 +213,19 @@ pen or a finger, no keyboard needed:
 - The bar under the panels, next to *Cancel* and *Insert circuit*, has Undo, Redo, Start over, Fit, **?** (these tips) and **⚙**: size in
   the note (small / standard / large), automatic numbering, junction dots, + on all branches and "ask for label after
   insert". Lines use your current pen thickness.
+
+#### 3D solids
+⋯ menu (or *+ Insert* / the *Insert* tab), a toolbar shortcut, or the command *Insert 3D solid*. Pick a solid, set its
+dimensions with the sliders and choose the view:
+
+- **Solids:** cube, cuboid, cylinder, tube, cone, truncated cone, sphere, hemisphere, torus, prism and pyramid (3-8
+  sides), tetrahedron, wedge.
+- **Views:** isometric, dimetric (ISO 5456-3), cavalier and cabinet (oblique), perspective (with a strength slider),
+  three views (front, top, side; first angle E or third angle A) and free - **drag the preview** to turn the solid.
+- **Hidden edges:** hidden, dashed or solid; **centre lines** (dash-dot) for round solids, prisms and pyramids.
+- The outlines of curved surfaces are computed exactly, so cylinders, spheres and rings stay smooth.
+- **Insert solid** puts it in the middle of the view as one group of ordinary pen strokes in your pen colour: one tap
+  selects it, the eraser cuts it, one undo removes it. ⚙ sets the size in the note.
 
 </details>
 
@@ -363,6 +377,7 @@ rejection.
 | Open calculator | |
 | Insert function plot into handwritten note | |
 | Insert circuit into handwritten note | |
+| Insert 3D solid into handwritten note | |
 | Export current note to PDF / Print current note | |
 | Show version history / Save a version now | |
 | Go to page… / Set title of the current page | |

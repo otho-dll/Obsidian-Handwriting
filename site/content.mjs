@@ -9,7 +9,7 @@
 //  • Placeholders, filled in when the site is built:
 //      {{version}}  plugin version from manifest.json      {{pluginId}}  plugin id from manifest.json
 //      {{year}}     current year                           {{links.repo}}, {{links.issues}}, … any value below
-//  • Icons (features, buttons): pen, shapes, lasso, pages, pagestyle, image, plot, circuit, history, phone,
+//  • Icons (features, buttons): pen, shapes, lasso, pages, pagestyle, image, plot, circuit, solid, history, phone,
 //    download, github, demo, bug, reset, file, pdf, settings, fullscreen, sparkles, grid, shield, lock, code.
 //  • Build and preview:  npm run site:dev   (http://localhost:8080)   ·   npm run site:build  (→ build/site/)
 // ============================================================================================================
@@ -69,6 +69,7 @@ export default {
             { icon: 'pagestyle', title: 'Page styles', text: 'Portrait, landscape or endless; dots, lines, grid, Cornell, music staff and more.' },
             { icon: 'image', title: 'Images & PDFs', text: 'Paste, crop and rotate images; import a PDF and write on it.' },
             { icon: 'circuit', title: 'Circuit diagrams', text: 'Build a schematic in seconds with the pen – resistors, coils, capacitors, sources and meters – and it lands in your note as ordinary strokes you can erase and write on.' },
+            { icon: 'solid', title: '3D solids', text: 'Cubes, cylinders, cones, spheres, tori, prisms and more in isometric, dimetric, oblique, perspective or three orthographic views – with dashed hidden edges and centre lines, as strokes you can erase.' },
             { icon: 'plot', title: 'Calculator & plots', text: 'Scientific calculator with units and matrices; editable function plots.' },
             { icon: 'history', title: 'Export & history', text: 'PDF export with bookmarks, printing, and automatic version history.' },
             { icon: 'phone', title: 'Tablets & OLED care', text: 'Palm rejection, pinch zoom, pen button, dark paper and burn-in protection.' },

@@ -6,7 +6,7 @@ import {
     FolderOpen, Group, Hand, Heading, Highlighter, History, ImagePlus, Lasso, List, Lock, LockOpen, Map as MapIcon,
     Maximize, Minimize, MoveVertical, Paintbrush, PenTool, Pencil, Plus, Printer, Redo2, RotateCcw, Rows2, RotateCw, Ruler, Save,
     Scissors, Search, SendToBack, Settings, Shapes, SlidersHorizontal, Trash, Trash2, Undo2, Ungroup, X, ZoomIn,
-    Download, Info, Zap, ArrowLeftRight, FlipVertical, ListChecks, CircleHelp, Equal, ArrowLeft, BookOpen, Scan, Vibrate,
+    Download, Info, Zap, ArrowLeftRight, FlipVertical, ListChecks, CircleHelp, Equal, ArrowLeft, BookOpen, Scan, Vibrate, Box,
     type IconNode as LucideIconNode,
 } from 'lucide';
 
@@ -29,7 +29,7 @@ const LUCIDE: Record<string, IconNode> = {
     'shapes': Shapes, 'sliders-horizontal': SlidersHorizontal, 'trash': Trash, 'trash-2': Trash2, 'undo-2': Undo2,
     'ungroup': Ungroup, 'x': X, 'zoom-in': ZoomIn, 'download': Download, 'info': Info,
     'zap': Zap, 'arrow-left-right': ArrowLeftRight, 'flip-vertical': FlipVertical, 'list-checks': ListChecks, 'circle-help': CircleHelp, 'equal': Equal, 'arrow-left': ArrowLeft,
-    'book-open': BookOpen, 'scan': Scan, 'vibrate': Vibrate,
+    'book-open': BookOpen, 'scan': Scan, 'vibrate': Vibrate, 'box': Box,
 };
 
 /** Obsidian names (or old Lucide names) → the Lucide icon used here. */
