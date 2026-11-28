@@ -241,7 +241,10 @@ function dropCovered(lines: Polyline[], keep: Polyline[], tol: number): Polyline
     return out;
 }
 
-/** Drops points that lie on the straight line between their neighbours (long straight edges keep 2 points). */
+/**
+ * Drops points that lie on the straight line between their neighbours (long straight edges keep 2 points). A point
+ * where the line turns back is kept even though it is on that line (a circle seen edge-on goes there and back).
+ */
 function simplify(pl: Polyline, tol: number): Polyline {
     if (pl.length <= 2) return pl;
     const out: Polyline = [pl[0]];
@@ -249,7 +252,8 @@ function simplify(pl: Polyline, tol: number): Polyline {
         const a = out[out.length - 1], b = pl[i], c = pl[i + 1];
         const L = Math.hypot(c[0] - a[0], c[1] - a[1]);
         const dist = L < 1e-9 ? Math.hypot(b[0] - a[0], b[1] - a[1]) : Math.abs((c[0] - a[0]) * (a[1] - b[1]) - (a[0] - b[0]) * (c[1] - a[1])) / L;
-        if (dist > tol) out.push(b);
+        const back = (b[0] - a[0]) * (c[0] - b[0]) + (b[1] - a[1]) * (c[1] - b[1]) < 0;
+        if (dist > tol || back) out.push(b);
     }
     out.push(pl[pl.length - 1]);
     return out;

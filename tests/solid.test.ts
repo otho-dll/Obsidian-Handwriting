@@ -98,3 +98,11 @@ test('centre lines run past the outline; an axis seen end-on becomes a cross', (
     assert.ok(below.some(l => flat(l)[1] < 1e-6 && flat(l)[0] > 60), 'horizontal line of the cross');
     assert.ok(below.some(l => flat(l)[0] < 1e-6 && flat(l)[1] > 60), 'vertical line of the cross');
 });
+
+test('a circle seen edge-on stays a full line (front view of a cylinder is a rectangle)', () => {
+    const g = buildSolid('cylinder', { r: 30, h: 80 });
+    const r = drawSolid(g, orthoView(0, 0), { hidden: 'dashed', axes: false });
+    const horiz = r.visible.filter(l => { const b = linesBox([l]); return b.y1 - b.y0 < 1e-6; });
+    assert.equal(horiz.length, 2, 'top and bottom edge');
+    for (const l of horiz) { const b = linesBox([l]); assert.ok(Math.abs(b.x1 - b.x0 - 60) < 0.5, `width ${b.x1 - b.x0}`); }
+});
