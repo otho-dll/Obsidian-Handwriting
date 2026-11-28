@@ -9,6 +9,8 @@ import {
 import { DIRECTIONAL, GRID, ORDER, SHEET_H, SHEET_W, TYPES, type Circuit, type ElType } from './types';
 
 const W = SHEET_W, H = SHEET_H, G = GRID;
+/** Zoom limits of the sheet (pinch, wheel, Fit). */
+const ZMIN = 0.5, ZMAX = 3;
 const INK = '#1f2328', ACC = '#4f6fd8';
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -69,6 +71,13 @@ export class CircuitModal extends Modal {
     private optOpen = false;
     private optWasOpen = false;
     private optHiddenAt = 0;
+    /** Visible part of the sheet (editor px). Its aspect follows the board, so a tall board shows a tall sheet. */
+    private vb = { x: 0, y: 0, w: W, h: H };
+    private zoom = 1;
+    private fitted = false;
+    /** Touch pointers on the board; two of them pinch / pan instead of editing. */
+    private touches = new Map<number, Vec>();
+    private gesture: { d0: number; m0: Vec; vb0: { x: number; y: number; w: number; h: number }; z0: number } | null = null;
 
     private sheet!: HTMLElement;
     private svg!: SVGSVGElement;
@@ -147,6 +156,7 @@ export class CircuitModal extends Modal {
             this.toast('Started over – Undo brings it back');
         });
         strip.createDiv({ cls: 'hw-circuit-strip-sep' });
+        tool('scan', 'Fit the circuit in view', () => { this.fitView(true); this.render(); });
         tool('circle-help', 'How it works', () => this.helpEl.toggleClass('is-open', !this.helpEl.hasClass('is-open')));
         const optBtn = tool('settings', 'Options', (ev) => {
             // The menu closes itself on pointerdown outside it – a tap on the button while it was open only closes it.
@@ -180,7 +190,7 @@ export class CircuitModal extends Modal {
 
         this.bindPointer();
         modalEl.addEventListener('keydown', ev => this.onKey(ev));
-        this.ro = new ResizeObserver(() => this.render());
+        this.ro = new ResizeObserver(() => { this.syncViewBox(); this.render(); });
         this.ro.observe(this.svg);
         this.render();
     }
@@ -190,6 +200,48 @@ export class CircuitModal extends Modal {
         window.clearTimeout(this.holdT);
         this.contentEl.empty();
     }
+
+    // ---------- view: visible part of the sheet ----------
+    /** Matches the viewBox to the board's size (keeps the centre); the first time centres the circuit. */
+    private syncViewBox() {
+        const r = this.svg.getBoundingClientRect();
+        if (r.width < 1 || r.height < 1) return;
+        const cx = this.vb.x + this.vb.w / 2, cy = this.vb.y + this.vb.h / 2;
+        this.vb.w = W / this.zoom;
+        this.vb.h = this.vb.w * r.height / r.width;
+        this.vb.x = cx - this.vb.w / 2; this.vb.y = cy - this.vb.h / 2;
+        if (!this.fitted) { this.fitted = true; this.fitView(false); }
+        this.applyViewBox();
+    }
+    private applyViewBox() {
+        const v = this.vb;
+        this.svg.setAttribute('viewBox', `${f1(v.x)} ${f1(v.y)} ${f1(v.w)} ${f1(v.h)}`);
+    }
+    /** Centres the view on the circuit. `zoomToo`: also zooms so it fills the view (otherwise only zooms out if it doesn't fit). */
+    private fitView(zoomToo: boolean) {
+        const r = this.svg.getBoundingClientRect();
+        if (r.width < 1 || r.height < 1) return;
+        let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+        for (const n of this.S.nodes) { x0 = Math.min(x0, n.x); y0 = Math.min(y0, n.y); x1 = Math.max(x1, n.x); y1 = Math.max(y1, n.y); }
+        if (!isFinite(x0)) { x0 = 0; y0 = 0; x1 = W; y1 = H; }
+        const pad = 70, bw = x1 - x0 + 2 * pad, bh = y1 - y0 + 2 * pad, asp = r.height / r.width;
+        // zoom at which the box fits: the view is W/z wide and W/z*asp tall
+        const fit = Math.min(W / bw, W * asp / bh);
+        this.zoom = Math.max(ZMIN, Math.min(zoomToo ? Math.min(ZMAX, fit) : 1, fit));
+        this.vb.w = W / this.zoom; this.vb.h = this.vb.w * asp;
+        this.vb.x = (x0 + x1) / 2 - this.vb.w / 2; this.vb.y = (y0 + y1) / 2 - this.vb.h / 2;
+        this.applyViewBox();
+    }
+    /** Zooms by factor k around the client point (cx, cy). */
+    private zoomAt(k: number, cx: number, cy: number) {
+        const r = this.svg.getBoundingClientRect(); if (r.width < 1) return;
+        const z = Math.max(ZMIN, Math.min(ZMAX, this.zoom * k));
+        const px = this.vb.x + (cx - r.left) * this.vb.w / r.width, py = this.vb.y + (cy - r.top) * this.vb.h / r.height;
+        this.zoom = z; this.vb.w = W / z; this.vb.h = this.vb.w * r.height / r.width;
+        this.vb.x = px - (cx - r.left) * this.vb.w / r.width; this.vb.y = py - (cy - r.top) * this.vb.h / r.height;
+        this.applyViewBox();
+    }
+    private bounds() { const v = this.vb; return { x0: v.x, y0: v.y, x1: v.x + v.w, y1: v.y + v.h }; }
 
     /** ⚙ menu: size in the note and editor options (checkable items). */
     private showOptions(ev: MouseEvent) {
@@ -228,10 +280,11 @@ export class CircuitModal extends Modal {
     private openPicker(eid: string, k: number, p: Vec) {
         this.picker = { eid, k };
         this.pickerEl.addClass('is-open');
-        const r = this.sheet.getBoundingClientRect(), s = r.width / W, pw = this.pickerEl.offsetWidth, ph = this.pickerEl.offsetHeight;
-        let x = p.x * s + 16, y = p.y * s + 16;
-        if (x + pw > r.width - 6) x = Math.max(6, p.x * s - pw - 16);
-        if (y + ph > r.height - 6) y = Math.max(6, p.y * s - ph - 16);
+        const r = this.sheet.getBoundingClientRect(), s = r.width / this.vb.w, pw = this.pickerEl.offsetWidth, ph = this.pickerEl.offsetHeight;
+        const sx = (p.x - this.vb.x) * s, sy = (p.y - this.vb.y) * s;
+        let x = sx + 16, y = sy + 16;
+        if (x + pw > r.width - 6) x = Math.max(6, sx - pw - 16);
+        if (y + ph > r.height - 6) y = Math.max(6, sy - ph - 16);
         this.pickerEl.style.left = x + 'px'; this.pickerEl.style.top = y + 'px';
         this.render();
     }
@@ -259,7 +312,7 @@ export class CircuitModal extends Modal {
         ids = ids.includes(eid) ? ids.filter(x => x !== eid) : [...ids, eid];
         this.sel = ids.length === 0 ? null : ids.length === 1 && !this.addMode ? { kind: 'edge', id: ids[0] } : { kind: 'multi', ids };
     }
-    private viewK() { const r = this.svg.getBoundingClientRect(); return (r.width ? W / r.width : 1) * (this.coarse ? 1.35 : 1); }
+    private viewK() { const r = this.svg.getBoundingClientRect(); return (r.width ? this.vb.w / r.width : 1) * (this.coarse ? 1.35 : 1); }
     private handlePos(): Vec | null {
         const ids = this.selEdges();
         if (!ids.length || (this.drag && this.drag.type !== 'group')) return null;
@@ -306,7 +359,7 @@ export class CircuitModal extends Modal {
         const defs = svgEl(svg, 'defs', {});
         const pat = svgEl(defs, 'pattern', { id: 'hwc-dots', x: -G / 2, y: -G / 2, width: G, height: G, patternUnits: 'userSpaceOnUse' });
         svgEl(pat, 'circle', { cx: G / 2, cy: G / 2, r: 1.1, fill: '#d3d8de' });
-        svgEl(svg, 'rect', { width: W, height: H, fill: 'url(#hwc-dots)' });
+        svgEl(svg, 'rect', { x: f1(this.vb.x), y: f1(this.vb.y), width: f1(this.vb.w), height: f1(this.vb.h), fill: 'url(#hwc-dots)' });
 
         const pe = this.plusEdges(), selEdge = this.sel?.kind === 'edge' ? this.sel.id : null;
         const band = (eid: string, op: number) => { const g = sc.geoms.get(eid); if (g) svgEl(svg, 'line', { x1: g.A.x, y1: g.A.y, x2: g.B.x, y2: g.B.y, stroke: ACC, 'stroke-opacity': op, 'stroke-width': 12 * vk, 'stroke-linecap': 'round' }); };
@@ -503,7 +556,7 @@ export class CircuitModal extends Modal {
             }
             if (a === 'par') {
                 const before = this.snapshot();
-                const ne = parallel(S, s.id);
+                const ne = parallel(S, s.id, this.bounds());
                 if (!ne) { this.toast('No room here – draw the branch by dragging from a node'); return; }
                 this.session.hist.push(before); this.session.redo.length = 0;
                 this.sel = { kind: 'edge', id: ne.id }; this.render(); return;
@@ -516,17 +569,22 @@ export class CircuitModal extends Modal {
     // ---------- pointer: mouse, pen and touch all go through here ----------
     private pos(ev: { clientX: number; clientY: number }): Vec {
         const r = this.svg.getBoundingClientRect();
-        return { x: (ev.clientX - r.left) * W / r.width, y: (ev.clientY - r.top) * H / r.height };
+        return { x: this.vb.x + (ev.clientX - r.left) * this.vb.w / r.width, y: this.vb.y + (ev.clientY - r.top) * this.vb.h / r.height };
     }
     private setPointer(ev: PointerEvent) {
         this.coarse = ev.pointerType !== 'mouse';
         const r = this.svg.getBoundingClientRect();
-        this.tolk = (r.width ? W / r.width : 1) * (this.coarse ? 1.5 : 1);
+        this.tolk = (r.width ? this.vb.w / r.width : 1) * (this.coarse ? 1.5 : 1);
     }
     private bindPointer() {
         const svg = this.svg;
         svg.addEventListener('pointerdown', ev => {
             if (ev.button > 0) return;
+            if (ev.pointerType === 'touch') {
+                this.touches.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+                if (this.touches.size >= 2) { svg.setPointerCapture(ev.pointerId); this.startGesture(); return; }
+            }
+            if (this.gesture) return;
             this.setPointer(ev);
             const lf = this.selBox.querySelector('.hw-circuit-label');
             if (lf && activeDocument.activeElement === lf) (lf as HTMLInputElement).blur();
@@ -543,6 +601,8 @@ export class CircuitModal extends Modal {
             }
         });
         svg.addEventListener('pointermove', ev => {
+            if (this.touches.has(ev.pointerId)) this.touches.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+            if (this.gesture) { this.moveGesture(); return; }
             const p = this.pos(ev);
             this.mouse = p;
             if (this.down) {
@@ -552,15 +612,32 @@ export class CircuitModal extends Modal {
             }
             if (ev.pointerType !== 'touch') { this.setPointer(ev); this.updateHover(p); }
         });
+        const lift = (ev: PointerEvent) => {
+            this.touches.delete(ev.pointerId);
+            if (this.gesture) { if (this.touches.size < 2) this.gesture = null; if (this.touches.size === 0) this.render(); return true; }
+            return false;
+        };
         svg.addEventListener('pointerup', ev => {
             window.clearTimeout(this.holdT);
+            if (lift(ev)) return;
             if (!this.down) return;
             const p = this.pos(ev), d = this.down; this.down = null;
             if (this.drag) { const dr = this.drag; this.drag = null; this.finishDrag(dr, p); } else this.click(d.h, p, d.add);
             if (ev.pointerType === 'touch') this.hoverEdge = null; else this.updateHover(p);
             this.render();
         });
-        svg.addEventListener('pointercancel', () => { window.clearTimeout(this.holdT); this.down = null; this.drag = null; this.render(); });
+        svg.addEventListener('pointercancel', ev => { lift(ev); window.clearTimeout(this.holdT); this.cancelEdit(); this.render(); });
+        // Mouse wheel: scroll the sheet; Ctrl + wheel (or a trackpad pinch): zoom.
+        svg.addEventListener('wheel', ev => {
+            ev.preventDefault();
+            if (ev.ctrlKey || ev.metaKey) this.zoomAt(Math.exp(-ev.deltaY * 0.01), ev.clientX, ev.clientY);
+            else {
+                const r = svg.getBoundingClientRect(), k = r.width ? this.vb.w / r.width : 1;
+                const dx = ev.shiftKey ? ev.deltaY : ev.deltaX, dy = ev.shiftKey ? 0 : ev.deltaY;
+                this.vb.x += dx * k; this.vb.y += dy * k; this.applyViewBox();
+            }
+            this.render();
+        }, { passive: false });
         svg.addEventListener('pointerleave', () => { if (!this.down && this.hoverEdge) { this.hoverEdge = null; this.render(); } });
         svg.addEventListener('contextmenu', ev => {
             ev.preventDefault();
@@ -568,6 +645,33 @@ export class CircuitModal extends Modal {
             window.clearTimeout(this.holdT); this.down = null;
             this.openMenu(this.uiHit(this.pos(ev)), ev.clientX, ev.clientY);
         });
+    }
+
+    /** Drops an unfinished press / drag (e.g. a second finger came down). A node or group drag already moved things: put them back. */
+    private cancelEdit() {
+        const d = this.drag;
+        if (d && (d.type === 'move' || d.type === 'group') && this.session.hist.length) this.setCircuit(JSON.parse(this.session.hist.pop()!) as Circuit);
+        this.down = null; this.drag = null;
+    }
+    private twoTouches(): [Vec, Vec] | null { const t = [...this.touches.values()]; return t.length >= 2 ? [t[0], t[1]] : null; }
+    private startGesture() {
+        window.clearTimeout(this.holdT);
+        this.cancelEdit(); this.hidePicker();
+        const t = this.twoTouches(); if (!t) return;
+        this.gesture = { d0: Math.max(1, Math.hypot(t[1].x - t[0].x, t[1].y - t[0].y)), m0: { x: (t[0].x + t[1].x) / 2, y: (t[0].y + t[1].y) / 2 }, vb0: { ...this.vb }, z0: this.zoom };
+        this.render();
+    }
+    private moveGesture() {
+        const g = this.gesture, t = this.twoTouches(); if (!g || !t) return;
+        const r = this.svg.getBoundingClientRect(); if (r.width < 1) return;
+        const d = Math.max(1, Math.hypot(t[1].x - t[0].x, t[1].y - t[0].y)), m = { x: (t[0].x + t[1].x) / 2, y: (t[0].y + t[1].y) / 2 };
+        const z = Math.max(ZMIN, Math.min(ZMAX, g.z0 * d / g.d0));
+        // the sheet point under the first midpoint stays under the fingers
+        const px = g.vb0.x + (g.m0.x - r.left) * g.vb0.w / r.width, py = g.vb0.y + (g.m0.y - r.top) * g.vb0.h / r.height;
+        this.zoom = z; this.vb.w = W / z; this.vb.h = this.vb.w * r.height / r.width;
+        this.vb.x = px - (m.x - r.left) * this.vb.w / r.width; this.vb.y = py - (m.y - r.top) * this.vb.h / r.height;
+        this.applyViewBox();
+        this.render();
     }
 
     private updateHover(p: Vec) {

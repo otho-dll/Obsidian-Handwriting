@@ -205,7 +205,9 @@ pen or a finger, no keyboard needed:
 - **Insert circuit** puts it in the middle of the view, selected. It is made of **ordinary pen strokes** (your pen
   colour, no background): erase any part of it, recolour it or write on it like your own handwriting. One undo removes
   the whole circuit. The editor keeps your last circuit until Obsidian is closed.
-- The bar under the panels, next to *Cancel* and *Insert circuit*, has Undo, Redo, Start over, **?** (these tips) and **⚙**: size in
+- **Pinch with two fingers** to zoom and move the sheet (mouse: wheel scrolls, Ctrl + wheel zooms); **Fit** centres the
+  circuit again. On a portrait tablet the sheet fills the whole free height and the panels sit compactly below it.
+- The bar under the panels, next to *Cancel* and *Insert circuit*, has Undo, Redo, Start over, Fit, **?** (these tips) and **⚙**: size in
   the note (small / standard / large), automatic numbering, junction dots, + on all branches and "ask for label after
   insert". Lines use your current pen thickness.
 

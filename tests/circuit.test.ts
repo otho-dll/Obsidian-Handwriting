@@ -57,6 +57,18 @@ test('parallel branch of a diagonal is exactly parallel', () => {
     }
 });
 
+test('parallel branch stays inside the visible sheet bounds', () => {
+    // a lone vertical branch at the right edge of the default sheet: the new branch goes to the left
+    const c1 = emptyCircuit();
+    const e1 = addEdge(c1, addNode(c1, 870, 200), addNode(c1, 870, 400));
+    const n1 = parallel(c1, e1.id)!;
+    assert.ok(n1 && nodeById(c1, n1.a)!.x < 870);
+    // a view barely wider than the branch: no room on either side
+    const c2 = emptyCircuit();
+    const e2 = addEdge(c2, addNode(c2, 300, 200), addNode(c2, 300, 400));
+    assert.equal(parallel(c2, e2.id, { x0: 280, y0: 180, x1: 320, y1: 420 }), null);
+});
+
 test('resample gives segments no longer than the step', () => {
     const pl = resample([[0, 0], [100, 0], [100, 37.5], [3, 3]], 3);
     for (let i = 1; i < pl.length; i++) assert.ok(Math.hypot(pl[i][0] - pl[i - 1][0], pl[i][1] - pl[i - 1][1]) <= 3 + 1e-9);

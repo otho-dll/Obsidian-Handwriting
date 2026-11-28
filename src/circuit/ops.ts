@@ -258,8 +258,12 @@ export function addWire(c: Circuit, st: End, en: End, tol: number): CircuitEdge 
 }
 
 // ---- parallel branch ----
-/** Adds a branch parallel to `eid`. Returns the new branch, or null when there is no room. */
-export function parallel(c: Circuit, eid: string): CircuitEdge | null {
+/** Visible part of the sheet (editor px): a parallel branch must stay inside it. */
+export interface SheetBounds { x0: number; y0: number; x1: number; y1: number }
+export const DEFAULT_BOUNDS: SheetBounds = { x0: 0, y0: 0, x1: SHEET_W, y1: SHEET_H };
+
+/** Adds a branch parallel to `eid`. Returns the new branch, or null when there is no room inside `bounds`. */
+export function parallel(c: Circuit, eid: string, bounds: SheetBounds = DEFAULT_BOUNDS): CircuitEdge | null {
     const e = edgeById(c, eid); if (!e) return null;
     const g = edgeGeom(c, e), A = g.A, B = g.B, nn = canonNormal(g.d);
     const sampleFree = (P: Vec, Q: Vec) => {
@@ -267,7 +271,7 @@ export function parallel(c: Circuit, eid: string): CircuitEdge | null {
         for (let i = 0; i <= n; i++) {
             const p = { x: P.x + (Q.x - P.x) * i / n, y: P.y + (Q.y - P.y) * i / n };
             if ([A, B, P, Q].some(r => Math.hypot(p.x - r.x, p.y - r.y) < 14)) continue;
-            if (p.x < 10 || p.y < 10 || p.x > SHEET_W - 10 || p.y > SHEET_H - 10) return false;
+            if (p.x < bounds.x0 + 10 || p.y < bounds.y0 + 10 || p.x > bounds.x1 - 10 || p.y > bounds.y1 - 10) return false;
             for (const m of c.nodes) if (Math.hypot(p.x - m.x, p.y - m.y) < 14) return false;
             const nearEnd = Math.hypot(p.x - A.x, p.y - A.y) < 26 || Math.hypot(p.x - B.x, p.y - B.y) < 26;
             for (const q of c.edges) {
