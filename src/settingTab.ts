@@ -363,11 +363,10 @@ export class HandwritingSettingTab extends PluginSettingTab {
                     .onChange(async (v) => { st.toolOptionsLayout = v as HandwritingSettings['toolOptionsLayout']; await save(); }));
             new Setting(c)
                 .setName('Menu style')
-                .setDesc('Where everything that is not on the toolbar lives. Classic: one ⋯ menu. Insert button and panels: a + button with large tiles for images, plots, circuits and PDFs, and ⋯ as a panel with View, File and Pen sections. Ribbon: tabs above the toolbar (Draw, Insert, View, File, Pen) – after an action it goes back to Draw.')
+                .setDesc('Where everything that is not on the toolbar lives. Classic: one ⋯ menu. Insert button and panels: a + button with large tiles for images, plots, circuits and PDFs, and ⋯ as a panel with View, File and Pen sections.')
                 .addDropdown(d => d
                     .addOption('classic', 'Classic menu (⋯)')
                     .addOption('panels', 'Insert button and panels')
-                    .addOption('ribbon', 'Ribbon with tabs')
                     .setValue(st.menuStyle)
                     .onChange(async (v) => { st.menuStyle = v as HandwritingSettings['menuStyle']; await save(); }));
             // Tools: chips that are on (on the toolbar) or off (in the ⋯ menu).

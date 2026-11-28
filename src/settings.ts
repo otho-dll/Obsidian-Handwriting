@@ -42,9 +42,9 @@ export interface HandwritingSettings {
     toolOptionsLayout: 'popup' | 'dock';
     /**
      * Where the actions that are not on the toolbar live: 'classic' = one ⋯ menu; 'panels' = a "+ Insert" panel and
-     * ⋯ as a panel with sections; 'ribbon' = tabs above the toolbar (Draw / Insert / View / File / Pen), no ⋯.
+     * ⋯ as a panel of tiles in sections.
      */
-    menuStyle: 'classic' | 'panels' | 'ribbon';
+    menuStyle: 'classic' | 'panels';
 
     /** Thin / medium / thick widths (page pixels) of the pen, the highlighter and shapes. */
     penSizes: number[];

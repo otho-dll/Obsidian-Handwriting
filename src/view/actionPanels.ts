@@ -2,12 +2,11 @@ import { defineMixin } from './mixin';
 import { Platform, setIcon } from 'obsidian';
 import { MENU_LAYOUT, quickAction } from '../quickActions';
 import { ICON_ERASER, ICON_HIGHLIGHTER, ICON_LASSO_LOOP, ICON_REDO, ICON_SHAPES, ICON_UNDO } from '../icons';
-import { hapticsAvailable, setHapticsLevel } from '../haptics';
 import { setSvg } from '../svg';
 
 /**
- * One button of an action grid / row. `svg`: icon paths (24-unit box) or `lucide`: an Obsidian icon name.
- * `toggle`: a switch (shown with a check box, keeps the panel open).
+ * One tile of an action panel. `svg`: icon paths (24-unit box) or `lucide`: an Obsidian icon name.
+ * `toggle`: a switch – the tile is highlighted while it is on, and the panel stays open.
  */
 export interface ActionItem {
     /** The quick action behind it (for its Obsidian menu icon). */
@@ -25,8 +24,8 @@ export interface ActionItem {
 const SHEET_BELOW = 600;
 
 /**
- * Shared parts of the "panels" and "ribbon" menu styles (Settings → Toolbar → Menu style):
- * the items of each group, a grid / row of labelled buttons and the popover that holds them.
+ * Menu style "Insert button and panels" (Settings → Toolbar → Menu style): a "+" panel with everything that inserts
+ * something, and ⋯ as a panel of tiles in sections. Like the classic menu, nothing on the toolbar appears twice.
  */
 export const actionPanelsMixin = defineMixin({
     /** Whether an action appears in the menus on this device. */
@@ -35,12 +34,16 @@ export const actionPanelsMixin = defineMixin({
         return !!a && (!a.windowsOnly || Platform.isWin);
     },
 
-    /** Items for the actions `ids`; `anchor` is where panels opened by an action (zoom, contents) attach. */
+    /**
+     * Items for the actions `ids` that are not on the toolbar already; `anchor` is where panels opened by an action
+     * (zoom, contents) attach.
+     */
     actionItems(ids: string[], anchor: () => HTMLElement | undefined, after?: () => void): ActionItem[] {
+        const onBar = new Set(this.plugin.settings.quickActions);
         const out: ActionItem[] = [];
         for (const id of ids) {
             const a = quickAction(id);
-            if (!a || !this.actionVisible(id)) continue;
+            if (!a || !this.actionVisible(id) || onBar.has(id)) continue;
             const title = id === 'zoom' ? `Zoom (${Math.round(this.currentZoom * 100)}%)…` : a.title;
             const checked = id === 'calculator' ? !!this.calcPanelEl : id === 'pages' ? !!this.pagesPanelEl : false;
             out.push({
@@ -56,23 +59,18 @@ export const actionPanelsMixin = defineMixin({
         return out;
     },
 
-    /** Switches of the pen and the view (pressure, palm rejection, vibration, two pages). */
+    /** Switches of the view (two pages) and the pen (pressure, palm rejection). */
     toggleItems(which: 'pen' | 'view'): ActionItem[] {
         const st = this.plugin.settings;
         const change = (apply: () => void) => { apply(); void this.plugin.saveSettings(); this.plugin.refreshViews(); };
         if (which === 'view') {
-            return [{ title: 'Two pages side by side', lucide: 'book-open', toggle: true, checked: st.twoPageMode !== 'off',
+            return [{ title: 'Two pages', lucide: 'book-open', toggle: true, checked: st.twoPageMode !== 'off',
                 run: () => change(() => { st.twoPageMode = st.twoPageMode === 'off' ? 'always' : 'off'; }) }];
         }
-        const items: ActionItem[] = [
+        return [
             { title: 'Pen pressure', lucide: 'pen-tool', toggle: true, checked: st.pressureEnabled, run: () => change(() => { st.pressureEnabled = !st.pressureEnabled; }) },
-            { title: 'Palm rejection', lucide: 'hand', toggle: true, checked: st.palmRejection !== 'off', run: () => change(() => { st.palmRejection = st.palmRejection === 'off' ? 'auto' : 'off'; }) },
+            { title: 'Palm rejection', lucide: 'shield-check', toggle: true, checked: st.palmRejection !== 'off', run: () => change(() => { st.palmRejection = st.palmRejection === 'off' ? 'auto' : 'off'; }) },
         ];
-        if (hapticsAvailable()) {
-            items.push({ title: 'Vibration', lucide: 'vibrate', toggle: true, checked: st.haptics !== 'off',
-                run: () => change(() => { st.haptics = st.haptics === 'off' ? 'light' : 'off'; setHapticsLevel(st.haptics); }) });
-        }
-        return items;
     },
 
     /** Tools (and undo / redo) that Settings → Toolbar moved off the toolbar. */
@@ -95,23 +93,24 @@ export const actionPanelsMixin = defineMixin({
         return out;
     },
 
-    /** Labelled buttons: 'tiles' = a grid of large tiles, 'row' = one row (ribbon), 'list' = rows with a check box. */
-    buildActionGrid(host: HTMLElement, items: ActionItem[], variant: 'tiles' | 'row' | 'list' = 'tiles') {
-        const box = host.createDiv({ cls: `hw-actions hw-actions-${variant}` });
+    /** A grid of equal tiles (icon above the label). A switch that is on is highlighted and has a ✓. */
+    buildActionGrid(host: HTMLElement, items: ActionItem[]) {
+        const box = host.createDiv({ cls: 'hw-actions' });
         for (const it of items) {
             const b = box.createEl('button', { cls: 'hw-action' });
             b.setAttribute('aria-label', it.title);
+            b.setAttribute('title', it.title);
             if (it.toggle) b.setAttribute('aria-pressed', String(!!it.checked));
-            b.toggleClass('is-checked', !!it.checked);
+            b.toggleClass('is-on', !!it.checked);
             if (it.disabled) b.disabled = true;
             const ic = b.createSpan({ cls: 'hw-action-icon' });
             if (it.svg) setSvg(ic, this.iconSvg(it.svg));
             else if (it.lucide) setIcon(ic, it.lucide);
             b.createSpan({ cls: 'hw-action-label', text: it.title.replace(/…$/, '') });
-            if (it.toggle) b.createSpan({ cls: 'hw-action-check' });
+            if (it.toggle) setIcon(b.createSpan({ cls: 'hw-action-tick' }), 'check');
             b.onclick = () => {
                 it.run();
-                if (it.toggle) { it.checked = !it.checked; b.toggleClass('is-checked', it.checked); b.setAttribute('aria-pressed', String(it.checked)); }
+                if (it.toggle) { it.checked = !it.checked; b.toggleClass('is-on', it.checked); b.setAttribute('aria-pressed', String(it.checked)); }
             };
         }
         return box;
@@ -159,35 +158,42 @@ export const actionPanelsMixin = defineMixin({
         doc.addEventListener('keydown', onKey, true);
     },
 
-    /** "+ Insert" (menu style 'panels'): a grid of everything that inserts something. */
+    /** Sections of tiles; empty sections are left out. */
+    fillActionSections(pop: HTMLElement, sections: [string, ActionItem[]][]) {
+        for (const [title, items] of sections) {
+            if (items.length === 0) continue;
+            pop.createDiv({ cls: 'hw-menu-title', text: title });
+            this.buildActionGrid(pop, items);
+        }
+    },
+
+    /** "+ Insert": everything that inserts something and is not on the toolbar already. */
     toggleInsertPanel(anchor: HTMLElement) {
         this.openActionPop('insert', anchor, (pop, close) => {
-            pop.createDiv({ cls: 'hw-menu-title', text: 'Insert' });
-            this.buildActionGrid(pop, this.actionItems(MENU_LAYOUT.insert, () => anchor, close), 'tiles');
+            this.fillActionSections(pop, [['Insert', this.actionItems(MENU_LAYOUT.insert, () => anchor, close)]]);
         });
     },
 
-    /** ⋯ in menu style 'panels': hidden tools, then View / File / Pen sections and Settings. */
+    /** ⋯ as a panel: Tools (moved off the toolbar), View, File, Pen (with Settings). */
     toggleMorePanel(anchor: HTMLElement) {
         this.openActionPop('more', anchor, (pop, close) => {
-            pop.addClass('hw-more-pop');
-            const tools = this.hiddenToolItems(close);
-            if (tools.length > 0) this.buildActionGrid(pop, tools, 'row');
-            const sec = (title: string, items: ActionItem[], variant: 'tiles' | 'list') => {
-                if (items.length === 0) return;
-                if (title) pop.createDiv({ cls: 'hw-menu-title', text: title });
-                this.buildActionGrid(pop, items, variant);
-            };
-            sec('View', this.actionItems(MENU_LAYOUT.view, () => anchor, close), 'tiles');
-            sec('', this.toggleItems('view'), 'list');
-            sec('File', this.actionItems(MENU_LAYOUT.file, () => anchor, close), 'tiles');
-            sec('Pen', this.toggleItems('pen'), 'list');
-            const foot = pop.createDiv({ cls: 'hw-action-foot' });
-            const set = foot.createEl('button', { cls: 'hw-action-settings' });
-            setIcon(set.createSpan(), 'settings');
-            set.createSpan({ text: 'Settings' });
-            set.onclick = () => { close(); this.openPluginSettings(); };
+            const settings: ActionItem = { title: 'Settings', lucide: 'settings', run: () => { close(); this.openPluginSettings(); } };
+            this.fillActionSections(pop, [
+                ['Tools', this.hiddenToolItems(close)],
+                ['View', [...this.actionItems(MENU_LAYOUT.view, () => anchor, close), ...this.toggleItems('view')]],
+                ['File', this.actionItems(MENU_LAYOUT.file, () => anchor, close)],
+                ['Pen', [...this.toggleItems('pen'), settings]],
+            ]);
         });
+    },
+
+    /** Shows "+" in the panels style, when it has something to show (everything may be on the toolbar already). */
+    applyMenuStyle() {
+        const style = this.plugin.settings.menuStyle;
+        if (style !== this.menuStyleShown) this.closeActionPop();
+        this.menuStyleShown = style;
+        const empty = this.actionItems(MENU_LAYOUT.insert, () => undefined).length === 0;
+        this.insertBtn?.toggleClass('hw-hidden-item', style !== 'panels' || empty);
     },
 });
 export type ActionPanelsMethods = typeof actionPanelsMixin;

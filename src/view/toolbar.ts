@@ -969,7 +969,6 @@ export const toolbarMixin = defineMixin({
         window.setTimeout(() => { updateFade(); syncArrows(); }, 50);
 
         void styleDivider;
-        this.buildRibbon(container, toolbar);
         this.applyMenuStyle();
         updateSharedUI();
         this.layoutToolbar();

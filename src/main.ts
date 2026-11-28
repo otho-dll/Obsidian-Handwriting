@@ -55,7 +55,6 @@ import { inkLayerMixin, InkLayerMethods } from './view/inkLayer';
 import { perfOverlayMixin, PerfOverlayMethods } from './view/perfOverlay';
 import { radialMenuMixin, RadialMenuMethods } from './view/radialMenu';
 import { actionPanelsMixin, ActionPanelsMethods } from './view/actionPanels';
-import { ribbonMixin, RibbonMethods, type RibbonTab } from './view/ribbon';
 
 /** Built stroke path plus the data used to tell that the stroke has not changed. */
 export interface PathCacheEntry {
@@ -325,7 +324,9 @@ export default class HandwritingPlugin extends Plugin {
         if (!oneOf(st.penHoldTool, ['pen', 'lasso', 'eraser', 'highlighter'])) st.penHoldTool = 'eraser';
         if (typeof st.fingerTapUndo !== 'boolean') st.fingerTapUndo = false;
         if (!oneOf(st.haptics, ['off', 'light', 'strong'])) st.haptics = 'off';
-        if (!oneOf(st.menuStyle, ['classic', 'panels', 'ribbon'])) st.menuStyle = 'classic';
+        // the ribbon style (tried in development) became the panels style
+        if (st.menuStyle === 'ribbon') st.menuStyle = 'panels';
+        if (!oneOf(st.menuStyle, ['classic', 'panels'])) st.menuStyle = 'classic';
         if (!oneOf(st.highlighterErase, ['off', 'whole', 'partial'])) st.highlighterErase = 'whole';
         // 3.16: "erase shapes" switch + whole/partial merged into one off/whole/partial setting.
         if (st.shapeEraseOn === false) st.shapeErase = 'off';
@@ -694,12 +695,8 @@ export class HandwritingView extends TextFileView {
     /** The open action panel ("+ Insert" / ⋯ in menu style 'panels'). */
     actionPopKey: string | null = null;
     actionPopClose: (() => void) | null = null;
-    /** Menu style 'ribbon': the tabs, the row of the open tab and the toolbar it sits in. */
-    ribbonTab: RibbonTab = 'draw';
+    /** The menu style the toolbar shows now (a change closes an open panel). */
     menuStyleShown: HandwritingSettings['menuStyle'] | null = null;
-    ribbonTabsEl: HTMLElement | null = null;
-    ribbonRowEl: HTMLElement | null = null;
-    ribbonToolbarEl: HTMLElement | null = null;
     activePageIndex = 0;
     redrawTimer: number | null = null;
     virtRaf: number | null = null;
@@ -1480,5 +1477,5 @@ export class HandwritingView extends TextFileView {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging -- the view's mixin methods (src/view/*.ts), added to the class right below
-export interface HandwritingView extends HistoryMethods, GeometryMethods, ImagesMethods, CanvasWindowMethods, ImageInsertMethods, PageToolsMethods, ThumbsMethods, CurrentPageMethods, PagesPanelMethods, ToolbarMethods, PdfIOMethods, StrokeDrawMethods, CalcPanelMethods, ClipboardMethods, MenusMethods, SelectionEditMethods, ShapeOpsMethods, VersionsMethods, PositionMethods, AssetsMethods, SelectionMethods, ContextMenuMethods, CircuitInsertMethods, NavigationMethods, InputMethods, PageSizeMethods, ContentsMethods, OledCareMethods, ZoomPanelMethods, TouchMethods, PrintMethods, InkLayerMethods, PerfOverlayMethods, RadialMenuMethods, ActionPanelsMethods, RibbonMethods, SolidInsertMethods {}
-Object.assign(HandwritingView.prototype, historyMixin, geometryMixin, imagesMixin, canvasWindowMixin, imageInsertMixin, pageToolsMixin, thumbsMixin, currentPageMixin, pagesPanelMixin, toolbarMixin, pdfIOMixin, strokeDrawMixin, calcPanelMixin, clipboardMixin, menusMixin, selectionEditMixin, shapeOpsMixin, versionsMixin, positionMixin, assetsMixin, selectionMixin, contextMenuMixin, circuitInsertMixin, navigationMixin, inputMixin, pageSizeMixin, contentsMixin, oledCareMixin, zoomPanelMixin, touchMixin, printMixin, inkLayerMixin, perfOverlayMixin, radialMenuMixin, actionPanelsMixin, ribbonMixin, solidInsertMixin);
+export interface HandwritingView extends HistoryMethods, GeometryMethods, ImagesMethods, CanvasWindowMethods, ImageInsertMethods, PageToolsMethods, ThumbsMethods, CurrentPageMethods, PagesPanelMethods, ToolbarMethods, PdfIOMethods, StrokeDrawMethods, CalcPanelMethods, ClipboardMethods, MenusMethods, SelectionEditMethods, ShapeOpsMethods, VersionsMethods, PositionMethods, AssetsMethods, SelectionMethods, ContextMenuMethods, CircuitInsertMethods, NavigationMethods, InputMethods, PageSizeMethods, ContentsMethods, OledCareMethods, ZoomPanelMethods, TouchMethods, PrintMethods, InkLayerMethods, PerfOverlayMethods, RadialMenuMethods, ActionPanelsMethods, SolidInsertMethods {}
+Object.assign(HandwritingView.prototype, historyMixin, geometryMixin, imagesMixin, canvasWindowMixin, imageInsertMixin, pageToolsMixin, thumbsMixin, currentPageMixin, pagesPanelMixin, toolbarMixin, pdfIOMixin, strokeDrawMixin, calcPanelMixin, clipboardMixin, menusMixin, selectionEditMixin, shapeOpsMixin, versionsMixin, positionMixin, assetsMixin, selectionMixin, contextMenuMixin, circuitInsertMixin, navigationMixin, inputMixin, pageSizeMixin, contentsMixin, oledCareMixin, zoomPanelMixin, touchMixin, printMixin, inkLayerMixin, perfOverlayMixin, radialMenuMixin, actionPanelsMixin, solidInsertMixin);
