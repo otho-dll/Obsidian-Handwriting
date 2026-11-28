@@ -155,6 +155,7 @@ export const inputMixin = defineMixin({
             if (e.pointerType === 'pen') {
                 if (e.type === 'pointerdown' && e.button === 5) return 'eraser';
                 if (e.type === 'pointermove' && (e.buttons & 32) !== 0) return 'eraser';
+                if (this.tempTool) return this.tempTool;   // side button held (Settings: pen side button = hold)
             }
             return this.currentTool;
         };

@@ -50,6 +50,7 @@ import { zoomPanelMixin, ZoomPanelMethods } from './view/zoomPanel';
 import { touchMixin, TouchMethods } from './view/touch';
 import { inkLayerMixin, InkLayerMethods } from './view/inkLayer';
 import { perfOverlayMixin, PerfOverlayMethods } from './view/perfOverlay';
+import { radialMenuMixin, RadialMenuMethods } from './view/radialMenu';
 
 /** Built stroke path plus the data used to tell that the stroke has not changed. */
 export interface PathCacheEntry {
@@ -303,7 +304,9 @@ export default class HandwritingPlugin extends Plugin {
         for (const k of ['minimapStyle', 'minimapSize', 'minimapThumbs', 'minimapLength']) delete st[k];
         if (typeof st.pdfExportFolder !== 'string') st.pdfExportFolder = '';
         if (typeof st.pdfLastFolder !== 'string') st.pdfLastFolder = '';
-        if (!oneOf(st.penButtonAction, ['none', 'snip', 'menu', 'undo', 'redo'])) st.penButtonAction = DEFAULT_SETTINGS.penButtonAction;
+        if (!oneOf(st.penButtonAction, ['none', 'snip', 'menu', 'undo', 'redo', 'swap', 'hold', 'radial'])) st.penButtonAction = DEFAULT_SETTINGS.penButtonAction;
+        if (!oneOf(st.penHoldTool, ['pen', 'lasso', 'eraser', 'highlighter'])) st.penHoldTool = 'eraser';
+        if (typeof st.fingerTapUndo !== 'boolean') st.fingerTapUndo = false;
         if (!oneOf(st.highlighterErase, ['off', 'whole', 'partial'])) st.highlighterErase = 'whole';
         // 3.16: "erase shapes" switch + whole/partial merged into one off/whole/partial setting.
         if (st.shapeEraseOn === false) st.shapeErase = 'off';
@@ -635,6 +638,16 @@ export class HandwritingView extends TextFileView {
     deleteSelBtn: HTMLButtonElement | null = null;
     activateLasso: (() => void) | null = null;
     setTool: ((t: 'pen' | 'highlighter' | 'eraser' | 'lasso' | 'shape' | 'hand') => void) | null = null;
+    /** The tool before the current one (pen side button 'swap'). */
+    prevTool: HandwritingView['currentTool'] | null = null;
+    /** The tool the toolbar last showed as active (to notice a change and remember `prevTool`). */
+    toolSeen: HandwritingView['currentTool'] = 'pen';
+    /** Tool used while the pen side button is held ('hold'); null = the current tool. */
+    tempTool: 'pen' | 'lasso' | 'eraser' | 'highlighter' | null = null;
+    /** Pen colours picked recently, newest first (radial menu). */
+    recentPenColors: string[] = [];
+    radialEl: HTMLElement | null = null;
+    radialClose: (() => void) | null = null;
     /** Moves the active tool's options between the popups and the dock (Settings → Toolbar). */
     applyToolOptionsLayout: (() => void) | null = null;
     /** Fits the tool dock again (its content got wider / narrower) and closes its "⋯" submenu. */
@@ -1204,8 +1217,12 @@ export class HandwritingView extends TextFileView {
             if (e.pointerType !== 'pen') return;
             this.lastPenAt = performance.now();
             if ((e.buttons & 2) !== 0 || e.button === 2) this.lastPenBarrelAt = performance.now();
-            // Pen side button: don't draw, run the configured action instead.
-            if ((e.type === 'pointerdown' && (e.button === 2 || (e.buttons & 2) !== 0)) || (e.type === 'pointermove' && e.button === 2)) {
+            const barrelDown = e.type === 'pointerdown' && (e.button === 2 || (e.buttons & 2) !== 0);
+            if (this.plugin.settings.penButtonAction === 'hold') {
+                // Held side button: this stroke is drawn with the hold tool (the event goes on to the page as usual).
+                if (barrelDown) this.tempTool = this.plugin.settings.penHoldTool;
+            } else if (barrelDown || (e.type === 'pointermove' && e.button === 2)) {
+                // Pen side button: don't draw, run the configured action instead.
                 e.preventDefault();
                 e.stopPropagation();
                 this.runPenButton(e.clientX, e.clientY);
@@ -1217,6 +1234,10 @@ export class HandwritingView extends TextFileView {
         this.registerDomEvent(this.scrollArea, 'pointermove', markPen, { capture: true });
         this.registerDomEvent(this.scrollArea, 'pointerup', markPen, { capture: true });
         this.registerDomEvent(this.scrollArea, 'pointerover', markPen, { capture: true });
+        // The stroke drawn with the held side button has ended (bubbling phase: after the page has handled it).
+        for (const ev of ['pointerup', 'pointercancel'] as const) {
+            this.registerDomEvent(window, ev, (e: PointerEvent) => { if (e.pointerType === 'pen' && this.tempTool) this.tempTool = null; });
+        }
 
         this.registerEvent(this.app.vault.on('rename', (file, oldPath) => {
             if (this.file && file === this.file && oldPath !== file.path) {
@@ -1243,6 +1264,7 @@ export class HandwritingView extends TextFileView {
 
     async onClose() {
         this.posEnd();
+        this.closeRadialMenu();
         if (this.resizeObserver) {
             this.resizeObserver.disconnect();
         }
@@ -1425,5 +1447,5 @@ export class HandwritingView extends TextFileView {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging -- the view's mixin methods (src/view/*.ts), added to the class right below
-export interface HandwritingView extends HistoryMethods, GeometryMethods, ImagesMethods, CanvasWindowMethods, ImageInsertMethods, PageToolsMethods, ThumbsMethods, CurrentPageMethods, PagesPanelMethods, ToolbarMethods, PdfIOMethods, StrokeDrawMethods, CalcPanelMethods, ClipboardMethods, MenusMethods, SelectionEditMethods, ShapeOpsMethods, VersionsMethods, PositionMethods, AssetsMethods, SelectionMethods, ContextMenuMethods, CircuitInsertMethods, NavigationMethods, InputMethods, PageSizeMethods, ContentsMethods, OledCareMethods, ZoomPanelMethods, TouchMethods, PrintMethods, InkLayerMethods, PerfOverlayMethods {}
-Object.assign(HandwritingView.prototype, historyMixin, geometryMixin, imagesMixin, canvasWindowMixin, imageInsertMixin, pageToolsMixin, thumbsMixin, currentPageMixin, pagesPanelMixin, toolbarMixin, pdfIOMixin, strokeDrawMixin, calcPanelMixin, clipboardMixin, menusMixin, selectionEditMixin, shapeOpsMixin, versionsMixin, positionMixin, assetsMixin, selectionMixin, contextMenuMixin, circuitInsertMixin, navigationMixin, inputMixin, pageSizeMixin, contentsMixin, oledCareMixin, zoomPanelMixin, touchMixin, printMixin, inkLayerMixin, perfOverlayMixin);
+export interface HandwritingView extends HistoryMethods, GeometryMethods, ImagesMethods, CanvasWindowMethods, ImageInsertMethods, PageToolsMethods, ThumbsMethods, CurrentPageMethods, PagesPanelMethods, ToolbarMethods, PdfIOMethods, StrokeDrawMethods, CalcPanelMethods, ClipboardMethods, MenusMethods, SelectionEditMethods, ShapeOpsMethods, VersionsMethods, PositionMethods, AssetsMethods, SelectionMethods, ContextMenuMethods, CircuitInsertMethods, NavigationMethods, InputMethods, PageSizeMethods, ContentsMethods, OledCareMethods, ZoomPanelMethods, TouchMethods, PrintMethods, InkLayerMethods, PerfOverlayMethods, RadialMenuMethods {}
+Object.assign(HandwritingView.prototype, historyMixin, geometryMixin, imagesMixin, canvasWindowMixin, imageInsertMixin, pageToolsMixin, thumbsMixin, currentPageMixin, pagesPanelMixin, toolbarMixin, pdfIOMixin, strokeDrawMixin, calcPanelMixin, clipboardMixin, menusMixin, selectionEditMixin, shapeOpsMixin, versionsMixin, positionMixin, assetsMixin, selectionMixin, contextMenuMixin, circuitInsertMixin, navigationMixin, inputMixin, pageSizeMixin, contentsMixin, oledCareMixin, zoomPanelMixin, touchMixin, printMixin, inkLayerMixin, perfOverlayMixin, radialMenuMixin);

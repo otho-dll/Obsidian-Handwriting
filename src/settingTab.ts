@@ -139,6 +139,11 @@ export class HandwritingSettingTab extends PluginSettingTab {
                 .addToggle(t => t.setValue(st.longPressMenu).onChange(async (v) => { st.longPressMenu = v; await this.plugin.saveSettings(); }));
 
             new Setting(c)
+                .setName('Tap with two fingers to undo')
+                .setDesc('A quick tap with two fingers undoes, with three fingers redoes. Ignored while the pen is near the screen and for touches palm rejection ignores.')
+                .addToggle(t => t.setValue(st.fingerTapUndo).onChange(async (v) => { st.fingerTapUndo = v; await this.plugin.saveSettings(); }));
+
+            new Setting(c)
                 .setName('Long-press delay')
                 .setDesc('How long to hold a finger (in milliseconds) before the menu opens. Shorter = faster, but a resting hand may trigger it more easily.')
                 .addSlider(sl => sl.setLimits(200, 1000, 50).setValue(st.longPressMs)
@@ -182,15 +187,29 @@ export class HandwritingSettingTab extends PluginSettingTab {
             new Setting(c).setName('Pen button and eraser').setHeading().settingEl.addClass('hw-set-sub');
             new Setting(c)
                 .setName('Pen side button')
-                .setDesc('Action of the barrel button on the stylus. Snipping Tool works on Windows only.')
+                .setDesc('Action of the barrel button on the stylus. Switch: a click toggles between the current and the previous tool (e.g. Shapes and Pen). Radial menu: tools, recent colours and undo in a ring around the pen – tap one, or keep the pen down and slide towards it. Snipping Tool works on Windows only.')
                 .addDropdown(d => d
                     .addOption('snip', 'Screenshot (Snipping Tool)')
                     .addOption('menu', 'Page menu')
+                    .addOption('swap', 'Switch to the previous tool')
+                    .addOption('hold', 'Hold: draw with another tool')
+                    .addOption('radial', 'Radial menu at the pen')
                     .addOption('undo', 'Undo')
                     .addOption('redo', 'Redo')
                     .addOption('none', 'Nothing')
                     .setValue(st.penButtonAction)
-                    .onChange(async (v) => { st.penButtonAction = v as HandwritingSettings['penButtonAction']; await this.plugin.saveSettings(); }));
+                    .onChange(async (v) => { st.penButtonAction = v as HandwritingSettings['penButtonAction']; holdTool.settingEl.toggle(v === 'hold'); await this.plugin.saveSettings(); }));
+            const holdTool = new Setting(c)
+                .setName('Tool while the button is held')
+                .setDesc('A stroke drawn with the side button held uses this tool; when you let go, the previous tool is back.')
+                .addDropdown(d => d
+                    .addOption('eraser', 'Eraser')
+                    .addOption('lasso', 'Selection')
+                    .addOption('highlighter', 'Highlighter')
+                    .addOption('pen', 'Pen')
+                    .setValue(st.penHoldTool)
+                    .onChange(async (v) => { st.penHoldTool = v as HandwritingSettings['penHoldTool']; await this.plugin.saveSettings(); }));
+            holdTool.settingEl.toggle(st.penButtonAction === 'hold');
             new Setting(c)
                 .setName('Eraser on highlighter')
                 .setDesc('Off: the eraser leaves the highlighter alone. Whole stroke: touching a highlighter stroke removes all of it at once. Partial: the eraser cuts out only the part it passes over (like with the pen). Also in the eraser menu on the toolbar.')

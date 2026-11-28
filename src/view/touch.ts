@@ -42,6 +42,9 @@ export const touchMixin = defineMixin({
             mode: 'undecided' | 'zoom' | 'pan';
         } | null = null;
         let hadTwo = false;                              // this touch had two fingers (no inertia at the end)
+        // Tap with two / three fingers (undo / redo): all touches from the first one down until the last one up.
+        let tap: { t0: number; max: number; ok: boolean; start: Map<number, { x: number; y: number }> } | null = null;
+        const TAP_MS = 300, TAP_PX = 14;
 
         const local = (x: number, y: number) => { const r = target.getBoundingClientRect(); return { x: x - r.left, y: y - r.top }; };
 
@@ -120,6 +123,13 @@ export const touchMixin = defineMixin({
         target.addEventListener('pointerdown', (e: PointerEvent) => {
             if (e.pointerType !== 'touch') return;
             raw.add(e.pointerId);
+            if (raw.size === 1) tap = { t0: e.timeStamp, max: 1, ok: !this.shouldRejectTouch(e), start: new Map() };
+            if (tap) {
+                tap.max = Math.max(tap.max, raw.size);
+                tap.start.set(e.pointerId, { x: e.clientX, y: e.clientY });
+                const big = this.plugin.settings.palmContactSize;
+                if (big > 0 && Math.max(e.width || 0, e.height || 0) > big) tap.ok = false;
+            }
             if (raw.size >= 3) {
                 // palm: cancel the gesture and ignore touches until all fingers are lifted
                 if (!palm) { palm = true; endAll(); hadTwo = true; }
@@ -156,6 +166,8 @@ export const touchMixin = defineMixin({
 
         target.addEventListener('pointermove', (e: PointerEvent) => {
             if (e.pointerType !== 'touch') return;
+            const s0 = tap?.start.get(e.pointerId);
+            if (tap && s0 && Math.hypot(e.clientX - s0.x, e.clientY - s0.y) > TAP_PX) tap.ok = false;
             const c = contacts.get(e.pointerId);
             if (!c || palm) return;
             c.x = e.clientX; c.y = e.clientY; c.t = e.timeStamp;
@@ -178,6 +190,14 @@ export const touchMixin = defineMixin({
             if (e.pointerType !== 'touch') return;
             raw.delete(e.pointerId);
             if (raw.size === 0) palm = false;
+            if (raw.size === 0 && tap) {
+                const t = tap;
+                tap = null;
+                const quick = e.type === 'pointerup' && e.timeStamp - t.t0 < TAP_MS;
+                if (this.plugin.settings.fingerTapUndo && t.ok && quick && !penNear() && (t.max === 2 || t.max === 3)) {
+                    if (t.max === 2) this.undo(); else this.redo();
+                }
+            }
             const c = contacts.get(e.pointerId);
             if (!c) return;
             contacts.delete(e.pointerId);

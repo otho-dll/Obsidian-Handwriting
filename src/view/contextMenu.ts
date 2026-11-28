@@ -35,6 +35,17 @@ export const contextMenuMixin = defineMixin({
         } else if (act === 'menu') this.requestPageMenu(clientX, clientY);
         else if (act === 'undo') this.undo();
         else if (act === 'redo') this.redo();
+        else if (act === 'swap') this.swapTool();
+        else if (act === 'radial') this.showRadialMenu(clientX, clientY, this.pointersDown.size > 0);
+        // 'hold' works while drawing (markPen in main.ts), a click alone does nothing.
+    },
+
+    /** Pen side button 'swap': back to the previous tool (Shapes ↔ Pen), like a double tap on a pen. */
+    swapTool() {
+        const cur = this.currentTool;
+        const to = this.prevTool && this.prevTool !== cur ? this.prevTool : cur !== 'pen' ? 'pen' : null;
+        if (!to) { new Notice('Pick another tool once – the pen button then switches between the two.', 2500); return; }
+        this.setTool?.(to);
     },
 
     // Menu after a right click or a long finger press.

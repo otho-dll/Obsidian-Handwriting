@@ -313,8 +313,16 @@ rejection.
   *Strict* - fingers never scroll.
 - **Pinch to zoom:** a sliding hand only scrolls, a resting hand (3+ contacts) does nothing. Can be turned off.
 - **Long-press menu:** hold a finger still for the page menu.
-- **Pen side button:** page menu, undo, redo, Snipping Tool (Windows) or nothing. Holding the pen still on the
-  screen (Windows press-and-hold) does not trigger it.
+- **Pen side button:**
+  - *Switch to the previous tool* (default except on Windows): a click toggles between the current and the previous
+    tool, e.g. Shapes ↔ Pen.
+  - *Hold: draw with another tool*: a stroke drawn with the button held uses the chosen tool (eraser, selection,
+    highlighter or pen); let go and the previous tool is back.
+  - *Radial menu at the pen*: tools, three recent colours and undo in a ring around the pen tip. Tap one, or keep the
+    pen down and slide towards it.
+  - Also: page menu, undo, redo, Snipping Tool (Windows, the default there) or nothing. Holding the pen still on the
+    screen (Windows press-and-hold) does not trigger it.
+- **Tap with two fingers to undo** (three fingers: redo). Off by default; ignored while the pen is near the screen.
 - **Mouse:** middle-button drag and a hold-a-key drag (default Space) move the page.
 
 #### OLED care
@@ -327,7 +335,7 @@ rejection.
 
 | Section | What you can set |
 |---|---|
-| Pen and touch | pressure, thickness values, palm rejection, pinch zoom, long-press menu, mouse panning, pen side button, eraser on shapes / highlighter, selection mode |
+| Pen and touch | pressure, thickness values, palm rejection, pinch zoom, long-press menu, two-finger tap to undo, mouse panning, pen side button (switch / hold / radial menu …), eraser on shapes / highlighter, selection mode |
 | Colors | five quick colours for the pen and for the highlighter |
 | Pages and view | default pattern and paper, favourite zooms, zoom when opening, two pages side by side (and which page is alone), dim other pages, pages panel side and columns |
 | Toolbar | tool options (popups / dock), tools and shortcut buttons |

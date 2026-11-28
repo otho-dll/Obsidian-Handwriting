@@ -1267,3 +1267,14 @@ canvas.hw-cur-ns { cursor: ns-resize; }
     .hw-circuit-palette { grid-auto-flow: column; grid-template-columns: none; grid-auto-columns: minmax(64px, 1fr); overflow-x: auto; overscroll-behavior-x: contain; padding-bottom: 2px; }
     .hw-circuit-sel { min-height: 0; }
 }
+
+/* --- Radial menu (pen side button) --- */
+.hw-radial-backdrop { position: fixed; inset: 0; z-index: var(--layer-menu, 60); touch-action: none; }
+.hw-radial { position: absolute; border-radius: 50%; background: color-mix(in srgb, var(--background-primary) 88%, transparent); border: 1px solid var(--background-modifier-border); box-shadow: var(--shadow-l); }
+.hw-radial::after { content: ''; position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: var(--text-faint); }
+.hw-radial-item.hw-radial-item { position: absolute; transform: translate(-50%, -50%); padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; box-shadow: none; touch-action: none; }
+.hw-radial-out { width: 44px; height: 44px; background: var(--background-secondary); color: var(--text-normal); }
+.hw-radial-in { width: 24px; height: 24px; background: var(--hw-radial-color, #000); border: 2px solid var(--background-primary); }
+.hw-radial-out.is-active { background: var(--interactive-accent); color: var(--text-on-accent); }
+.hw-radial-in.is-active { outline: 2px solid var(--interactive-accent); outline-offset: 1px; }
+.hw-radial-item.is-hot, .hw-radial-item:hover { outline: 3px solid var(--interactive-accent); outline-offset: 1px; }

@@ -507,7 +507,7 @@ export const toolbarMixin = defineMixin({
             const st = this.plugin.settings;
             if (this.currentTool === 'pen') {
                 allSizeBtns.forEach(b => b.disabled = false);
-                this.renderPalette(secColor, st.penPalette, this.penColor, 'pen', (c) => { this.penColor = c; this.persistMemory(); updateStyleBtn(); updateSizeBtn(); });
+                this.renderPalette(secColor, st.penPalette, this.penColor, 'pen', (c) => { this.penColor = c; this.noteRecentPenColor(c); this.persistMemory(); updateStyleBtn(); updateSizeBtn(); });
             } else if (this.currentTool === 'shape') {
                 allSizeBtns.forEach(b => b.disabled = false);
                 const filled = this.shapeFill !== 'none' && this.shapeType !== 'line';
@@ -555,6 +555,7 @@ export const toolbarMixin = defineMixin({
         };
 
         const updateActiveTool = (btn: HTMLElement) => {
+            if (this.currentTool !== this.toolSeen) { this.prevTool = this.toolSeen; this.toolSeen = this.currentTool; }
             this.closeToolDockPop?.();
             this.endOrthoPath();
             this.cancelSplitMode();

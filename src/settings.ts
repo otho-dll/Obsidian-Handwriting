@@ -80,8 +80,15 @@ export interface HandwritingSettings {
     pdfLastKind: 'vault' | 'disk';
     pdfLastDisk: string;
 
-    /** Pen side button. */
-    penButtonAction: 'none' | 'snip' | 'menu' | 'undo' | 'redo';
+    /**
+     * Pen side button. 'swap': a click switches between the current and the previous tool; 'hold': strokes drawn
+     * with the button held use `penHoldTool`; 'radial': a ring of tools, colours and undo around the pen.
+     */
+    penButtonAction: 'none' | 'snip' | 'menu' | 'undo' | 'redo' | 'swap' | 'hold' | 'radial';
+    /** Tool used while the side button is held ('hold'). */
+    penHoldTool: 'pen' | 'lasso' | 'eraser' | 'highlighter';
+    /** Tap with two fingers = undo, with three = redo. */
+    fingerTapUndo: boolean;
     /** Eraser vs highlighter: 'off' = never erased, 'whole' = removes the whole stroke at a touch, 'partial' = cuts pieces out. */
     highlighterErase: 'off' | 'whole' | 'partial';
     /** Menu on a long finger press on the page. */
@@ -212,7 +219,9 @@ export const DEFAULT_SETTINGS: HandwritingSettings = {
     pdfLastKind: 'vault',
     pdfLastDisk: '',
     pdfLastFolder: '',
-    penButtonAction: Platform.isWin ? 'snip' : 'menu',
+    penButtonAction: Platform.isWin ? 'snip' : 'swap',
+    penHoldTool: 'eraser',
+    fingerTapUndo: false,
     highlighterErase: 'whole',
     longPressMenu: true,
     longPressMs: 350,
