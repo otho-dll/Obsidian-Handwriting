@@ -89,6 +89,8 @@ export interface HandwritingSettings {
     penHoldTool: 'pen' | 'lasso' | 'eraser' | 'highlighter';
     /** Tap with two fingers = undo, with three = redo. */
     fingerTapUndo: boolean;
+    /** Short vibrations of the device (Android only) when snapping, selecting or switching tools. */
+    haptics: 'off' | 'light' | 'strong';
     /** Eraser vs highlighter: 'off' = never erased, 'whole' = removes the whole stroke at a touch, 'partial' = cuts pieces out. */
     highlighterErase: 'off' | 'whole' | 'partial';
     /** Menu on a long finger press on the page. */
@@ -222,6 +224,7 @@ export const DEFAULT_SETTINGS: HandwritingSettings = {
     penButtonAction: Platform.isWin ? 'snip' : 'swap',
     penHoldTool: 'eraser',
     fingerTapUndo: false,
+    haptics: 'off',
     highlighterErase: 'whole',
     longPressMenu: true,
     longPressMs: 350,

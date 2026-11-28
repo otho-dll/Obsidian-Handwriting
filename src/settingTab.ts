@@ -6,6 +6,7 @@ import { QUICK_ACTIONS, TOOLBAR_ITEMS } from './quickActions';
 import { setSvg, appendSvg } from './svg';
 import { CONVERTER_FILE, saveConverterScript, copyConverterCommand } from './converter';
 import { LOGO_FILE } from './constants';
+import { hapticsAvailable, setHapticsLevel } from './haptics';
 import { HandwritingSettings, DEFAULT_PEN_PALETTE, DEFAULT_HIGHLIGHTER_PALETTE, DEFAULT_PEN_SIZES, DEFAULT_HIGH_SIZES, DEFAULT_SHAPE_SIZES, SIZE_LIMITS, cleanSizes } from './settings';
 import type HandwritingPlugin from './main';
 
@@ -210,6 +211,17 @@ export class HandwritingSettingTab extends PluginSettingTab {
                     .setValue(st.penHoldTool)
                     .onChange(async (v) => { st.penHoldTool = v as HandwritingSettings['penHoldTool']; await this.plugin.saveSettings(); }));
             holdTool.settingEl.toggle(st.penButtonAction === 'hold');
+            if (hapticsAvailable()) {
+                new Setting(c)
+                    .setName('Vibration')
+                    .setDesc('Vibrates the device, not the pen (Android only): when a line snaps to an angle, a selection is made, the pen button switches the tool or a wire snaps in the circuit editor.')
+                    .addDropdown(d => d
+                        .addOption('off', 'Off')
+                        .addOption('light', 'Light')
+                        .addOption('strong', 'Strong')
+                        .setValue(st.haptics)
+                        .onChange(async (v) => { st.haptics = v as HandwritingSettings['haptics']; setHapticsLevel(st.haptics); await this.plugin.saveSettings(); }));
+            }
             new Setting(c)
                 .setName('Eraser on highlighter')
                 .setDesc('Off: the eraser leaves the highlighter alone. Whole stroke: touching a highlighter stroke removes all of it at once. Partial: the eraser cuts out only the part it passes over (like with the pen). Also in the eraser menu on the toolbar.')

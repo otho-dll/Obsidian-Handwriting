@@ -1,6 +1,7 @@
 import { defineMixin } from './mixin';
 import { ICON_ERASER, ICON_HIGHLIGHTER, ICON_LASSO_LOOP, ICON_PEN, ICON_SHAPES, ICON_UNDO } from '../icons';
 import { setSvg } from '../svg';
+import { buzz } from '../haptics';
 
 /** Ring radii (px): the tools on the outer ring, the colours on the inner one. */
 const R_OUT = 66, R_IN = 30, SIZE = 2 * R_OUT + 52;
@@ -82,7 +83,7 @@ export const radialMenuMixin = defineMixin({
             if (this.radialEl === backdrop) { this.radialEl = null; this.radialClose = null; }
         };
         this.radialClose = close;
-        const pick = (it: RadialItem) => { close(); it.run(); };
+        const pick = (it: RadialItem) => { close(); it.run(); buzz('confirm'); };
 
         for (const it of items) {
             const r = it.ring === 'out' ? R_OUT : R_IN;
@@ -123,6 +124,7 @@ export const radialMenuMixin = defineMixin({
             hot?.el?.removeClass('is-hot');
             hot = h;
             hot?.el?.addClass('is-hot');
+            if (hot) buzz('tick');
         };
         const onUp = (e: PointerEvent) => {
             if (!penDown || e.pointerType !== 'pen') return;

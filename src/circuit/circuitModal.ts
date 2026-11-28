@@ -1,4 +1,5 @@
 import { App, Menu, Modal, Notice, setIcon } from 'obsidian';
+import { buzz } from '../haptics';
 import { layoutText, type Polyline } from './font';
 import { canonNormal, edgeById, edgeGeom, nodeById, projOnto, scene, symbolLocal, degrees, type Vec } from './geometry';
 import {
@@ -711,7 +712,11 @@ export class CircuitModal extends Modal {
     }
     private updateDrag(p: Vec) {
         const d = this.drag!;
-        if (d.type === 'wire') d.end = resolveEnd(this.S, p, d.start, this.tolk, { angTol: this.coarse ? 10 : 6, prevDir: d.end?.dir ?? null });
+        if (d.type === 'wire') {
+            const was = !!d.end?.snap || d.end?.kind === 'node';
+            d.end = resolveEnd(this.S, p, d.start, this.tolk, { angTol: this.coarse ? 10 : 6, prevDir: d.end?.dir ?? null });
+            if (!was && (d.end.snap || d.end.kind === 'node')) buzz('snap');   // the wire clicked into place
+        }
         else if (d.type === 'move') { const n = nodeById(this.S, d.node); if (n) { n.x = Math.round(p.x / G) * G; n.y = Math.round(p.y / G) * G; } }
         else if (d.type === 'group') moveGroup(this.S, d.orig, p.x - d.p.x, p.y - d.p.y);
         else if (d.type === 'lasso') { const l = d.pts[d.pts.length - 1]; if (Math.hypot(p.x - l[0], p.y - l[1]) > 4) d.pts.push([p.x, p.y]); }

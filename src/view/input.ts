@@ -3,6 +3,7 @@ import { SIMPLIFY_EPSILON, ROTATE_STEP, LIGHT_FILL_ALPHA } from '../constants';
 import { Point, Stroke, Bounds, BBox } from '../types';
 import { newId } from '../utils';
 import type { StretchSnap } from './shapeOps';
+import { buzz } from '../haptics';
 
 /** Writing with the pen / mouse: pen, highlighter, eraser, shapes and lasso on the page canvas. */
 export const inputMixin = defineMixin({
@@ -119,6 +120,7 @@ export const inputMixin = defineMixin({
         // at a corner, both following the pen. orthoDown: where the pen went down (a tap without moving ends the path).
         let orthoDown: { x: number; y: number } | null = null;
         let orthoPref: 'h' | 'v' | null = null;    // preferred first direction (continuing path: perpendicular to the last segment)
+        let snapStep: number | null = null;   // Shift + line: the 45° step the line is snapped to (a tick when it changes)
         let orthoFirst: 'h' | 'v' | null = null;   // direction of the first segment of this L (decided after a few pixels)
         let orthoSeg2: Stroke | null = null;       // second segment of the L (preview)
         let rotateDrag: { cx: number; cy: number; start: number; total: number } | null = null;
@@ -531,7 +533,10 @@ export const inputMixin = defineMixin({
                         const sel = this.selection;
                         if (!sel) return;
                         let target = Math.atan2(lpos.y - rd.cy, lpos.x - rd.cx) - rd.start;
-                        if (shift) target = Math.round(target / ROTATE_STEP) * ROTATE_STEP;   // Shift = 15° step
+                        if (shift) {
+                            target = Math.round(target / ROTATE_STEP) * ROTATE_STEP;   // Shift = 15° step
+                            if (target !== rd.total) buzz('tick');
+                        }
                         const inc = target - rd.total;
                         if (inc === 0) return;
                         this.rotateItems(sel.strokes, sel.images, rd.cx, rd.cy, inc);
@@ -561,6 +566,7 @@ export const inputMixin = defineMixin({
                     else if (!orthoFirst) {
                         const along = (d: 'h' | 'v') => d === 'h' ? dx : dy;
                         orthoFirst = orthoPref && along(orthoPref) * 2 >= along(orthoPref === 'h' ? 'v' : 'h') ? orthoPref : (dx >= dy ? 'h' : 'v');
+                        buzz('tick');
                     }
                     const first = orthoFirst ?? orthoPref ?? (dx >= dy ? 'h' : 'v');
                     const corner = first === 'h' ? this.mkPoint(pos.x, p0.y) : this.mkPoint(p0.x, pos.y);
@@ -575,6 +581,11 @@ export const inputMixin = defineMixin({
                     return;
                 }
                 const end = e.shiftKey ? this.constrainShape(currentStroke, pos) : pos;
+                if (e.shiftKey && currentStroke.shape === 'line') {
+                    const p0s = currentStroke.points[0];
+                    const step = Math.round(Math.atan2(end.y - p0s.y, end.x - p0s.x) / (Math.PI / 4));
+                    if (step !== snapStep) { if (snapStep !== null) buzz('tick'); snapStep = step; }
+                } else snapStep = null;
                 currentStroke.points = [currentStroke.points[0], end];
                 // Clear only the area of the previous and the new preview (not the whole canvas).
                 const p0 = currentStroke.points[0];
@@ -679,6 +690,7 @@ export const inputMixin = defineMixin({
                 hideLasso();
                 if (path.length >= 3 && Math.max(maxX - minX, maxY - minY) > 6) this.selectInPolygon(pageIndex, this.simplifyPoints(path, 0.8));
                 else this.selectAt(pageIndex, path[0]);   // a plain tap: a stroke or an image (with its whole group)
+                if (this.selection) buzz('confirm');
                 this.redrawOverlay(pageIndex);   // the strokes didn't change – only the selection frame
                 if (topCanvas.hasPointerCapture(e.pointerId)) topCanvas.releasePointerCapture(e.pointerId);
                 return;
