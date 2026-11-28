@@ -15,6 +15,8 @@ export interface HandwritingSettings {
     dateSeparator: '-' | '.' | '_' | ' ';
     /** 'dmy' = day, month, year; 'dm' = day and month only. */
     dateParts: 'dmy' | 'dm';
+    /** A new note continues a numbered series of the folder (ćw1, ćw2 → ćw3) instead of using the name scheme. */
+    continueSeries: boolean;
     /** Old date format setting (migration only). */
     dateFormat?: string;
     /** Default selection mode: lasso or rectangle. */
@@ -183,6 +185,7 @@ export const DEFAULT_SETTINGS: HandwritingSettings = {
     nameMode: 'folderDate',
     dateSeparator: '-',
     dateParts: 'dmy',
+    continueSeries: true,
     selectMode: 'lasso',
     pressureEnabled: true,
     pressureSensitivity: 0.7,

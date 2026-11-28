@@ -15,6 +15,7 @@ import { HandwritingSettings, LastPosition, ToolMemory, defaultMemory, DEFAULT_P
 import { HandwritingSettingTab } from './settingTab';
 import { DebugLogModal } from './debugLog';
 import { saveConverterScript, copyConverterCommand } from './converter';
+import { detectSeries, schemeMatcher, seriesName } from './noteNaming';
 import { historyMixin, HistoryMethods } from './view/history';
 import { geometryMixin, GeometryMethods } from './view/geometry';
 import { imagesMixin, ImagesMethods } from './view/images';
@@ -311,6 +312,7 @@ export default class HandwritingPlugin extends Plugin {
         if (!oneOf(st.nameMode, ['folderDate', 'folder', 'date'])) st.nameMode = st.dateFormat === 'none' ? 'folder' : 'folderDate';
         if (!oneOf(st.dateSeparator, ['-', '.', '_', ' '])) st.dateSeparator = '-';
         if (!oneOf(st.dateParts, ['dmy', 'dm'])) st.dateParts = 'dmy';
+        if (typeof st.continueSeries !== 'boolean') st.continueSeries = true;
         delete st.dateFormat;
         if (!oneOf(st.pdfExportMode, ['ask', 'folder', 'disk', 'note'])) st.pdfExportMode = 'ask';
         if (typeof st.pdfExportDiskFolder !== 'string') st.pdfExportDiskFolder = '';
@@ -469,27 +471,58 @@ export default class HandwritingPlugin extends Plugin {
         return parts.join(sep);
     }
 
-    /** Name of a new note (without extension and collision number) according to the settings. */
-    buildNoteName(folderPath: string, now = new Date()): string {
+    /** Folder part of the name of a new note (abbreviated or full folder names). */
+    private folderNamePart(folderPath: string): string {
         const s = this.settings;
         const names = folderPath.split('/').filter(Boolean).slice(-s.folderLevels);
         const parts = names.map(n => s.folderStyle === 'abbr' ? this.abbreviateFolderName(n) : n);
-        const folderPart = parts.length > 0 ? parts.join(s.separator) : 'Note';
+        return (parts.length > 0 ? parts.join(s.separator) : 'Note').replace(/[\\/:*?"<>|]/g, '-').trim();
+    }
+
+    /** Name of a new note (without extension and collision number) according to the settings. */
+    buildNoteName(folderPath: string, now = new Date()): string {
+        const s = this.settings;
+        const folderPart = this.folderNamePart(folderPath);
         const date = this.formatDate(now);
         const sep = s.separator === '' ? ' ' : s.separator;
         const name = s.nameMode === 'date' ? date : s.nameMode === 'folder' ? folderPart : `${folderPart}${sep}${date}`;
         return name.replace(/[\\/:*?"<>|]/g, '-').trim();
     }
 
-    async createHandwritingNote(folderPath: string) {
-        const base = this.buildNoteName(folderPath);
-        const prefix = folderPath && folderPath !== '/' ? folderPath + '/' : '';
+    /**
+     * The numbered series in the folder (ćw1, ćw2 → ćw3), when "Continue numbered names" is on.
+     * Only the notes directly in the folder count, and names made by the name scheme are skipped.
+     */
+    private seriesInFolder(folderPath: string) {
+        if (!this.settings.continueSeries) return null;
+        const folder = folderPath && folderPath !== '/' ? this.app.vault.getAbstractFileByPath(folderPath) : this.app.vault.getRoot();
+        if (!(folder instanceof TFolder)) return null;
+        const entries = folder.children
+            .filter((f): f is TFile => f instanceof TFile && f.extension === 'hnote')
+            .map(f => ({ name: f.basename, mtime: f.stat.mtime }));
+        const s = this.settings;
+        const isScheme = schemeMatcher({ mode: s.nameMode, folderPart: this.folderNamePart(folderPath), separator: s.separator, dateSeparator: s.dateSeparator });
+        return detectSeries(entries, isScheme);
+    }
 
-        // No number while the name is free; a number (001, 002...) only on a collision.
-        let filePath = `${prefix}${base}.hnote`;
-        let sequence = 1;
-        while (this.app.vault.getAbstractFileByPath(filePath)) {
-            filePath = `${prefix}${base} ${String(sequence++).padStart(3, '0')}.hnote`;
+    async createHandwritingNote(folderPath: string) {
+        const prefix = folderPath && folderPath !== '/' ? folderPath + '/' : '';
+        const series = this.seriesInFolder(folderPath);
+
+        let filePath: string;
+        if (series) {
+            // Continue the series; a taken number (e.g. a folder note) moves on to the next one.
+            let n = series.next;
+            filePath = `${prefix}${seriesName(series, n)}.hnote`;
+            while (this.app.vault.getAbstractFileByPath(filePath)) filePath = `${prefix}${seriesName(series, ++n)}.hnote`;
+        } else {
+            // No number while the name is free; a number (001, 002...) only on a collision.
+            const base = this.buildNoteName(folderPath);
+            filePath = `${prefix}${base}.hnote`;
+            let sequence = 1;
+            while (this.app.vault.getAbstractFileByPath(filePath)) {
+                filePath = `${prefix}${base} ${String(sequence++).padStart(3, '0')}.hnote`;
+            }
         }
 
         await this.app.vault.create(filePath, JSON.stringify({ pages: [{ strokes: [] }] }));

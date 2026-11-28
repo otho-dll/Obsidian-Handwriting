@@ -43,6 +43,8 @@
 
 **Quick start:** right-click a folder → **New handwritten note** (or the command *Create new handwritten note*).
 The pen draws, fingers scroll and zoom, and everything saves automatically.
+New notes are named after the folder and the date (Settings → Files and export). If the folder already has numbered
+notes (*Exercise 1*, *Exercise 2*), the new one continues the series (*Exercise 3*).
 
 ## User guide
 
@@ -329,7 +331,7 @@ rejection.
 | Colors | five quick colours for the pen and for the highlighter |
 | Pages and view | default pattern and paper, favourite zooms, zoom when opening, two pages side by side (and which page is alone), dim other pages, pages panel side and columns |
 | Toolbar | tool options (popups / dock), tools and shortcut buttons |
-| Files and export | where images are stored, the Python converter, new-note naming, PDF location and resolution |
+| Files and export | where images are stored, the Python converter, new-note naming (and continuing numbered names), PDF location and resolution |
 | Version history | on / off, interval, retention, space limit per note |
 | Performance | canvas sharpness, low-latency ink |
 | OLED care | dark paper, fading toolbar, pixel shift, dim when idle |

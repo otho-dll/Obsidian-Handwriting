@@ -433,6 +433,13 @@ export class HandwritingSettingTab extends PluginSettingTab {
                     .setValue(st.nameMode)
                     .onChange(async (v) => { st.nameMode = v as HandwritingSettings['nameMode']; await changed(); }));
 
+            new Setting(c)
+                .setName('Continue numbered names in the folder')
+                .setDesc('When the folder already has numbered notes (e.g. Exercise 1, Exercise 2), a new note gets the next number (Exercise 3) instead of a name from the scheme. Notes named by the scheme don\'t count.')
+                .addToggle(t => t
+                    .setValue(st.continueSeries)
+                    .onChange(async (v) => { st.continueSeries = v; await this.plugin.saveSettings(); }));
+
             const preview = c.createEl('p', { cls: 'setting-item-description hw-name-preview' });
             const sample = 'University/Quantum Physics/Lectures';
             const refresh = () => {
