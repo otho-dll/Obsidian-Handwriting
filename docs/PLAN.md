@@ -10,6 +10,8 @@ Decyzje użytkownika: (a) plansza na całą wolną wysokość, panele zwarte na 
 
 Dodatkowe prośby (druga runda): 4. nazwa nowej notatki kontynuuje serię w folderze (ćw1, ćw2 → ćw3); 5. porządek w menu ⋯ i szybka zmiana narzędzia bez sięgania do paska (przycisk boczny rysika); 6. haptyka.
 
+Trzecia runda (część 5): menu w trzech stylach do wyboru (classic / panels / ribbon); bez kształtu jednorazowego.
+
 ## Krok 0
 Pierwsza czynność po zatwierdzeniu: skopiować ten plan do repozytorium jako **`docs/PLAN.md`** i zrobić commit, żeby dało się kontynuować pracę na innym komputerze.
 
@@ -107,26 +109,36 @@ Dziś [main.ts:473 `buildNoteName`](src/main.ts#L473) zawsze składa nazwę z us
 
 ## Część 5: porządek w menu ⋯ i szybka zmiana narzędzia piórem
 
-### 5a. Menu ⋯ jest przeładowane
-Dziś [menus.ts `showMoreMenu`](src/view/menus.ts#L19) to płaska lista: ukryte narzędzia, 3 grupy akcji (wstawianie, widok, plik) i 3 przełączniki. Po dodaniu brył będzie jeszcze dłuższa. Proponuję:
+### 5a. Menu ⋯ jest przeładowane: trzy style do wyboru
+Dziś [menus.ts `showMoreMenu`](src/view/menus.ts#L19) to płaska lista: ukryte narzędzia, 3 grupy akcji (wstawianie, widok, plik) i 3 przełączniki. Po dodaniu brył będzie jeszcze dłuższa. Decyzja (runda 3): zamiast jednego nowego układu użytkownik wybiera w ustawieniach jeden z trzech stylów, `menuStyle: 'classic' | 'panels' | 'ribbon'` (Settings → Toolbar → *Menu style*, domyślnie `classic`).
 
-1. **Nowy przycisk „+ Insert”** na pasku (stały, jak pióro): popover w formie **siatki dużych kafelków z ikonami** (Image, Screenshot, Function plot, Circuit, 3D solid, Import PDF, a w przyszłości kolejne generatory). Wszystkie generatory są w jednym miejscu, a z ⋯ znika cała grupa „wstawianie”. Kafelki przypięte jako skróty (`quickActions`) dalej działają.
-2. **⋯ jako panel z sekcjami** zamiast `Menu`: popover w stylu istniejących paneli (zoom, contents) z nagłówkami **View** (zoom, contents, pages, page style, two pages), **File** (export PDF, print, version history), **Pen** (pressure, palm rejection, haptics) i stopką *Settings*. Akcje widoku i pliku jako rząd ikon z podpisem; przełączniki jako wiersze z checkboxem. Ukryte narzędzia (np. Hand) zostają na górze jako rząd ikon.
-3. Kod: wspólna funkcja `buildActionGrid(host, items)` w nowym `src/view/actionPanels.ts`, używana przez oba popovery. Obecne definicje `groups` z `showMoreMenu` przechodzą do tablicy w [quickActions.ts](src/quickActions.ts) z polem `group: 'insert' | 'view' | 'file'`, żeby lista akcji była w jednym miejscu. `runQuickAction` zostaje jako jedyny dyspozytor.
-4. Na wąskim ekranie oba popovery otwierają się jako dolny arkusz (bottom sheet) na pełną szerokość, z kafelkami min. 56 px.
+**Wspólna podstawa.** Definicje `groups` z `showMoreMenu` przechodzą do rejestru w [quickActions.ts](src/quickActions.ts) (pola `group: 'insert' | 'view' | 'file'`, `title`, `show?`), plus lista przełączników pióra (pressure, palm rejection, haptics). `runQuickAction` zostaje jedynym dyspozytorem. Wszystkie trzy style czytają ten sam rejestr.
+
+1. **`classic`**: obecne płaskie menu ⋯, bez zmian w działaniu (czyta rejestr, dochodzi przełącznik haptyki).
+2. **`panels`**:
+   - przycisk **„+ Insert”** na pasku: popover w formie siatki dużych kafelków z ikonami (Image, Screenshot, Function plot, Circuit, 3D solid, Import PDF, Calculator). Przypięte skróty (`quickActions`) dalej działają;
+   - **⋯ jako panel z sekcjami** (View, File, Pen) i stopką *Settings*. Akcje jako kafelki z podpisem, przełączniki jako wiersze z checkboxem, ukryte narzędzia (np. Hand) rzędem ikon na górze;
+   - kod: `buildActionGrid(host, items)` w `src/view/actionPanels.ts`;
+   - w wąskim oknie oba popovery otwierają się jako dolny arkusz na pełną szerokość, kafelki min. 56 px.
+3. **`ribbon`**: wstążka z kartami w stylu OneNote, **bez ⋯**. Nad paskiem cienki rząd kart **Draw · Insert · View · File · Pen**:
+   - Draw: obecny pasek bez zmian (narzędzia, historia, kolory, przypięte skróty);
+   - pozostałe karty pokazują w tym samym rzędzie przyciski z podpisem z rejestru (w wąskim oknie przewijane poziomo). Insert: wstawianie i kalkulator. View: ukryte narzędzia, zoom, contents, pages, page style. File: PDF, druk, historia, Settings. Pen: przełączniki;
+   - po wykonaniu akcji (nie przełącznika) wstążka wraca na kartę Draw;
+   - kod: `src/view/ribbon.ts`.
 
 ### 5b. Rysuję kształt i chcę od razu pisać
 Ręka musi iść do paska na drugim końcu ekranu. Rozwiązania, od najprostszego:
 
-1. **Kształt jednorazowy**: ustawienie *After drawing a shape: stay on Shapes / return to the previous tool* (domyślnie zostaje jak dziś). Po zakończeniu kształtu (`pointerup` w [strokeDraw.ts](src/view/strokeDraw.ts); dla ścieżki ortogonalnej dopiero po `endOrthoPath`) wraca `setTool(prevTool)`. Wymaga pamiętania `prevTool` w `setTool`.
-2. **Przycisk boczny rysika, nowe akcje** w `penButtonAction` ([settings.ts:82](src/settings.ts#L82), [contextMenu.ts `runPenButton`](src/view/contextMenu.ts#L28), walidacja w [main.ts:305](src/main.ts#L305)):
-   - `'swap'`: **kliknięcie przełącza** między bieżącym a poprzednim narzędziem (Shapes ↔ Pen), jak „podwójne stuknięcie” w Apple Pencil
+(Kształt jednorazowy, czyli automatyczny powrót do poprzedniego narzędzia po narysowaniu kształtu, został odrzucony w rundzie 3.)
+
+1. **Przycisk boczny rysika, nowe akcje** w `penButtonAction` ([settings.ts:82](src/settings.ts#L82), [contextMenu.ts `runPenButton`](src/view/contextMenu.ts#L28), walidacja w [main.ts:305](src/main.ts#L305)):
+   - `'swap'`: **kliknięcie przełącza** między bieżącym a poprzednim narzędziem (Shapes ↔ Pen), jak „podwójne stuknięcie” w Apple Pencil. Wymaga pamiętania `prevTool` w `setTool`
    - `'hold'`: **trzymanie przycisku = narzędzie tymczasowe**. Kreska narysowana z wciśniętym przyciskiem idzie wybranym narzędziem (ustawienie *Hold tool*: Pen / Lasso / Eraser / Highlighter), a po puszczeniu wraca poprzednie. Dziś [main.ts:1175](src/main.ts#L1175) przechwytuje `pointerdown` z `buttons & 2` i nie rysuje; dla `'hold'` zamiast tego ustawiamy `this.tempTool` i przepuszczamy zdarzenie. `getEffectiveTool` w [input.ts:154](src/view/input.ts#L154) zwraca `tempTool`, tak jak dziś zwraca `'eraser'` dla końcówki gumki.
    - `'radial'`: **menu kołowe przy rysiku**: kliknięcie przyciskiem w powietrzu albo na stronie otwiera wokół końcówki pierścień z 6–8 polami (narzędzia, 3 ostatnie kolory, cofnij). Wybór kolejnym stuknięciem albo przeciągnięciem w kierunku pola. Nowy `src/view/radialMenu.ts`. Daje dostęp do wszystkiego bez sięgania do paska.
    - Uwaga, Windows: przycisk boczny z dociśniętą końcówką system raportuje jako prawy klik lub „press-and-hold”. Kod już to rozróżnia (`lastPenBarrelAt`), więc `'hold'` musi korzystać z tego samego mechanizmu. Do sprawdzenia na prawdziwym sprzęcie (Surface, Wacom, Android z S Pen).
-3. **Gest stuknięcia palcem**: stuknięcie dwoma palcami = cofnij, trzema = ponów (jak w GoodNotes); opcjonalnie, w ustawieniach *Pen and touch*. Tylko gdy odrzucanie dłoni pozwala na dotyk.
+2. **Gest stuknięcia palcem**: stuknięcie dwoma palcami = cofnij, trzema = ponów (jak w GoodNotes); opcjonalnie, w ustawieniach *Pen and touch*. Tylko gdy odrzucanie dłoni pozwala na dotyk.
 
-Domyślne ustawienia: na Windows zostaje `snip` (nie zmieniamy przyzwyczajeń), na pozostałych platformach domyślnie `swap` zamiast `menu`. Opcja kształtu jednorazowego jest wyłączona.
+Domyślne ustawienia: na Windows zostaje `snip` (nie zmieniamy przyzwyczajeń), na pozostałych platformach domyślnie `swap` zamiast `menu`.
 
 ---
 
@@ -151,7 +163,7 @@ Plan:
   - torus od góry: dwa okręgi R±r
   - 3 rzuty: trzy rozłączne bboxy
 - `tests/noteNaming.test.ts` (część 4).
-- Ręcznie: menu ⋯ i „+ Insert” w szerokim i wąskim oknie; przycisk boczny w trybach `swap` / `hold` / `radial` na prawdziwym rysiku; kształt jednorazowy wraca do pióra; `haptics` na Androidzie wibruje, a na desktopie opcja jest ukryta.
+- Ręcznie: trzy style menu (`classic`, `panels`, `ribbon`) w szerokim i wąskim oknie; przycisk boczny w trybach `swap` / `hold` / `radial` na prawdziwym rysiku; `haptics` na Androidzie wibruje, a na desktopie opcja jest ukryta.
 - Istniejący `tests/circuit.test.ts` musi przejść po zmianie sygnatury `parallel`.
 - `npm run build` i lint (`eslint.config.mjs`).
 - Ręcznie w demo (`scripts/build-site.mjs`) oraz w Obsidianie:
