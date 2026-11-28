@@ -231,7 +231,7 @@ export const DEFAULT_SETTINGS: HandwritingSettings = {
     penHoldTool: 'eraser',
     fingerTapUndo: false,
     haptics: 'off',
-    highlighterErase: 'whole',
+    highlighterErase: 'partial',
     longPressMenu: true,
     longPressMs: 350,
     penSizes: [...DEFAULT_PEN_SIZES],

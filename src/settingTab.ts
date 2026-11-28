@@ -185,7 +185,7 @@ export class HandwritingSettingTab extends PluginSettingTab {
                 await this.plugin.saveSettings();
             }));
 
-            new Setting(c).setName('Pen button and eraser').setHeading().settingEl.addClass('hw-set-sub');
+            new Setting(c).setName('Pen button').setHeading().settingEl.addClass('hw-set-sub');
             new Setting(c)
                 .setName('Pen side button')
                 .setDesc('Action of the barrel button on the stylus. Switch: a click toggles between the current and the previous tool (e.g. Shapes and Pen). Radial menu: tools, recent colours and undo in a ring around the pen – tap one, or keep the pen down and slide towards it. Snipping Tool works on Windows only.')
@@ -222,26 +222,6 @@ export class HandwritingSettingTab extends PluginSettingTab {
                         .setValue(st.haptics)
                         .onChange(async (v) => { st.haptics = v as HandwritingSettings['haptics']; setHapticsLevel(st.haptics); await this.plugin.saveSettings(); }));
             }
-            new Setting(c)
-                .setName('Eraser on highlighter')
-                .setDesc('Off: the eraser leaves the highlighter alone. Whole stroke: touching a highlighter stroke removes all of it at once. Partial: the eraser cuts out only the part it passes over (like with the pen). Also in the eraser menu on the toolbar.')
-                .addDropdown(d => d
-                    .addOption('off', 'Off (not erased)')
-                    .addOption('whole', 'Whole stroke')
-                    .addOption('partial', 'Partial')
-                    .setValue(st.highlighterErase)
-                    .onChange(async (v) => { st.highlighterErase = v as HandwritingSettings['highlighterErase']; await this.plugin.saveSettings(); }));
-
-            new Setting(c)
-                .setName('Eraser on shapes')
-                .setDesc('Off: lines, rectangles, ellipses and triangles (and pieces left after partly erasing them) are never erased – handy for diagrams. Whole shape: touching a shape removes all of it. Partial: the eraser cuts out only the part it passes over (a filled shape or an arrow is still removed whole). Also in the eraser menu on the toolbar.')
-                .addDropdown(d => d
-                    .addOption('off', 'Off (not erased)')
-                    .addOption('whole', 'Whole shape')
-                    .addOption('partial', 'Partial')
-                    .setValue(st.shapeErase)
-                    .onChange(async (v) => { st.shapeErase = v as HandwritingSettings['shapeErase']; await this.plugin.saveSettings(); }));
-
             new Setting(c).setName('Selection').setHeading().settingEl.addClass('hw-set-sub');
             new Setting(c)
                 .setName('Default selection mode')

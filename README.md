@@ -78,8 +78,9 @@ together in one small button with their own menu. In a narrow window the other o
 by one into such buttons showing the current value (shapes: options, thickness, shape, colours last).
 
 #### Eraser options
-For **shapes** and for the **highlighter** separately: *Off* (left alone), *Whole* (touching removes all of it) or
-*Part* (cuts out only what you rub over). Filled shapes and arrows are always removed whole.
+Tap the eraser again (or see the dock). For **shapes** and for the **highlighter** separately: *Off* (left alone),
+*Whole* (touching removes all of it) or *Part* (cuts out only what you rub over; the default). Filled shapes and arrows
+are always removed whole.
 
 #### Shapes
 - Line styles: solid, dashed, dotted, dash-dot.
@@ -360,7 +361,7 @@ Like the classic menu, the panels leave out whatever is already on the toolbar.
 
 | Section | What you can set |
 |---|---|
-| Pen and touch | pressure, thickness values, palm rejection, pinch zoom, long-press menu, two-finger tap to undo, mouse panning, pen side button (switch / hold / radial menu …), eraser on shapes / highlighter, selection mode |
+| Pen and touch | pressure, thickness values, palm rejection, pinch zoom, long-press menu, two-finger tap to undo, mouse panning, pen side button (switch / hold / radial menu …), selection mode |
 | Colors | five quick colours for the pen and for the highlighter |
 | Pages and view | default pattern and paper, favourite zooms, zoom when opening, two pages side by side (and which page is alone), dim other pages, pages panel side and columns |
 | Toolbar | tool options (popups / dock), menu style (classic / panels), tools and shortcut buttons |

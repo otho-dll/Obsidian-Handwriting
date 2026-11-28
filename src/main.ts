@@ -327,7 +327,7 @@ export default class HandwritingPlugin extends Plugin {
         // the ribbon style (tried in development) became the panels style
         if (st.menuStyle === 'ribbon') st.menuStyle = 'panels';
         if (!oneOf(st.menuStyle, ['classic', 'panels'])) st.menuStyle = 'classic';
-        if (!oneOf(st.highlighterErase, ['off', 'whole', 'partial'])) st.highlighterErase = 'whole';
+        if (!oneOf(st.highlighterErase, ['off', 'whole', 'partial'])) st.highlighterErase = 'partial';
         // 3.16: "erase shapes" switch + whole/partial merged into one off/whole/partial setting.
         if (st.shapeEraseOn === false) st.shapeErase = 'off';
         delete st.shapeEraseOn;
