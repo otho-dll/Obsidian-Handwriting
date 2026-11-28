@@ -57,7 +57,8 @@ class Builder implements SolidGeom {
         }
     }
     circle(z: number, r: number) { this.sharp.push(circlePts([0, 0, z], r)); }
-    axisZ(z0: number, z1: number) { const e = 0.12 * (z1 - z0) + 4; this.axes.push([[0, 0, z0 - e], [0, 0, z1 + e]]); }
+    /** The z axis through the solid (drawSolid makes it run past the outline on the screen). */
+    axisZ(z0: number, z1: number) { this.axes.push([[0, 0, z0], [0, 0, z1]]); }
 }
 
 export function circlePts(c: V3, r: number, n = CIRCLE_SEG): V3[] {
@@ -155,12 +156,11 @@ export function buildSolid(kind: SolidKind, p: Record<string, number>): SolidGeo
                 nu: 128, nv: half ? 32 : 64, wrapU: true,
             };
             B.patch(sph, SURF_U, half ? SURF_V / 2 : SURF_V);
-            const e = r * 1.15;
             if (half) {
                 B.disc(dz, r); B.circle(dz, r);
-                B.axes.push([[0, 0, dz - 0.15 * r], [0, 0, r + dz + 0.15 * r]], [[-e, 0, dz], [e, 0, dz]], [[0, -e, dz], [0, e, dz]]);
+                B.axes.push([[0, 0, dz], [0, 0, r + dz]], [[-r, 0, dz], [r, 0, dz]], [[0, -r, dz], [0, r, dz]]);
             } else {
-                B.axes.push([[-e, 0, 0], [e, 0, 0]], [[0, -e, 0], [0, e, 0]], [[0, 0, -e], [0, 0, e]]);
+                B.axes.push([[-r, 0, 0], [r, 0, 0]], [[0, -r, 0], [0, r, 0]], [[0, 0, -r], [0, 0, r]]);
             }
             break;
         }

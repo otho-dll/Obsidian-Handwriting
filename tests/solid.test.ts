@@ -82,3 +82,19 @@ test('every solid and view draws something', () => {
         for (const l of [...r.visible, ...r.hidden, ...r.axes]) for (const [x, y] of l) assert.ok(Number.isFinite(x) && Number.isFinite(y), `${s.kind} ${projection}: finite`);
     }
 });
+
+test('centre lines run past the outline; an axis seen end-on becomes a cross', () => {
+    const iso = renderSolid(spec({ kind: 'cylinder', params: { cylinder: { r: 30, h: 80 } }, projection: 'iso', axes: true }));
+    const out = linesBox([...iso.visible, ...iso.hidden]);
+    assert.equal(iso.axes.length, 1);
+    const ax = linesBox(iso.axes);
+    assert.ok(ax.y0 < out.y0 - 2 && ax.y1 > out.y1 + 2, 'the axis sticks out at the top and the bottom');
+
+    // three views: the view from above shows the axis end-on – a cross (one horizontal, one vertical line)
+    const v = renderSolid(spec({ kind: 'cylinder', params: { cylinder: { r: 30, h: 80 } }, projection: 'views', layout: 'E', axes: true }));
+    const front = linesBox(v.visible.filter(l => linesBox([l]).y1 <= 41));
+    const below = v.axes.filter(l => linesBox([l]).y0 > front.y1);
+    const flat = (l: Polyline) => { const b = linesBox([l]); return [b.x1 - b.x0, b.y1 - b.y0]; };
+    assert.ok(below.some(l => flat(l)[1] < 1e-6 && flat(l)[0] > 60), 'horizontal line of the cross');
+    assert.ok(below.some(l => flat(l)[0] < 1e-6 && flat(l)[1] > 60), 'vertical line of the cross');
+});

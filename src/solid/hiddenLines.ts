@@ -281,6 +281,35 @@ export function drawSolid(g: SolidGeom, proj: Projector, opts: { hidden: HiddenM
     return {
         visible,
         hidden: opts.hidden === 'hide' ? [] : hidden,
-        axes: opts.axes ? g.axes.map(toScreen) : [],
+        axes: opts.axes ? dropCovered(centreLines(g.axes.map(toScreen), [...visible, ...hidden]), [], tol) : [],
     };
+}
+
+/**
+ * Centre lines as in technical drawing: a straight axis runs past the outline by the same short length at both ends
+ * (wherever its ends were in 3D); an axis seen end-on becomes a centre cross. Curved ones (the centre circle of a
+ * torus) stay as they are.
+ */
+function centreLines(axes: Polyline[], outline: Polyline[]): Polyline[] {
+    const pts = outline.flat();
+    if (pts.length === 0) return axes;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const [x, y] of pts) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+    const big = Math.max(x1 - x0, y1 - y0), m = 0.06 * big;
+    /** The line through c along unit u, from the outline's extent along u, plus the margin at both ends. */
+    const across = (c: [number, number], u: [number, number]): Polyline => {
+        let t0 = Infinity, t1 = -Infinity;
+        for (const [x, y] of pts) { const t = (x - c[0]) * u[0] + (y - c[1]) * u[1]; t0 = Math.min(t0, t); t1 = Math.max(t1, t); }
+        return [[c[0] + u[0] * (t0 - m), c[1] + u[1] * (t0 - m)], [c[0] + u[0] * (t1 + m), c[1] + u[1] * (t1 + m)]];
+    };
+    const out: Polyline[] = [];
+    for (const a of axes) {
+        if (a.length !== 2) { out.push(a); continue; }
+        const [[ax, ay], [bx, by]] = a, L = Math.hypot(bx - ax, by - ay);
+        if (L < 0.01 * big) {
+            const c: [number, number] = [(ax + bx) / 2, (ay + by) / 2];
+            out.push(across(c, [1, 0]), across(c, [0, 1]));
+        } else out.push(across([ax, ay], [(bx - ax) / L, (by - ay) / L]));
+    }
+    return out;
 }
