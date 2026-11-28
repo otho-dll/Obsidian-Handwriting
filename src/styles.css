@@ -597,23 +597,34 @@ button.hw-swatch-add.hw-swatch-add.hw-swatch-add {
 .hw-quick-slots:empty { display: none; }
 
 /* --- Settings: About and sections --- */
-.hw-about { display: flex; gap: 16px; align-items: center; padding: 14px; margin-bottom: 14px; border: 1px solid var(--background-modifier-border); border-radius: 12px; background: var(--background-secondary); }
+/* The accent colour marks what belongs together: the open section, its group headings and its notes. */
+.hw-about { display: flex; gap: 16px; align-items: center; padding: 14px 16px; margin-bottom: 16px; border: 1px solid color-mix(in srgb, var(--interactive-accent) 45%, transparent); border-radius: 12px; background: color-mix(in srgb, var(--interactive-accent) 8%, var(--background-secondary)); }
 .hw-about-logo { flex: 0 0 72px; width: 72px; height: 72px; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
 .hw-about-logo img { width: 100%; height: 100%; object-fit: contain; }
 .hw-about-info { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .hw-about-name { font-size: 1.25em; font-weight: 700; }
-.hw-about-version { color: var(--text-muted); }
+.hw-about-version { color: var(--text-accent); font-weight: 600; }
 .hw-about-text { font-size: 0.9em; color: var(--text-muted); }
 .hw-about-ai { color: var(--text-normal); }
-.hw-set-section { border: 1px solid var(--background-modifier-border); border-radius: 10px; margin-bottom: 8px; background: var(--background-primary); }
-.hw-set-section > summary { cursor: pointer; padding: 12px 14px; font-weight: 600; font-size: 1.02em; list-style: none; }
+.hw-set-section { border: 1px solid var(--background-modifier-border); border-radius: 10px; margin-bottom: 10px; background: var(--background-primary); overflow: hidden; }
+.hw-set-section[open] { border-color: color-mix(in srgb, var(--interactive-accent) 40%, var(--background-modifier-border)); box-shadow: inset 3px 0 0 var(--interactive-accent); }
+.hw-set-section > summary { display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 12px 14px; font-weight: 600; font-size: 1.05em; list-style: none; }
+.hw-set-section > summary:hover { background: var(--background-modifier-hover); }
 .hw-set-section > summary::-webkit-details-marker { display: none; }
-.hw-set-section > summary::before { content: '▸'; display: inline-block; width: 1.2em; color: var(--text-muted); }
-.hw-set-section[open] > summary::before { content: '▾'; }
-.hw-set-body { padding: 0 14px 10px; }
-/* sub-headings inside a settings section (Setting.setHeading) */
-.setting-item.hw-set-sub { margin-top: 14px; padding-bottom: 2px; border-top: none; }
-.hw-set-sub .setting-item-name { font-size: 0.8em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+.hw-set-section > summary::after { content: '▸'; margin-left: auto; color: var(--text-faint); }
+.hw-set-section[open] > summary::after { content: '▾'; color: var(--text-accent); }
+.hw-set-section[open] > summary { color: var(--text-accent); background: color-mix(in srgb, var(--interactive-accent) 9%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--interactive-accent) 25%, transparent); }
+.hw-set-section[open] > summary .hw-set-title { color: var(--text-accent); }
+.hw-set-icon { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; color: var(--text-accent); background: color-mix(in srgb, var(--interactive-accent) 14%, transparent); }
+.hw-set-icon svg { width: 17px; height: 17px; }
+.hw-set-body { padding: 2px 16px 12px 18px; }
+.hw-set-body .setting-item:not(.setting-item-heading) .setting-item-name { font-weight: 500; }
+/* explanations of a section or group: a note with an accent bar */
+.hw-set-body > .hw-set-note { margin: 12px 0 4px; padding: 8px 12px; border-left: 3px solid var(--interactive-accent); border-radius: 0 6px 6px 0; background: color-mix(in srgb, var(--interactive-accent) 7%, transparent); color: var(--text-normal); }
+.hw-set-body > p.setting-item-description { margin: 6px 0; }
+/* group headings inside a section (Setting.setHeading): accent colour and an accent line under them */
+.setting-item.hw-set-sub { margin-top: 22px; padding-bottom: 4px; border-top: none; border-bottom: 1px solid color-mix(in srgb, var(--interactive-accent) 40%, transparent); }
+.hw-set-sub .setting-item-name { font-size: 0.78em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-accent); }
 
 .hw-pdf-tabs { display: flex; gap: 6px; margin: 4px 0 10px; }
 .hw-pdf-tabs button { flex: 1; }

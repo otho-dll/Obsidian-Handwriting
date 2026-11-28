@@ -33,7 +33,7 @@
 | **3D solids** | Cube, cuboid, cylinder, tube, cone, sphere, torus, prisms, pyramids… in isometric, dimetric, oblique, perspective or three views, with dashed hidden edges and centre lines |
 | **Calculator and plots** | Scientific calculator with units and matrices, editable function plots |
 | **Export and history** | PDF export with bookmarks, printing, automatic version history |
-| **Tablets and OLED** | Palm rejection, pinch zoom, pen side button, dark paper, burn-in protection |
+| **Tablets and OLED** | Palm rejection, pinch zoom, pen side button, dark pages, burn-in protection |
 
 ## Install
 
@@ -162,6 +162,9 @@ pages), **another page** or the **selected pages**.
 - **Size:** portrait A4, landscape A4, or **endless** - one page that grows as you write (up to 16 A4 pages).
 - **Pattern:** dots, lines, grid, blank, Cornell, isometric, lines + margin, checklist, millimetre paper, music staff.
 - **Paper colour:** presets or any colour. *Use note default* removes a page's own style.
+- **Dark pages on screen** (Settings → Pages and view): light pages shown dark with light ink - easier on the eyes at
+  night and in a dark theme, and it saves battery on OLED screens. Only the display changes; notes and PDF exports stay
+  as they are.
 
 #### Page titles and contents
 Right-click a page → **Page title…** (also in the pages panel and as a command). Titled pages start sections in the
@@ -350,7 +353,6 @@ Like the classic menu, the panels leave out whatever is already on the toolbar.
 - **Mouse:** middle-button drag and a hold-a-key drag (default Space) move the page.
 
 #### OLED care
-- **Dark paper on screen** - light pages shown dark with light ink (display only, files and exports unchanged).
 - **Fade the toolbar while writing** - comes back when the pen or cursor gets close.
 - **Pixel shift** - the view moves by 1-2 px every few minutes.
 - **Dim when idle** - after 1-30 minutes; the first tap only wakes it.
@@ -361,12 +363,12 @@ Like the classic menu, the panels leave out whatever is already on the toolbar.
 |---|---|
 | Pen and touch | pressure, thickness values, palm rejection, pinch zoom, long-press menu, two-finger tap to undo, mouse panning, pen side button (switch / hold / radial menu …), selection mode |
 | Colors | five quick colours for the pen and for the highlighter |
-| Pages and view | default pattern and paper, favourite zooms, zoom when opening, two pages side by side (and which page is alone), dim other pages, pages panel side and columns |
+| Pages and view | default pattern and paper, dark pages on screen, favourite zooms, zoom when opening, two pages side by side (and which page is alone), dim other pages, pages panel side and columns |
 | Toolbar | tool options (popups / dock), menu style (classic / panels), tools and shortcut buttons |
 | Files and export | where images are stored, the Python converter, new-note naming (and continuing numbered names), PDF location and resolution |
 | Version history | on / off, interval, retention, space limit per note |
 | Performance | canvas sharpness, low-latency ink |
-| OLED care | dark paper, fading toolbar, pixel shift, dim when idle |
+| OLED care | fading toolbar, pixel shift, dim when idle |
 | Advanced | debug logging (with a log viewer and a button for the developer console – no keyboard needed), performance overlay |
 
 #### Commands (Ctrl/Cmd + P)

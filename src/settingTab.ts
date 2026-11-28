@@ -1,4 +1,4 @@
-import { App, Notice, Platform, PluginSettingTab, Setting } from 'obsidian';
+import { App, Notice, Platform, PluginSettingTab, Setting, setIcon } from 'obsidian';
 import { canUseDisk, pickDiskFolder } from './disk';
 import { canOpenDevTools, toggleDevTools } from './desktop';
 import { PageTemplate, PAGE_TEMPLATES } from './templates';
@@ -39,7 +39,7 @@ export class HandwritingSettingTab extends PluginSettingTab {
         const title = info.createDiv({ cls: 'hw-about-title' });
         title.createSpan({ text: m.name, cls: 'hw-about-name' });
         title.createSpan({ text: ` v${m.version}`, cls: 'hw-about-version' });
-        info.createDiv({ cls: 'hw-about-text', text: 'Handwritten notes with a pen or a mouse: infinite-feeling pages, shapes, images, PDF import and export, a calculator and function plots.' });
+        info.createDiv({ cls: 'hw-about-text', text: 'Handwritten notes made with engineering students in mind: circuit diagrams, 3D solids, function plots and a calculator, inserted as ink you can erase and write on – plus PDF import and export and version history.' });
         info.createDiv({ cls: 'hw-about-text hw-about-ai', text: 'This extension has been made using ClaudeCode under my supervision' });
         if (m.author) info.createDiv({ cls: 'hw-about-text', text: `Author: ${m.author}` });
     }
@@ -51,10 +51,18 @@ export class HandwritingSettingTab extends PluginSettingTab {
 
         this.renderAbout(containerEl);
 
+        // Each section: a heading with an icon in the accent colour (folded except the first).
+        const SECTION_ICONS: Record<string, string> = {
+            'Pen and touch': 'pen-tool', 'Colors': 'palette', 'Pages and view': 'book-open', 'Toolbar': 'panel-top',
+            'Files and export': 'file-output', 'Version history': 'history', 'Performance': 'gauge', 'OLED care': 'monitor', 'Advanced': 'wrench',
+        };
         const section = (title: string, open: boolean) => {
             const d = containerEl.createEl('details', { cls: 'hw-set-section' });
             if (open) d.setAttribute('open', '');
-            d.createEl('summary', { text: title });
+            const sum = d.createEl('summary');
+            const ic = sum.createSpan({ cls: 'hw-set-icon' });
+            if (SECTION_ICONS[title]) setIcon(ic, SECTION_ICONS[title]);
+            sum.createSpan({ cls: 'hw-set-title', text: title });
             return d.createDiv({ cls: 'hw-set-body' });
         };
         {
@@ -72,7 +80,7 @@ export class HandwritingSettingTab extends PluginSettingTab {
 
             // Thin / medium / thick widths of each tool (the three thickness buttons on the toolbar / in the dock).
             new Setting(c).setName('Thickness').setHeading().settingEl.addClass('hw-set-sub');
-            c.createEl('p', { cls: 'setting-item-description', text: 'Widths behind the thin / medium / thick buttons, in page pixels (an A4 page is about 794 px wide). Strokes already written keep their width.' });
+            c.createEl('p', { cls: 'setting-item-description hw-set-note', text: 'Widths behind the thin / medium / thick buttons, in page pixels (an A4 page is about 794 px wide). Strokes already written keep their width.' });
             const sizeRow = (name: string, key: 'penSizes' | 'highSizes' | 'shapeSizes', def: number[], lim: readonly [number, number], step: number) => {
                 const s = new Setting(c).setName(name).setDesc(`Default ${def.join(' / ')} · allowed ${lim[0]}–${lim[1]}`);
                 const inputs: HTMLInputElement[] = [];
@@ -257,6 +265,10 @@ export class HandwritingSettingTab extends PluginSettingTab {
                 .setName('Default paper color')
                 .addColorPicker(c => c.setValue(st.defaultPaper).onChange(async (v) => { st.defaultPaper = v.toLowerCase(); await this.plugin.saveSettings(); this.plugin.refreshViews(); }))
                 .addExtraButton(b => b.setIcon('reset').setTooltip('White').onClick(async () => { st.defaultPaper = '#ffffff'; await this.plugin.saveSettings(); this.plugin.refreshViews(); this.display(); }));
+            new Setting(c)
+                .setName('Dark pages on screen')
+                .setDesc('Shows light pages dark with light ink (colours keep their hue) – easier on the eyes at night and in a dark theme, and it saves battery on OLED screens. Only the display changes: the note, its colours and PDF exports stay as they are.')
+                .addToggle(t => t.setValue(st.oledDarkPaper).onChange(async (v) => { st.oledDarkPaper = v; await this.plugin.saveSettings(); this.plugin.refreshViews(); }));
 
             new Setting(c).setName('Zoom').setHeading().settingEl.addClass('hw-set-sub');
             new Setting(c)
@@ -319,7 +331,7 @@ export class HandwritingSettingTab extends PluginSettingTab {
         }
         {
             const c = section('Toolbar', false);
-            c.createEl('p', { cls: 'setting-item-description', text: 'Decide what sits on the toolbar. Anything you turn off here moves into the "More" (⋯) menu, so it is still one tap away. The pen and the colours always stay on the toolbar; tap a tool again for its thickness and options.' });
+            c.createEl('p', { cls: 'setting-item-description hw-set-note', text: 'Decide what sits on the toolbar. Anything you turn off here moves into the "More" (⋯) menu, so it is still one tap away. The pen and the colours always stay on the toolbar; tap a tool again for its thickness and options.' });
             const save = async () => { await this.plugin.saveSettings(); this.plugin.refreshViews(); };
             new Setting(c)
                 .setName('Tool options')
@@ -611,12 +623,8 @@ export class HandwritingSettingTab extends PluginSettingTab {
         }
         {
             const c = section('OLED care', false);
-            c.createDiv({ cls: 'setting-item-description hw-set-note', text: 'Protects OLED screens from burn-in: bright areas and edges that stay in the same place for hours wear the pixels unevenly. Each option works on its own. Your notes, PDF exports and other devices are not affected.' });
+            c.createDiv({ cls: 'setting-item-description hw-set-note', text: 'Protects OLED screens from burn-in: bright areas and edges that stay in the same place for hours wear the pixels unevenly. Each option works on its own. Your notes, PDF exports and other devices are not affected. (Dark pages, the biggest saving, are under Pages and view.)' });
             const save = async () => { await this.plugin.saveSettings(); this.plugin.refreshViews(); };
-            new Setting(c)
-                .setName('Dark paper on screen')
-                .setDesc('Light pages are shown dark with light ink (colors keep their hue). Only the display changes – the note, its colors and PDF exports stay as they are. The biggest saving for an OLED screen and its battery.')
-                .addToggle(t => t.setValue(st.oledDarkPaper).onChange(async (v) => { st.oledDarkPaper = v; await save(); }));
             new Setting(c)
                 .setName('Fade the toolbar while writing')
                 .setDesc('A moment after you start writing, the toolbar and the page number fade. They come back when the cursor or pen gets close to them, or when you tap them.')
